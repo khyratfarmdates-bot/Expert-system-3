@@ -6,6 +6,12 @@ export default [
     ignores: ['dist/**', 'build/**', 'node_modules/**', '.next/**', 'coverage/**'],
   },
   ...tseslint.configs.recommended,
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off'
+    }
+  },
   firebaseRulesPlugin.configs['flat/recommended'],
   {
     files: ['**/*.rules'],

@@ -42,10 +42,12 @@ import {
   Settings,
   Scan,
   Archive as ArchiveIcon,
-  Image as ImageIcon
+  Image as ImageIcon,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -156,8 +158,6 @@ function AppContent() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
-  const [language, setLanguage] = useState<'ar' | 'en'>('ar');
-
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -705,11 +705,31 @@ function AppContent() {
               />
             </div>
             {sysSettings.showWelcomeMessage && (
-               <div className="max-w-[100px] md:max-w-[200px] overflow-hidden truncate">
-                  <span className="text-[7px] md:text-[9px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 whitespace-nowrap">
-                    {sysSettings.generalAnnouncement}
-                  </span>
-               </div>
+               <Dialog>
+                 <DialogTrigger asChild>
+                   <div className="max-w-[100px] md:max-w-[200px] overflow-hidden truncate cursor-pointer hover:opacity-80 transition-opacity">
+                      <span className="text-[7px] md:text-[9px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 whitespace-nowrap block truncate">
+                        {sysSettings.generalAnnouncement}
+                      </span>
+                   </div>
+                 </DialogTrigger>
+                 <DialogContent className="sm:max-w-[425px] rounded-3xl p-6 border-none shadow-2xl" dir="rtl">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
+                        <MessageCircle className="w-5 h-5 text-primary" />
+                        رسالة إدارية
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Bell className="w-5 h-5 text-primary" />
+                      </div>
+                      <p className="text-slate-700 font-bold leading-relaxed text-sm">
+                        {sysSettings.generalAnnouncement}
+                      </p>
+                    </div>
+                 </DialogContent>
+               </Dialog>
             )}
           </div>
         
@@ -953,13 +973,33 @@ function AppContent() {
             </Button>
             <div className="flex flex-col">
               {sysSettings.showWelcomeMessage && (
-                <div className="mb-0.5 animate-in fade-in slide-in-from-right-4 duration-1000 delay-500">
-                  <div className="flex items-center gap-1.5 bg-primary/10 px-3 py-1 rounded-full border border-primary/20 shadow-sm shadow-primary/5">
-                    <span className="text-[10px] font-black text-primary leading-none">
-                      {sysSettings.generalAnnouncement}
-                    </span>
-                  </div>
-                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <div className="mb-0.5 animate-in fade-in slide-in-from-right-4 duration-1000 delay-500 cursor-pointer hover:opacity-80 transition-opacity">
+                      <div className="inline-flex items-center gap-1.5 bg-primary/10 px-3 py-1 rounded-full border border-primary/20 shadow-sm shadow-primary/5">
+                        <span className="text-[10px] font-black text-primary leading-none max-w-[250px] truncate block">
+                          {sysSettings.generalAnnouncement}
+                        </span>
+                      </div>
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] rounded-3xl p-6 border-none shadow-2xl" dir="rtl">
+                     <DialogHeader>
+                       <DialogTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
+                         <MessageCircle className="w-5 h-5 text-primary" />
+                         رسالة إدارية
+                       </DialogTitle>
+                     </DialogHeader>
+                     <div className="mt-4 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
+                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                         <Bell className="w-5 h-5 text-primary" />
+                       </div>
+                       <p className="text-slate-700 font-bold leading-relaxed text-sm">
+                         {sysSettings.generalAnnouncement}
+                       </p>
+                     </div>
+                  </DialogContent>
+                </Dialog>
               )}
               <div className="font-bold text-lg text-primary tracking-tight">
                 مرحباً،{" "}

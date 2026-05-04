@@ -1,11 +1,13 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
   Users, 
-  Wallet, 
+  Wallet,
+  Bell, 
   ShoppingBag,
   ShoppingCart,
   AlertTriangle,
@@ -329,9 +331,26 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
               animate={{ opacity: 1, x: 0 }}
               className="animate-in fade-in slide-in-from-left-4 duration-700 max-w-[150px] md:max-w-xs"
             >
-              <span className="text-[9px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20 shadow-sm block truncate">
-                {generalAnnouncement}
-              </span>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <span className="text-[9px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20 shadow-sm block truncate cursor-pointer hover:bg-primary/20 transition-colors">
+                    {generalAnnouncement}
+                  </span>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] rounded-3xl p-6 border-none shadow-2xl" dir="rtl">
+                   <DialogHeader>
+                     <DialogTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
+                       <Bell className="w-5 h-5 text-primary" />
+                       رسالة إدارية
+                     </DialogTitle>
+                   </DialogHeader>
+                   <div className="mt-4 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
+                     <p className="text-slate-700 font-bold leading-relaxed text-sm">
+                       {generalAnnouncement}
+                     </p>
+                   </div>
+                </DialogContent>
+              </Dialog>
             </motion.div>
           )}
         </div>
