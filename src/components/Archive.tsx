@@ -15,7 +15,9 @@ import {
   History,
   ArrowRightLeft,
   Printer,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Copy,
+  Share2
 } from 'lucide-react';
 import { 
   collection, 

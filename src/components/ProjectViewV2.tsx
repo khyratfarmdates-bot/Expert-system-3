@@ -43,7 +43,7 @@ import {
 import { db, auth } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { toast } from 'sonner';
-import { Project, Worker, ProjectUpdate, Transaction, ProjectMilestone } from '../types';
+import { Project, UserProfile as Worker, ProjectUpdate, Transaction, ProjectMilestone } from '../types';
 import { calculateProjectProgress } from '../lib/projectUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';

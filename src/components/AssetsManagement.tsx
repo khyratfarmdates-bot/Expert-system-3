@@ -565,7 +565,7 @@ export default function AssetsManagement() {
                              </div>
                            ) : (
                              <div className="flex gap-2 mb-6">
-                                <Select onValueChange={(val) => handleAssignAsset(asset.id, val)}>
+                                <Select onValueChange={(val) => handleAssignAsset(asset.id, String(val))}>
                                    <SelectTrigger className="rounded-2xl bg-white border-slate-200">
                                       <SelectValue placeholder="تسليم العهدة لموظف..." />
                                    </SelectTrigger>

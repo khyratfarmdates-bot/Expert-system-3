@@ -97,7 +97,7 @@ const scrollbarStyles = `
 `;
 
 // Error Boundary Component
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error?: null | Error }> {
+class ErrorBoundary extends React.Component<any, any> {
   state = { hasError: false };
   static getDerivedStateFromError() {
     return { hasError: true };
@@ -143,7 +143,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
         </div>
       );
     }
-    return this.props.children;
+    return (this as any).props.children;
   }
 }
 
