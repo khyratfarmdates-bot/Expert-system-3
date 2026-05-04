@@ -1,0 +1,214 @@
+rules_version = "2";
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Global Safety Net (Pillar 0)
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Shared Helper Primitives (Phase 3)
+    // ===============================================================
+    function isSignedIn() { return request.auth != null; }
+
+    // Connection Test
+    match /_connection_test_/{docId} {
+      allow read: if true;
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    
+    // Auth helpers
+    function isAdmin() { 
+      return isSignedIn() && (
+        request.auth.token.email.lower() == 'amanrental2020@gmail.com' ||
+        request.auth.token.email.lower() == 'khyratfarmdates@gmail.com'
+      ); 
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isManager() {
+      return isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserRole() == "manager");
+    }
+    
+    function isElevated() {
+      return isManager() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserRole() == "supervisor");
+    }
+    
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ===============================================================
+    // Entity Validations (Pillar 2)
+    // ===============================================================
+    
+    function isValidOffice(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.type in ['office', 'gallery', 'warehouse'] &&
+             data.latitude is number && data.longitude is number &&
+             data.keys().hasAll(['name', 'type', 'latitude', 'longitude']) &&
+             data.keys().size() >= 4;
+    }
+
+    function isValidAttendance(data) {
+      return data.userId == request.auth.uid &&
+             data.date is string && data.date.size() == 10 &&
+             data.status in ['present', 'absent', 'late', 'excused'] &&
+             (data.location is map || !('location' in data)) &&
+             data.keys().hasAll(['userId', 'date', 'status']);
+    }
+
+    function isValidSystemSettings(data) {
+      return (data.companyName is string && data.companyName.size() < 100) &&
+             (data.attendanceRadius is number && data.attendanceRadius >= 0);
+    }
+
+    function isValidTransaction(data) {
+      return data.type in ['expense', 'purchase', 'income'] &&
+             data.amount is number && data.amount > 0 &&
+             data.description is string && data.description.size() < 500 &&
+             data.createdBy == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Match Blocks (Phase 4 / Pillar 8)
+    // ===============================================================
+
+    match /system/settings {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /bankAccounts/{accId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /payrolls/{payrollId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /offices/{officeId} {
+      allow read: if isSignedIn();
+      allow create: if isElevated() && isValidOffice(incoming()) && isValidId(officeId);
+      allow update: if isElevated() && isValidOffice(incoming());
+      allow delete: if isManager();
+    }
+
+    match /users/{userId} {
+      // Allow any signed-in user to read user profiles
+      // This is necessary for the initial login lookup
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (isElevated() || (isOwner(userId) && !('role' in incoming())));
+      allow update: if isElevated() || 
+                    (isOwner(userId) && incoming().role == existing().role) ||
+                    (isSignedIn() && request.auth.token.email.lower() == existing().email.lower() && incoming().keys().hasOnly(['uid']) && existing().uid == null);
+      allow delete: if isAdmin();
+    }
+
+    match /projects/{projectId} {
+      allow get: if true; 
+      allow list: if isSignedIn();
+      allow create, update: if isElevated();
+      allow delete: if isManager();
+
+      match /payments/{paymentId} {
+        allow read, write: if isElevated();
+      }
+
+      match /assignments/{assignmentId} {
+        allow read, write: if isElevated();
+      }
+    }
+
+    match /attendance/{atId} {
+      allow get: if true; 
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidAttendance(incoming()) && (incoming().userId == request.auth.uid || isElevated());
+      allow update: if (isElevated() || isOwner(existing().userId)) && isValidAttendance(incoming());
+      allow delete: if isManager();
+    }
+
+    match /transactions/{txId} {
+      allow read: if isElevated() || (isSignedIn() && existing().createdBy == request.auth.uid);
+      allow list: if true; // Need list for public reports if needed, but best is to restrict to authenticated
+      allow create: if isSignedIn() && incoming().createdBy == request.auth.uid && isValidTransaction(incoming());
+      allow update: if isManager() || (
+        (isSignedIn() && existing().createdBy == request.auth.uid) && 
+        incoming().status == existing().status
+      );
+      allow delete: if isManager() || (isSignedIn() && existing().createdBy == request.auth.uid);
+    }
+
+    match /notifications/{notId} {
+      allow read: if isSignedIn();
+      allow write: if isElevated();
+    }
+
+    match /workerNotifications/{notId} {
+      allow get: if true; 
+      allow list: if true; // Workers poll this
+      allow create, delete: if isElevated();
+      allow update: if isElevated() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledged', 'acknowledgedAt'])
+      );
+    }
+
+    match /workers/{workerId} {
+      allow get: if true;
+      allow list: if isSignedIn();
+      allow update: if isElevated() || (
+        (!('bankAccount' in existing()) || existing().bankAccount == '' || existing().bankAccount == null) && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bankAccount', 'bankAccountUpdatedAt'])
+      );
+      allow create, delete: if isElevated();
+    }
+
+    match /dailyLogs/{logId} {
+      allow get: if true; 
+      allow list: if true; // Public listable for shared links when filtered by workerId
+      allow write: if isElevated(); 
+    }
+
+    match /workerTransactions/{txId} {
+      allow get: if true; 
+      allow list: if true; 
+      allow write: if isElevated();
+    }
+
+    match /subcontractors/{scId} {
+      allow read: if isSignedIn();
+      allow write: if isElevated();
+    }
+
+    match /projectNotes/{noteId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isElevated() || (isSignedIn() && existing().createdBy == request.auth.uid);
+    }
+
+    match /gallery/{docId} {
+      allow read: if isSignedIn();
+      allow create, update: if isElevated();
+      allow delete: if isManager();
+    }
+
+    match /archive/{docId} {
+      allow read: if isSignedIn();
+      allow create, update: if isElevated();
+      allow delete: if isManager();
+    }
+    
+    // Fallback for everything else
+    match /{collection}/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isManager();
+    }
+  }
+}
