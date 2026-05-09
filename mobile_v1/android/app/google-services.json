@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "234055211388",
+    "project_id": "gen-lang-client-0313577394",
+    "storage_bucket": "gen-lang-client-0313577394.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:234055211388:android:2c42cd066296d8cf52ecf9",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "234055211388-gidm27gu6m2r4lcr31h6jbthbvkq02gs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.myapp",
+            "certificate_hash": "86b87e8270648eff0963e29df908be19c4b60df8"
+          }
+        },
+        {
+          "client_id": "234055211388-o1fihio3krj1jclfo4q3c9meeibciqir.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0uunJqSUZoIfripErZjJ0Y-t21W-Gw6g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "234055211388-o1fihio3krj1jclfo4q3c9meeibciqir.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "234055211388-m1jb52o0oj1u4s2qpsud7f2sc2a4id0l.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.experts.app"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:234055211388:android:a4d2a6cba522789452ecf9",
+        "android_client_info": {
+          "package_name": "com.experts.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "234055211388-o1fihio3krj1jclfo4q3c9meeibciqir.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0uunJqSUZoIfripErZjJ0Y-t21W-Gw6g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "234055211388-o1fihio3krj1jclfo4q3c9meeibciqir.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "234055211388-m1jb52o0oj1u4s2qpsud7f2sc2a4id0l.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.experts.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
