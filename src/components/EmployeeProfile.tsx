@@ -349,9 +349,10 @@ export default function EmployeeProfile({ employeeId, onBack }: EmployeeProfileP
   };
 
   const totals = useMemo(() => {
+    if (!employee) return { base: 0, bonuses: 0, deductions: 0, net: 0 };
     const base = employee.salary || employee.baseSalary || 0;
-    const bonusTotal = adjustments.filter(a => a.type === 'bonus').reduce((acc, a) => acc + a.amount, 0);
-    const deductionTotal = adjustments.filter(a => a.type === 'deduction').reduce((acc, a) => acc + a.amount, 0);
+    const bonusTotal = (adjustments || []).filter(a => a.type === 'bonus').reduce((acc: number, a: any) => acc + (Number(a.amount) || 0), 0);
+    const deductionTotal = (adjustments || []).filter(a => a.type === 'deduction').reduce((acc: number, a: any) => acc + (Number(a.amount) || 0), 0);
     return {
       base,
       bonuses: bonusTotal,

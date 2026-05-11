@@ -127,7 +127,7 @@ export default function CameraCapture() {
           description: `مسح تلقائي مستمر - ${result.data.vendor}`,
           date: result.data.date || new Date().toISOString(),
           createdBy: profile?.uid,
-          status: 'pending',
+          status: profile?.role === 'manager' ? 'approved' : 'pending',
           createdAt: serverTimestamp()
         });
         
@@ -321,7 +321,7 @@ export default function CameraCapture() {
         description: parsedData.description || `فاتورة من ${parsedData.vendor}`,
         date: parsedData.date || new Date().toISOString(),
         createdBy: profile.uid,
-        status: 'pending',
+        status: 'pending', // Manual save always needs approval as per new rule
         createdAt: serverTimestamp()
       });
       toast.success('تمت إضافة الفاتورة للنظام بنجاح');

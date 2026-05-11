@@ -308,7 +308,7 @@ export default function Purchases() {
         category: finalCategory,
         date: serverTimestamp(),
         createdBy: profile.uid,
-        status: isManager ? 'approved' : 'pending',
+        status: 'pending', // All manual invoices require approval as per new rule
         projectId: formData.projectId || null,
         paymentMethod: isManager ? formData.paymentMethod : 'cash',
         bankAccountId: isManager ? formData.bankAccountId : null,
@@ -319,7 +319,7 @@ export default function Purchases() {
       const projectTitle = projects.find(p => p.id === formData.projectId)?.title;
       await logActivity(
         'طلب شراء جديد',
-        `تم تسجيل طلب شراء للمورد: ${finalDescription} بمبلغ ${formData.amount} ر.س ${projectTitle ? `للمشروع: ${projectTitle}` : ''}`,
+        `تم تسجيل طلب شراء للمورد: ${finalDescription} بمبلغ ${formData.amount} ر.س ${projectTitle ? `للمشروع: ${projectTitle}` : ''} بانتظار الاعتماد`,
         'info',
         'purchase',
         profile.uid
@@ -328,8 +328,8 @@ export default function Purchases() {
       // System Notification
       await sendNotification({
         title: 'طلب شراء جديد',
-        message: `قام ${profile.name} بتسجيل طلب شراء لـ ${finalDescription} بمبلغ ${formData.amount} ر.س`,
-        type: isManager ? 'success' : 'info',
+        message: `قام ${profile.name} بتسجيل طلب شراء لـ ${finalDescription} بمبلغ ${formData.amount} ر.س بانتظار الاعتماد`,
+        type: 'info',
         category: 'financial',
         targetRole: 'manager',
         tab: 'purchases',
@@ -342,8 +342,8 @@ export default function Purchases() {
       const message = `طلب شراء جديد بانتظار الاعتماد:\nالبيان: ${formData.description}\nالمبلغ: ${formData.amount} ر.س\nبواسطة: ${profile.name}`;
       const waLink = `https://wa.me/${managerPhone}?text=${encodeURIComponent(message)}`;
 
-      toast.success(isSupervisor ? 'تم إرسال الطلب للاعتماد' : 'تم تسجيل طلب الشراء بنجاح', {
-        action: isSupervisor ? {
+      toast.success('تم إرسال الطلب للاعتماد المباشر', {
+        action: isSupervisor || isManager ? {
           label: 'إخطار المدير (واتساب)',
           onClick: () => window.open(waLink, '_blank')
         } : undefined

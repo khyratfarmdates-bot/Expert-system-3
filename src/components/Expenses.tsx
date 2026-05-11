@@ -140,23 +140,14 @@ export default function Expenses() {
         paymentMethod: formData.paymentMethod,
         bankAccountId: formData.bankAccountId || null,
         invoiceNumber: formData.invoiceNumber || null,
-        status: isManager ? 'approved' : 'pending',
+        status: 'pending', // All manual invoices require approval now
         date: serverTimestamp(),
         createdBy: profile.uid,
         createdAt: serverTimestamp()
       });
 
-      if (isManager && formData.bankAccountId) {
-        // Only deduct if manager adds and specifies account
-        const bankRef = doc(db, 'bankAccounts', formData.bankAccountId);
-        const bankSnap = await getDoc(bankRef);
-        if (bankSnap.exists()) {
-          const currentBalance = bankSnap.data().initialBalance || 0;
-          await updateDoc(bankRef, {
-            initialBalance: currentBalance - parseFloat(formData.amount)
-          });
-        }
-      }
+      // No longer auto-deducting since it's pending approval
+      // if (isManager && formData.bankAccountId) { ... }
 
       await logActivity(
         'تسجيل مصروف جديد',
@@ -168,15 +159,15 @@ export default function Expenses() {
 
       await sendNotification({
         title: 'تسجيل مصروف جديد',
-        message: `تم تسجيل مصروف ${formData.description} بقيمة ${formData.amount} ر.س`,
-        type: isManager ? 'info' : 'warning',
+        message: `تم تسجيل مصروف ${formData.description} بقيمة ${formData.amount} ر.س بانتظار الاعتماد`,
+        type: 'warning',
         category: 'financial',
         targetRole: 'manager',
         tab: 'expenses',
         priority: 'medium'
       });
 
-      toast.success(isManager ? 'تم تسجيل المصروف بنجاح' : 'تم إرسال المصروف للمراجعة والاعتماد');
+      toast.success('تم إرسال المصروف للمراجعة والاعتماد');
       setIsDialogOpen(false);
       setFormData({ 
         amount: '', 
