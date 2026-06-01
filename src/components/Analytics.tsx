@@ -130,25 +130,25 @@ export default function Analytics({ onBack }: { onBack?: () => void }) {
   const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444'];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700 pb-20 max-w-7xl mx-auto px-4">
+    <div className="space-y-6 pb-20 max-w-7xl mx-auto px-4" dir="rtl">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           {onBack && (
-            <Button onClick={onBack} variant="ghost" size="icon" className="rounded-2xl bg-white shadow-sm border">
-              <ChevronRight className="w-5 h-5" />
+            <Button onClick={onBack} variant="ghost" size="icon" className="rounded-lg bg-white shadow-sm border border-slate-200 h-9 w-9">
+              <ChevronRight className="w-4 h-4 text-slate-700" />
             </Button>
           )}
           <div>
-            <h1 className="text-3xl font-black text-primary tracking-tight">ذكاء الأعمال (Business BI)</h1>
-            <p className="text-muted-foreground text-sm font-bold flex items-center gap-2">
-               مركز التحليلات الشامل والقرارات الذكية
-               <Badge className="bg-emerald-100 text-emerald-700 border-none px-2 py-0 h-5 text-[10px] font-black animate-pulse">مباشر</Badge>
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">ذكاء الأعمال والتحليلات (Business BI)</h1>
+            <p className="text-slate-500 text-xs font-semibold flex items-center gap-2 mt-0.5">
+               مركز التقارير وقراءة مؤشرات كفاءة الأداء المالي والتشغيلي للمشاريع ثانية بثانية
+               <Badge className="bg-emerald-50 text-emerald-600 border-none px-2 py-0.5 h-4.5 text-[9px] font-bold animate-pulse">مباشر</Badge>
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap bg-white p-1 rounded-2xl border shadow-sm self-start">
+        <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 self-start">
           <PeriodButton active={period === 'daily'} label="يومي" onClick={() => setPeriod('daily')} />
           <PeriodButton active={period === 'weekly'} label="أسبوعي" onClick={() => setPeriod('weekly')} />
           <PeriodButton active={period === 'monthly'} label="شهري" onClick={() => setPeriod('monthly')} />
@@ -158,12 +158,12 @@ export default function Analytics({ onBack }: { onBack?: () => void }) {
       </div>
 
       {/* Main Grid: Bento Style */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Row 1: KPI Cards */}
         <StatCard 
-          title="صافي الربح" 
+          title="صافي الأرباح" 
           value={filteredData.netProfit} 
-          subtitle="الأداء المالي الصافي"
+          subtitle="الأداء المالي الإجمالي الصافي"
           icon={Wallet} 
           trend="+12%"
           color="blue" 
@@ -171,25 +171,25 @@ export default function Analytics({ onBack }: { onBack?: () => void }) {
         <StatCard 
           title="نسبة الإنجاز" 
           value={filteredData.completedProjects} 
-          subtitle="مشاريع منتهية"
+          subtitle="مشاريع منتهية ومسلمة"
           icon={CheckCircle2} 
           isCount
           trend="+5"
           color="emerald" 
         />
         <StatCard 
-          title="نبض الفريق" 
+          title="نسبة حضور وانضباط الفريق" 
           value={filteredData.attendanceRate.toFixed(1)} 
-          subtitle="متوسط الحضور"
+          subtitle="معدل الحضور والانضباط اليومي"
           icon={Activity} 
           isPercent
           trend="-2%"
           color="amber" 
         />
         <StatCard 
-          title="معدل النمو" 
+          title="معدل نمو المؤسسة" 
           value={filteredData.margin.toFixed(1)} 
-          subtitle="هامش الربحية"
+          subtitle="هامش الربحية التشغيلي"
           icon={TrendingUp} 
           isPercent
           trend="+3%"
@@ -197,34 +197,33 @@ export default function Analytics({ onBack }: { onBack?: () => void }) {
         />
 
         {/* Row 2: Charts */}
-        <Card className="lg:col-span-3 rounded-[2.5rem] border-none shadow-xl shadow-slate-200/50 bg-white overflow-hidden">
-          <CardHeader className="p-8 border-b border-dashed">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <Card className="lg:col-span-3 rounded-xl border border-slate-200/60 shadow-sm bg-white overflow-hidden">
+          <CardHeader className="p-6 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                <div>
-                  <CardTitle className="text-xl font-black flex items-center gap-2">
-                    <BarChart3 className="w-6 h-6 text-primary" />
-                    تحليل التدفقات والربحية
+                  <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800">
+                    <BarChart3 className="w-4.5 h-4.5 text-slate-700" />
+                    تحليل التدفقات والربحية والسيولة المتوقعة
                   </CardTitle>
-                  <CardDescription className="font-bold">مراقبة الأداء المباشر حسب الفترة المختارة</CardDescription>
+                  <CardDescription className="text-xs font-semibold text-slate-400 mt-0.5">مراقبة الأداء المالي المباشر وتتبع العوائد مقابل المصاريف</CardDescription>
                </div>
                <div className="flex gap-4">
                   <LegendItem label="إيرادات" color="bg-emerald-500" />
-                  <LegendItem label="مصاريف" color="bg-red-400" />
-                  <LegendItem label="أرباح" color="bg-blue-500" />
+                  <LegendItem label="أرباح صافية" color="bg-blue-500" />
                </div>
             </div>
           </CardHeader>
-          <CardContent className="p-8">
-            <div className="h-[400px] w-full">
+          <CardContent className="p-6">
+            <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={filteredData.chartData}>
                   <defs>
                     <linearGradient id="gIncome" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.15}/>
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="gProfit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
@@ -233,18 +232,18 @@ export default function Analytics({ onBack }: { onBack?: () => void }) {
                     dataKey="name" 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{fontSize: 12, fontWeight: 800, fill: '#64748b'}} 
+                    tick={{fontSize: 10, fontWeight: 600, fill: '#64748b'}} 
                   />
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{fontSize: 12, fontWeight: 800, fill: '#64748b'}} 
+                    tick={{fontSize: 10, fontWeight: 600, fill: '#64748b'}} 
                   />
                   <Tooltip 
-                    contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', fontFamily: 'Cairo', padding: '16px' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontFamily: 'Cairo', padding: '10px 14px' }}
                   />
-                  <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#gIncome)" />
-                  <Area type="monotone" dataKey="profit" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#gProfit)" />
+                  <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#gIncome)" />
+                  <Area type="monotone" dataKey="profit" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#gProfit)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -253,123 +252,130 @@ export default function Analytics({ onBack }: { onBack?: () => void }) {
 
         {/* Row 2: Secondary Insights */}
         <div className="flex flex-col gap-4">
-           <Card className="rounded-[2.5rem] border-none shadow-lg bg-primary text-primary-foreground p-8 flex-1 flex flex-col justify-between">
-              <Zap className="w-10 h-10 text-amber-400 mb-4" />
-              <div>
-                 <h4 className="text-2xl font-black mb-2">كفاءة التشغيل</h4>
-                 <p className="text-sm opacity-80 font-bold">بناءً على المشاريع والموظفين، كفاءتك الحالية هي:</p>
+           <Card className="rounded-xl border border-slate-900 bg-slate-950 text-white p-6 flex flex-col justify-between h-1/2">
+              <div className="flex justify-between items-start">
+                <Zap className="w-8 h-8 text-amber-400" />
+                <Badge variant="secondary" className="bg-white/10 text-white hover:bg-white/10 border-none text-[8px]">ذكاء اصطناعي</Badge>
               </div>
-              <div className="mt-6">
-                 <div className="text-5xl font-black">92%</div>
-                 <div className="w-full h-2 bg-white/20 rounded-full mt-4 overflow-hidden">
-                    <div className="h-full bg-amber-400" style={{ width: '92%' }} />
+              <div>
+                 <h4 className="text-sm font-bold text-slate-100">كفاءة تشغيل الأصول</h4>
+                 <p className="text-[10px] text-slate-400 font-medium">وفق المشاريع الفعالة الحالية ومعدلات حضور الكادر البشري</p>
+              </div>
+              <div className="mt-4">
+                 <div className="text-3xl font-bold font-mono text-amber-400">92%</div>
+                 <div className="w-full h-1.5 bg-white/10 rounded-full mt-2.5 overflow-hidden">
+                    <div className="h-full bg-amber-400 transition-all duration-1000" style={{ width: '92%' }} />
                  </div>
               </div>
            </Card>
 
-           <Card className="rounded-[2.5rem] border-none shadow-lg bg-emerald-600 text-white p-6 relative overflow-hidden">
-              <div className="relative z-10">
-                 <Briefcase className="w-6 h-6 mb-2" />
-                 <p className="text-xs font-bold opacity-80">المشاريع النشطة</p>
-                 <h4 className="text-3xl font-black tracking-tighter">{filteredData.activeProjects} مشروع قيد العمل</h4>
+           <Card className="rounded-xl border border-slate-200/60 bg-white p-6 flex flex-col justify-between h-1/2 relative overflow-hidden">
+              <div className="relative z-10 space-y-1">
+                 <div className="w-8 h-8 bg-emerald-50 text-emerald-700 flex items-center justify-center rounded-lg mb-2">
+                   <Briefcase className="w-4 h-4" />
+                 </div>
+                 <p className="text-[10px] font-bold text-slate-400">المشاريع النشطة حالياً</p>
+                 <h4 className="text-base font-bold text-slate-800">{filteredData.activeProjects} مشاريع قيد التنفيذ</h4>
               </div>
-              <div className="absolute -right-8 -bottom-8 opacity-10">
-                 <Layers className="w-32 h-32" />
+              <div className="absolute right-2 -bottom-2 opacity-[0.03]">
+                 <Layers className="w-24 h-24 text-slate-950" />
               </div>
            </Card>
         </div>
 
         {/* Row 3: Employees & Tasks */}
-        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white p-8">
-           <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                 <Users className="w-6 h-6" />
+        <Card className="rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
+           <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
+                 <Users className="w-4 h-4" />
               </div>
-              <h4 className="text-lg font-black tracking-tight">أفضل الموظفين (Top)</h4>
+              <h4 className="text-sm font-bold text-slate-800">الأكثر كفاءة والتزاماً</h4>
            </div>
-           <div className="space-y-5">
+           <div className="space-y-3.5">
               {employees.slice(0, 4).map((emp, i) => (
                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-primary border-2 border-white shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                       <div className="w-7.5 h-7.5 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-800 text-xs border border-slate-200 shadow-sm">
                           {emp.name?.[0]}
                        </div>
                        <div>
-                          <p className="text-sm font-black text-slate-800">{emp.name}</p>
-                          <p className="text-[10px] text-muted-foreground font-bold">{emp.role === 'manager' ? 'مدير' : emp.role === 'supervisor' ? 'مشرف' : 'فني'}</p>
+                          <p className="text-xs font-bold text-slate-800">{emp.name}</p>
+                          <p className="text-[9px] text-slate-400 font-semibold">{emp.role === 'manager' ? 'مدير' : emp.role === 'supervisor' ? 'مشرف' : 'فني'}</p>
                        </div>
                     </div>
-                    <Badge className="bg-emerald-50 text-emerald-600 text-[10px] border-none font-black shadow-none px-3">متميز</Badge>
+                    <Badge variant="outline" className="bg-emerald-50/50 text-emerald-600 text-[8px] border-emerald-100 font-bold shadow-none px-1.5 py-0">مثالي</Badge>
                  </div>
               ))}
            </div>
         </Card>
 
         {/* Row 3: Distribution Chart */}
-        <Card className="lg:col-span-2 rounded-[2.5rem] border-none shadow-xl bg-white p-8">
-            <h4 className="text-lg font-black mb-6 flex items-center gap-2">
-              <PieChartIcon className="w-6 h-6 text-primary" />
-              توزيع الموارد والسيولة
+        <Card className="lg:col-span-2 rounded-xl border border-slate-200/60 bg-white p-6 shadow-sm">
+            <h4 className="text-sm font-bold mb-4 flex items-center gap-2 text-slate-800">
+              <PieChartIcon className="w-4.5 h-4.5 text-slate-500" />
+              توزيع وتخصيص التدفقات النقدية
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-               <div className="h-[250px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+               <div className="h-[180px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={[
-                           { name: 'دخل', value: filteredData.income },
+                           { name: 'إيراد', value: filteredData.income },
                            { name: 'صرف', value: filteredData.expense },
                            { name: 'صافي', value: filteredData.netProfit > 0 ? filteredData.netProfit : 0 }
                         ]}
-                        cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={8} dataKey="value"
+                        cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={4} dataKey="value"
                       >
-                        {COLORS.map((c, i) => <Cell key={i} fill={c} cornerRadius={10} />)}
+                        {COLORS.map((c, i) => <Cell key={i} fill={c} cornerRadius={4} />)}
                       </Pie>
                       <Tooltip 
-                         contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
+                         contentStyle={{ borderRadius: '6px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontSize: 10 }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                </div>
-               <div className="space-y-4">
-                  <div className="p-4 rounded-3xl bg-emerald-50 border border-emerald-100">
-                     <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-black text-emerald-700">تدفق الإيرادات</span>
-                        <ArrowUpRight className="w-4 h-4 text-emerald-600" />
+               <div className="space-y-2">
+                  <div className="p-3 rounded-lg bg-emerald-50/50 border border-emerald-100 flex justify-between items-center">
+                     <div>
+                        <span className="text-[10px] font-semibold text-emerald-700">مجموع الإيرادات</span>
+                        <div className="text-sm font-bold text-emerald-900 mt-0.5">{filteredData.income.toLocaleString()} ر.س</div>
                      </div>
-                     <div className="text-xl font-black text-emerald-900">{filteredData.income.toLocaleString()} ر.س</div>
+                     <ArrowUpRight className="w-4 h-4 text-emerald-600" />
                   </div>
-                  <div className="p-4 rounded-3xl bg-blue-50 border border-blue-100">
-                     <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-black text-blue-700">صافي الأرباح</span>
-                        <Zap className="w-4 h-4 text-blue-600" />
+                  <div className="p-3 rounded-lg bg-blue-50/50 border border-blue-100 flex justify-between items-center">
+                     <div>
+                        <span className="text-[10px] font-semibold text-blue-700">شجرة الأرباح المحققة</span>
+                        <div className="text-sm font-bold text-blue-900 mt-0.5">{filteredData.netProfit.toLocaleString()} ر.س</div>
                      </div>
-                     <div className="text-xl font-black text-blue-900">{filteredData.netProfit.toLocaleString()} ر.س</div>
+                     <Zap className="w-4 h-4 text-blue-600" />
                   </div>
-                  <div className="p-4 rounded-3xl bg-red-50 border border-red-100">
-                     <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-black text-red-700">إجمالي المصاريف</span>
-                        <TrendingDown className="w-4 h-4 text-red-600" />
+                  <div className="p-3 rounded-lg bg-red-50/50 border border-red-100 flex justify-between items-center">
+                     <div>
+                        <span className="text-[10px] font-semibold text-red-700">شجرة المصاريف والتشغيل</span>
+                        <div className="text-sm font-bold text-red-900 mt-0.5">{filteredData.expense.toLocaleString()} ر.س</div>
                      </div>
-                     <div className="text-xl font-black text-red-900">{filteredData.expense.toLocaleString()} ر.س</div>
+                     <TrendingDown className="w-4 h-4 text-red-600" />
                   </div>
                </div>
             </div>
         </Card>
 
         {/* Row 3: Insights Panel */}
-        <Card className="rounded-[2.5rem] border-none shadow-xl bg-slate-900 text-white p-8">
-           <h4 className="text-lg font-black mb-4 flex items-center gap-2">
-               <ArrowUpRight className="w-6 h-6 text-emerald-400" />
-               مقترحات النمو
-           </h4>
-           <div className="space-y-4 mt-6">
-              <InsightItem text="زيادة الإنتاجية في المشتريات لخفض الهدر بمقدار 5%" color="bg-emerald-400" />
-              <InsightItem text="توسيع قائمة العملاء لزيادة الدخل الشهري بنسبة 15%" color="bg-blue-400" />
-              <InsightItem text="تحسين جدول حضور الموظفين لرفع نبض الفريق" color="bg-amber-400" />
+        <Card className="rounded-xl border border-slate-900 bg-slate-950 text-white p-6 shadow-sm flex flex-col justify-between">
+           <div>
+              <h4 className="text-sm font-bold flex items-center gap-2">
+                  <ArrowUpRight className="w-4.5 h-4.5 text-emerald-400" />
+                  توصيات ذكية مقترحة
+              </h4>
+              <div className="space-y-3.5 mt-5">
+                 <InsightItem text="تحسين سياسة التحصيل بالمستخلصات لتكثيف النقدية بنسبة 5%" color="bg-emerald-400" />
+                 <InsightItem text="جدولة مشتريات المواد الخام لخفض التكلفة التشغيلية الإضافية" color="bg-blue-400" />
+                 <InsightItem text="أتمتة طلبات تصاريح المواقع لتسريع مراحل التسليم الفعلي" color="bg-amber-400" />
+              </div>
            </div>
-           <Button className="w-full mt-8 rounded-[1.5rem] bg-white text-slate-900 font-black hover:bg-slate-100 h-12 shadow-inner">
-              طلب تقرير تفصيلي
+           <Button className="w-full mt-6 rounded-lg bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 h-9 text-xs font-semibold cursor-pointer">
+              تصدير كشف مؤشرات الأداء
            </Button>
         </Card>
       </div>
@@ -381,7 +387,7 @@ function PeriodButton({ active, label, onClick }: any) {
   return (
     <button 
       onClick={onClick}
-      className={`px-4 md:px-6 py-2 rounded-xl text-[11px] md:text-sm font-black transition-all ${active ? 'bg-primary text-white shadow-lg scale-105' : 'text-muted-foreground hover:bg-slate-50'}`}
+      className={`px-3.5 py-1.5 rounded-md text-[10px] md:text-xs font-bold transition-all cursor-pointer ${active ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
     >
       {label}
     </button>
@@ -390,29 +396,26 @@ function PeriodButton({ active, label, onClick }: any) {
 
 function StatCard({ title, value, subtitle, icon: Icon, color, isPercent, isCount, trend }: any) {
   const themes: any = {
-    blue: 'bg-blue-600 text-white',
-    emerald: 'bg-emerald-500 text-white',
-    amber: 'bg-amber-500 text-white',
-    indigo: 'bg-indigo-600 text-white'
+    blue: 'border-l-4 border-l-blue-500',
+    emerald: 'border-l-4 border-l-emerald-500',
+    amber: 'border-l-4 border-l-amber-500',
+    indigo: 'border-l-4 border-l-indigo-500'
   };
 
   return (
-    <Card className={`${themes[color]} rounded-[2.5rem] p-6 border-none shadow-xl relative overflow-hidden transition-all hover:scale-[1.03]`}>
+    <Card className={`${themes[color]} rounded-xl border border-slate-200/60 bg-white p-5 shadow-sm relative overflow-hidden transition-all hover:shadow-md`}>
       <div className="relative z-10">
-        <div className="flex justify-between items-start mb-6">
-           <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-              <Icon className="w-6 h-6" />
+        <div className="flex justify-between items-start mb-4">
+           <div className="p-2.5 bg-slate-50 text-slate-700 rounded-lg border border-slate-100">
+              <Icon className="w-4 h-4" />
            </div>
-           <Badge className="bg-white/20 text-white border-none font-bold text-[10px]">{trend}</Badge>
+           <Badge variant="secondary" className="bg-slate-50 text-slate-600 border border-slate-100 font-bold text-[9px] pointer-events-none">{trend}</Badge>
         </div>
-        <p className="text-xs font-bold opacity-80 uppercase tracking-widest">{title}</p>
-        <h3 className="text-2xl md:text-3xl font-black mt-1">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{title}</p>
+        <h3 className="text-xl md:text-2xl font-bold text-slate-900 font-mono mt-0.5 tracking-tight">
           {isPercent ? `${value}%` : isCount ? value : `${Math.round(value).toLocaleString()} ر.س`}
         </h3>
-        <p className="text-[10px] mt-2 font-bold opacity-70 italic">{subtitle}</p>
-      </div>
-      <div className="absolute -right-4 -bottom-4 opacity-10">
-         <Activity className="w-24 h-24" />
+        <p className="text-[9px] mt-1 font-medium text-slate-400">{subtitle}</p>
       </div>
     </Card>
   );
@@ -420,18 +423,18 @@ function StatCard({ title, value, subtitle, icon: Icon, color, isPercent, isCoun
 
 function LegendItem({ label, color }: any) {
   return (
-    <div className="flex items-center gap-2">
-      <div className={`w-3 h-3 rounded-full ${color}`} />
-      <span className="text-xs font-black text-slate-600">{label}</span>
+    <div className="flex items-center gap-1.5">
+      <div className={`w-2 h-2 rounded-full ${color}`} />
+      <span className="text-[10px] font-bold text-slate-500">{label}</span>
     </div>
   );
 }
 
 function InsightItem({ text, color }: any) {
   return (
-    <div className="flex items-start gap-3">
-       <div className={`w-1.5 h-1.5 rounded-full ${color} mt-1.5 shrink-0`} />
-       <p className="text-[11px] font-bold opacity-90 leading-relaxed">{text}</p>
+    <div className="flex items-start gap-2.5">
+       <div className={`w-1 h-1 rounded-full ${color} mt-2 shrink-0`} />
+       <p className="text-[11px] font-medium text-slate-300 leading-relaxed">{text}</p>
     </div>
   );
 }

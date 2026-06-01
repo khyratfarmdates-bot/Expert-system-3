@@ -381,10 +381,10 @@ export default function Subcontractors() {
 
       {/* Add Subcontractor Dialog */}
       <Dialog open={isAddSubDialogOpen} onOpenChange={setIsAddSubDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] text-right rounded-[2rem]" dir="rtl">
+        <DialogContent className="sm:max-w-[500px] text-right rounded-xl" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-primary">إضافة مقاول باطن جديد</DialogTitle>
-            <DialogDescription className="font-bold text-slate-500">
+            <DialogTitle className="text-xl font-bold text-slate-900">إضافة مقاول باطن جديد</DialogTitle>
+            <DialogDescription className="font-semibold text-slate-500 mt-1">
                تسجيل بيانات مقاول جديد وربطه بمشروع
             </DialogDescription>
           </DialogHeader>
@@ -392,34 +392,34 @@ export default function Subcontractors() {
           <form onSubmit={handleAddSubcontractor} className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-2">
-                 <Label className="font-black text-slate-700 mr-1">المقاول / الشركة</Label>
+                 <Label className="font-bold text-slate-700 mr-1 text-xs">المقاول / الشركة</Label>
                  <Input 
                    placeholder="اسم المقاول..." 
                    value={subForm.name}
                    onChange={(e) => setSubForm({...subForm, name: e.target.value})}
-                   className="h-11 rounded-xl bg-slate-50 border-none font-bold"
+                   className="h-10 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold"
                    required
                  />
                </div>
                <div className="space-y-2">
-                 <Label className="font-black text-slate-700 mr-1">نوع الخدمة</Label>
+                 <Label className="font-bold text-slate-700 mr-1 text-xs">نوع الخدمة</Label>
                  <Input 
                    placeholder="مثال: سباكة، كهرباء..." 
                    value={subForm.serviceType}
                    onChange={(e) => setSubForm({...subForm, serviceType: e.target.value})}
-                   className="h-11 rounded-xl bg-slate-50 border-none font-bold"
+                   className="h-10 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold"
                    required
                  />
                </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="font-black text-slate-700 mr-1">المشروع المرتبط</Label>
+              <Label className="font-bold text-slate-700 mr-1 text-xs">المشروع المرتبط</Label>
               <Select value={subForm.projectId} onValueChange={(v) => setSubForm({...subForm, projectId: v})}>
-                <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none font-bold">
+                <SelectTrigger className="h-10 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold">
                   <SelectValue placeholder="اختر المشروع" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-lg">
                   {projects.map(p => (
                     <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
                   ))}
@@ -429,35 +429,35 @@ export default function Subcontractors() {
 
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-2">
-                 <Label className="font-black text-slate-700 mr-1">إجمالي مبلغ العقد</Label>
+                 <Label className="font-bold text-slate-700 mr-1 text-xs">إجمالي مبلغ العقد</Label>
                  <Input 
                    type="number"
                    placeholder="0.00" 
                    value={subForm.contractAmount}
                    onChange={(e) => setSubForm({...subForm, contractAmount: e.target.value})}
-                   className="h-11 rounded-xl bg-slate-50 border-none font-bold"
+                   className="h-10 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold"
                    required
                  />
                </div>
                <div className="space-y-2">
-                 <Label className="font-black text-slate-700 mr-1">الدفعة الأولى (إن وجد)</Label>
+                 <Label className="font-bold text-slate-700 mr-1 text-xs">الدفعة الأولى (إن وجد)</Label>
                  <Input 
                    type="number"
                    placeholder="0.00" 
                    value={subForm.paidAmount}
                    onChange={(e) => setSubForm({...subForm, paidAmount: e.target.value})}
-                   className="h-11 rounded-xl bg-slate-50 border-none font-bold"
+                   className="h-10 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold"
                  />
                </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="font-black text-slate-700 mr-1">بيانات التواصل</Label>
+              <Label className="font-bold text-slate-700 mr-1 text-xs">بيانات التواصل</Label>
               <Input 
                 placeholder="رقم الهاتف أو العنوان..." 
                 value={subForm.contact}
                 onChange={(e) => setSubForm({...subForm, contact: e.target.value})}
-                className="h-11 rounded-xl bg-slate-50 border-none font-bold"
+                className="h-10 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold"
               />
             </div>
 
@@ -465,9 +465,9 @@ export default function Subcontractors() {
                <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="w-full h-12 bg-primary hover:bg-black text-white rounded-2xl font-black gap-2 transition-all"
+                className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold gap-2 transition-all cursor-pointer text-xs"
                >
-                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                  حفظ بيانات المقاول
                </Button>
             </DialogFooter>
@@ -477,32 +477,32 @@ export default function Subcontractors() {
 
       {/* Payment Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[450px] text-right rounded-[2rem]" dir="rtl">
+        <DialogContent className="sm:max-w-[450px] text-right rounded-xl" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-primary">تسجيل دفعة لمقاول</DialogTitle>
-            <DialogDescription className="font-bold text-slate-500">
+            <DialogTitle className="text-xl font-bold text-slate-900">تسجيل دفعة لمقاول</DialogTitle>
+            <DialogDescription className="font-semibold text-slate-500 mt-1">
                صرف مبالغ مالية مقابل خدمات مقدمة من {selectedSub?.name}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAddPayment} className="space-y-6 pt-4">
-            <div className="bg-slate-50 p-4 rounded-2xl flex items-center justify-between">
+          <form onSubmit={handleAddPayment} className="space-y-4 pt-4">
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex items-center justify-between">
                <div>
                   <p className="text-[10px] text-slate-400 font-bold uppercase">المبلغ المتبقي للمقاول</p>
-                  <p className="text-lg font-black text-amber-600">
+                  <p className="text-base font-bold text-amber-600">
                     {(selectedSub ? selectedSub.contractAmount - selectedSub.paidAmount : 0).toLocaleString()} ر.س
                   </p>
                </div>
                <div className="text-left">
                   <p className="text-[10px] text-slate-400 font-bold uppercase">إجمالي العقد</p>
-                  <p className="text-sm font-bold text-primary">
+                  <p className="text-xs font-bold text-slate-700">
                     {selectedSub?.contractAmount.toLocaleString()} ر.س
                   </p>
                </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="font-black text-slate-700 mr-1">قيمة الدفعة الحالية</Label>
+              <Label className="font-bold text-slate-700 mr-1 text-xs">قيمة الدفعة الحالية</Label>
               <div className="relative">
                 <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
                 <Input 
@@ -510,7 +510,7 @@ export default function Subcontractors() {
                   placeholder="0.00" 
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="pr-10 h-12 rounded-xl bg-slate-50 border-none font-black text-xl text-emerald-600"
+                  className="pr-10 h-10 rounded-lg bg-slate-50 border border-slate-200 font-bold text-base text-emerald-600"
                   required
                 />
               </div>
@@ -518,24 +518,24 @@ export default function Subcontractors() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="font-black text-slate-700 mr-1">طريقة الصرف</Label>
+                <Label className="font-bold text-slate-700 mr-1 text-xs">طريقة الصرف</Label>
                 <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
-                  <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                  <SelectTrigger className="h-10 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-lg">
                     <SelectItem value="cash">نقداً (كاش)</SelectItem>
                     <SelectItem value="transfer">تحويل بنكي</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="font-black text-slate-700 mr-1">الحساب المصدر</Label>
+                <Label className="font-bold text-slate-700 mr-1 text-xs">الحساب المصدر</Label>
                 <Select value={bankAccountId} onValueChange={setBankAccountId}>
-                  <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                  <SelectTrigger className="h-10 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold">
                     <SelectValue placeholder="اختر الحساب" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-lg">
                     {bankAccounts.map(acc => (
                       <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
                     ))}
@@ -548,9 +548,9 @@ export default function Subcontractors() {
                <Button 
                 type="submit" 
                 disabled={isSubmitting || !bankAccountId}
-                className="w-full h-14 bg-primary hover:bg-black text-white rounded-2xl font-black text-lg gap-2 shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]"
+                className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs gap-2 transition-all cursor-pointer"
                >
-                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
+                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                  اعتماد الصرف الآن
                </Button>
             </DialogFooter>
@@ -560,27 +560,27 @@ export default function Subcontractors() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[400px] text-right rounded-3xl" dir="rtl">
+        <DialogContent className="sm:max-w-[400px] text-right rounded-xl" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black text-red-600">تأكيد أرشفة المقاول</DialogTitle>
-            <DialogDescription className="font-bold text-slate-500 py-2">
+            <DialogTitle className="text-base font-bold text-red-600">تأكيد أرشفة المقاول</DialogTitle>
+            <DialogDescription className="font-semibold text-slate-500 py-1.5 text-xs mt-1">
               هل أنت متأكد من رغبتك في نقل المقاول "{subToDelete?.name}" إلى سلة المهملات؟ 
               ستتمكن من استعادة بياناته وتاريخ تعاملاته خلال 30 يوماً.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-4 mt-4">
+          <div className="flex gap-4 mt-4 text-xs">
              <Button 
               variant="destructive" 
               onClick={confirmDeleteSub}
               disabled={isSubmitting}
-              className="flex-1 rounded-xl h-11 font-black"
+              className="flex-1 rounded-lg h-9 font-bold text-xs cursor-pointer"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'نعم، أرشفة'}
+              {isSubmitting ? <Loader2 className="w-3 h-3 animate-spin mx-auto text-white" /> : 'نعم، أرشفة'}
             </Button>
             <Button 
               variant="outline" 
               onClick={() => setIsDeleteConfirmOpen(false)}
-              className="flex-1 rounded-xl h-11 font-black text-slate-500"
+              className="flex-1 rounded-lg h-9 font-bold text-slate-500 text-xs cursor-pointer"
             >إلغاء</Button>
           </div>
         </DialogContent>
@@ -594,78 +594,78 @@ function SubcontractorCard({ sub, projectName, onAddPayment, onDelete }: { key?:
   const progress = (sub.paidAmount / sub.contractAmount) * 100;
 
   return (
-    <Card className="rounded-[2rem] border-none shadow-sm hover:shadow-md transition-all group overflow-hidden bg-white">
+    <Card className="rounded-xl border border-slate-200/60 shadow-sm hover:shadow-md transition-all group overflow-hidden bg-white">
       <CardContent className="p-0">
          <div className="flex flex-col lg:flex-row">
             {/* Main Info */}
-            <div className="flex-1 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
-               <div className="w-20 h-20 rounded-3xl bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 shadow-inner group-hover:bg-primary group-hover:text-white transition-all duration-500">
-                  <Users className="w-10 h-10" />
+            <div className="flex-1 p-5 md:p-6 flex flex-col md:flex-row items-center gap-5">
+               <div className="w-14 h-14 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center shrink-0 border border-slate-200 shadow-3xs group-hover:bg-slate-900 group-hover:text-white transition-all duration-350">
+                  <Users className="w-6 h-6" />
                </div>
                
                <div className="flex-1 text-center md:text-right">
-                  <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
-                     <h3 className="text-xl font-black text-slate-800">{sub.name}</h3>
-                     <Badge className={`w-fit mx-auto md:mx-0 border-none px-3 py-0.5 text-[10px] font-black ${
-                       sub.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1.5">
+                     <h3 className="text-base font-bold text-slate-800">{sub.name}</h3>
+                     <Badge className={`w-fit mx-auto md:mx-0 border-none px-2 py-0.5 text-[9px] font-bold ${
+                       sub.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-blue-50 text-blue-700 border border-blue-100'
                      }`}>
                         {sub.status === 'completed' ? 'تمت التسوية' : 'نشط'}
                      </Badge>
                   </div>
                   
-                  <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm font-bold text-slate-400">
-                     <div className="flex items-center gap-1.5">
-                        <Wallet className="w-3.5 h-3.5" />
+                  <div className="flex flex-wrap justify-center md:justify-start gap-3 text-xs font-semibold text-slate-400">
+                     <div className="flex items-center gap-1">
+                        <Wallet className="w-3.5 h-3.5 text-slate-400" />
                         <span>{sub.serviceType}</span>
                      </div>
-                     <div className="flex items-center gap-1.5 font-black text-slate-500">
-                        <Briefcase className="w-3.5 h-3.5" />
+                     <div className="flex items-center gap-1 font-bold text-slate-500">
+                        <Briefcase className="w-3.5 h-3.5 text-slate-400" />
                         <span>{projectName}</span>
                      </div>
-                     <div className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" />
+                     <div className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5 text-slate-400" />
                         <span>{sub.contact || 'لا يوجد تواصل'}</span>
                      </div>
                      <Button 
                         variant="ghost" 
                         size="icon" 
                         onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete();
+                           e.stopPropagation();
+                           onDelete();
                         }}
-                        className="w-8 h-8 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 -mr-2"
+                        className="w-7 h-7 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 -mr-1 cursor-pointer"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                   </div>
                </div>
             </div>
 
             {/* Financial Side */}
-            <div className="lg:w-96 bg-slate-50/50 p-6 md:p-8 border-r border-dashed border-slate-200">
-               <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="lg:w-80 bg-slate-50/50 p-5 md:p-6 border-r border-dashed border-slate-200 flex flex-col justify-between">
+               <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">إجمالي العقد</p>
-                     <p className="text-lg font-black text-primary">{sub.contractAmount.toLocaleString()} <span className="text-[10px] font-normal opacity-50">ر.س</span></p>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">إجمالي العقد</p>
+                     <p className="text-base font-bold text-slate-850">{sub.contractAmount.toLocaleString()} <span className="text-[9px] font-normal opacity-50">ر.س</span></p>
                   </div>
                   <div>
-                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">المتبقي</p>
-                     <p className={`text-lg font-black ${remaining > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                        {remaining.toLocaleString()} <span className="text-[10px] font-normal opacity-50">ر.س</span>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">المتبقي</p>
+                     <p className={`text-base font-bold ${remaining > 0 ? 'text-amber-600' : 'text-emerald-500'}`}>
+                        {remaining.toLocaleString()} <span className="text-[9px] font-normal opacity-50">ر.س</span>
                      </p>
                   </div>
                </div>
 
-               <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[10px] font-black uppercase">
-                     <span>المدفوع: {sub.paidAmount.toLocaleString()} ر.س</span>
+               <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[9px] font-bold uppercase">
+                     <span className="text-slate-400">المدفوع: {sub.paidAmount.toLocaleString()} ر.س</span>
                      <span className="text-emerald-600">{Math.round(progress)}%</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-slate-250 rounded-full overflow-hidden">
                      <motion.div 
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
-                        className={`h-full ${progress >= 100 ? 'bg-emerald-500' : 'bg-primary'}`}
+                        className={`h-full ${progress >= 100 ? 'bg-emerald-500' : 'bg-slate-900'}`}
                      />
                   </div>
                </div>
@@ -673,10 +673,10 @@ function SubcontractorCard({ sub, projectName, onAddPayment, onDelete }: { key?:
                <Button 
                 onClick={onAddPayment}
                 disabled={remaining <= 0}
-                className="w-full mt-6 rounded-2xl h-12 bg-white hover:bg-primary hover:text-white text-primary border-2 border-primary/10 shadow-sm font-black transition-all group/btn"
+                className="w-full mt-4 rounded-lg h-9 bg-white hover:bg-slate-900 hover:text-white text-slate-800 border border-slate-200 shadow-sm font-bold transition-all text-xs cursor-pointer flex items-center justify-center gap-1"
                >
-                  <DollarSign className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
-                  تسجيل دفعة جديدة
+                  <DollarSign className="w-3.5 h-3.5" />
+                  تسجيل دفع دفعة
                </Button>
             </div>
          </div>
@@ -695,17 +695,16 @@ interface SummaryCardProps {
 
 function SummaryCard({ title, value, icon: Icon, color, highlight }: SummaryCardProps) {
   return (
-    <Card className={`rounded-3xl border-none shadow-sm bg-white overflow-hidden relative group ${highlight ? 'ring-2 ring-primary/20' : ''}`}>
-      <div className={`absolute top-0 right-0 w-24 h-24 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110 duration-700 ${color.replace('text', 'bg')}/5`} />
-      <CardContent className="p-6">
-        <div className="flex items-center gap-4">
-          <div className={`p-4 rounded-2xl ${color.replace('text', 'bg')}/10 ${color}`}>
-            <Icon className="w-6 h-6" />
+    <Card className={`rounded-xl border border-slate-200/60 shadow-sm bg-white overflow-hidden relative group ${highlight ? 'ring-2 ring-primary/20' : ''}`}>
+      <CardContent className="p-5">
+        <div className="flex items-center gap-3.5">
+          <div className={`p-2.5 rounded-lg ${color.replace('text', 'bg')}/10 ${color}`}>
+            <Icon className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">{title}</p>
-            <h3 className={`text-2xl font-black ${color} mt-1`}>
-               {value.toLocaleString()} <span className="text-sm font-bold opacity-40">ر.س</span>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{title}</p>
+            <h3 className={`text-lg font-bold ${color} mt-0.5`}>
+               {value.toLocaleString()} <span className="text-xs font-normal opacity-40">ر.س</span>
             </h3>
           </div>
         </div>

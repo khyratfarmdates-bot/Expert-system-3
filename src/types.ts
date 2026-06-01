@@ -113,9 +113,14 @@ export interface DailyLog {
 export interface BankAccount {
   id: string;
   name: string;
+  accountNumber?: string;
   iban?: string;
+  ibanCertificateUrl?: string;
   type: 'bank' | 'cash';
   initialBalance: number;
+  status: 'active' | 'suspended';
+  bankName?: string;
+  lastUpdated?: any;
 }
 
 export interface Transaction {

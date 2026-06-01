@@ -35,22 +35,26 @@ export default function GlobalNotificationListener() {
 
   const playNotificationSound = (priority: string = 'high') => {
     try {
-      // Different sounds based on priority
-      const soundUrl = priority === 'critical' 
-        ? 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3' // Siren/Alarm
-        : 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'; // Standard bell
-        
-      const audio = new Audio(soundUrl);
-      audio.volume = priority === 'critical' ? 0.8 : 0.6;
-      audio.play().catch(e => {
-        console.log("Sound play blocked. Prompting user interaction.");
-        toast.info("تم استقبال إشعار جديد - يرجى الضغط للسماح بالتنبيهات الصوتية", {
-          action: {
-            label: "تفعيل الصوت",
-            onClick: () => audio.play()
-          }
-        });
-      });
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      const freq = priority === 'critical' ? 880 : 587.33; 
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, ctx.currentTime + 0.12);
+      
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start();
+      osc.stop(ctx.currentTime + 0.6);
     } catch (e) {
       console.log("Audio play error:", e);
     }

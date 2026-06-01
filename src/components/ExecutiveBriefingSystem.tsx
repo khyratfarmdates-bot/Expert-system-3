@@ -126,7 +126,7 @@ export default function ExecutiveBriefingSystem() {
           id: 'team-1',
           type: 'action',
           title: 'تحديث تقييمات الموظفين',
-          description: 'يحين موعد التقييم الربع سنوي لبعض أعضاء الفريق الفني الأسبوع القادم.',
+          description: 'يحين موعد التقييم الربع سنوي لبعض الكفاءات والكوادر الفنية بالميدان.',
           priority: 'medium',
           icon: Users,
           category: 'الموارد البشرية'
@@ -150,48 +150,47 @@ export default function ExecutiveBriefingSystem() {
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-5xl mx-auto" dir="rtl">
       {/* Header Section with Voice Briefing Controls */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 relative overflow-hidden rounded-[3rem] bg-zinc-900 border border-white/5 text-white p-8 md:p-12 shadow-2xl">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full -mr-48 -mt-48 blur-[100px] animate-pulse" />
-          <div className="relative z-10 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 relative overflow-hidden rounded-xl bg-slate-900 border border-slate-800 text-white p-6 md:p-8 shadow-sm">
+          <div className="relative z-10 space-y-3">
             <div className="flex items-center gap-3">
-               <div className="p-3 bg-primary/20 rounded-2xl border border-white/10 backdrop-blur-xl">
-                  <Zap className="w-8 h-8 text-primary" />
+               <div className="p-2.5 bg-white/10 rounded-lg">
+                  <Zap className="w-5 h-5 text-amber-400" />
                </div>
                <div>
-                  <h1 className="text-3xl md:text-5xl font-black tracking-tighter">مساعد القيادة التنفيذي</h1>
-                  <p className="text-zinc-500 font-bold uppercase tracking-[0.2em] text-xs">Executive Strategic Briefing</p>
+                  <h1 className="text-lg md:text-xl font-bold tracking-tight text-white">المساعد الذكي للقيادة التنفيذية</h1>
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Executive Strategic Briefing</p>
                </div>
             </div>
-            <p className="text-zinc-400 max-w-2xl text-sm md:text-lg font-medium leading-relaxed">
-               مرحباً بك في نظام الإرشاد المتكامل. تم تصميم هذه الصفحة لتمنحك رؤية استباقية وتوجيهات دقيقة لإدارة العمليات اليومية بكفاءة عالية.
+            <p className="text-slate-300 max-w-2xl text-xs md:text-sm font-medium leading-relaxed">
+               أهلاً بك في نظام الإرشاد المباشر للمؤسسة. تم تحليل السجلات والتدفقات لإبراز أهم البنود المعلقة التي تحتاج لمتابعتك اليومية.
             </p>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-[3rem] bg-white border border-slate-200 p-8 shadow-xl flex flex-col justify-between">
-           <div className="space-y-4">
+        <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+           <div className="space-y-3">
               <div className="flex items-center justify-between">
-                 <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                    <Volume2 className="w-5 h-5 text-primary" /> التقرير الصوتي الذكي
+                 <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                    <Volume2 className="w-4 h-4 text-slate-700" /> التقرير الصوتي الذكي
                  </h3>
-                 <Button variant="ghost" size="icon" className="rounded-full text-slate-400 hover:text-primary">
-                    <Settings2 className="w-4 h-4" />
+                 <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md text-slate-400 hover:text-primary">
+                    <Settings2 className="w-3.5 h-3.5" />
                  </Button>
               </div>
-              <p className="text-xs font-bold text-slate-500 leading-relaxed">
-                 احصل على ملخص صوتي مخصص لحالة العمل الآن بناءً على تفضيلاتك الحالية.
+              <p className="text-[10px] font-semibold text-slate-400 leading-relaxed">
+                 استمع إلى ملخص تنفيذي سريع بناءً على نطاق التركيز الذي تحدده:
               </p>
               
               <div className="grid grid-cols-2 gap-2">
                  <div className="space-y-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase mr-1">التركيز</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">التركيز الأساسي</span>
                     <select 
                       value={voiceConfig.focus}
                       onChange={(e) => setVoiceConfig({...voiceConfig, focus: e.target.value})}
-                      className="w-full text-[10px] font-black p-2 rounded-xl bg-slate-50 border-none outline-none appearance-none"
+                      className="w-full text-[10px] font-bold p-1.5 rounded bg-slate-50 border border-slate-200 outline-none"
                     >
                        <option value="financial">المالية والسيولة</option>
                        <option value="operations">العمليات والمشاريع</option>
@@ -200,11 +199,11 @@ export default function ExecutiveBriefingSystem() {
                     </select>
                  </div>
                  <div className="space-y-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase mr-1">نبرة الصوت</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">نبرة الإلقاء</span>
                     <select 
                       value={voiceConfig.tone}
                       onChange={(e) => setVoiceConfig({...voiceConfig, tone: e.target.value})}
-                      className="w-full text-[10px] font-black p-2 rounded-xl bg-slate-50 border-none outline-none appearance-none"
+                      className="w-full text-[10px] font-bold p-1.5 rounded bg-slate-50 border border-slate-200 outline-none"
                     >
                        <option value="professional">رسمي واحترافي</option>
                        <option value="energetic">حماسي ومحفز</option>
@@ -214,27 +213,27 @@ export default function ExecutiveBriefingSystem() {
               </div>
            </div>
 
-           <div className="pt-6">
+           <div className="pt-4">
               {isSpeaking ? (
                 <Button 
                   onClick={stopSpeaking}
-                  className="w-full rounded-2xl bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-200 h-14 gap-4 animate-pulse"
+                  className="w-full rounded-lg bg-rose-600 hover:bg-rose-700 text-white h-10 gap-2 animate-pulse cursor-pointer"
                 >
-                   <Square className="w-6 h-6 fill-white" />
-                   <span className="text-sm font-black italic">جاري التحدث... اضغط للإيقاف</span>
+                   <Square className="w-4 h-4 fill-white" />
+                   <span className="text-xs font-bold">جاري التحدث... اضغط لإيقاف الصوت</span>
                 </Button>
               ) : (
                 <Button 
                   onClick={generateVoiceBrief}
                   disabled={isGeneratingBrief}
-                  className="w-full rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 h-14 gap-4"
+                  className="w-full rounded-lg bg-slate-900 hover:bg-slate-800 text-white h-10 gap-2 cursor-pointer"
                 >
                    {isGeneratingBrief ? (
-                     <Loader2 className="w-6 h-6 animate-spin" />
+                     <Loader2 className="w-4 h-4 animate-spin" />
                    ) : (
-                     <Play className="w-6 h-6 fill-white" />
+                     <Play className="w-4 h-4 fill-white" />
                    )}
-                   <span className="text-sm font-black">تشغيل الملخص الصوتي الذكي</span>
+                   <span className="text-xs font-bold">تشغيل التقرير المباشر صوتياً</span>
                 </Button>
               )}
            </div>
@@ -242,76 +241,73 @@ export default function ExecutiveBriefingSystem() {
       </div>
 
       {/* Control Panel */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-4">
-         <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+         <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 self-start">
             <button 
               onClick={() => setActiveFilter('all')}
-              className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeFilter === 'all' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-primary'}`}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${activeFilter === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
             >
                الكل
             </button>
             <button 
               onClick={() => setActiveFilter('high')}
-              className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeFilter === 'high' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-rose-600'}`}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${activeFilter === 'high' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-rose-600'}`}
             >
                عالي الأولوية
             </button>
             <button 
               onClick={() => setActiveFilter('pending')}
-              className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${activeFilter === 'pending' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-amber-600'}`}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${activeFilter === 'pending' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-amber-600'}`}
             >
-               قيد الانتظار
+               نشط ومقترح
             </button>
          </div>
-         <Badge variant="outline" className="border-emerald-100 text-emerald-600 bg-emerald-50 px-4 py-1 rounded-full font-black text-[10px]">
-            تحديث مباشر: {new Date().toLocaleTimeString('ar-SA')}
+         <Badge variant="outline" className="border-slate-200 text-slate-600 bg-slate-50 px-3 py-1 rounded-md font-bold text-[9px] self-start">
+            تحديث الفهرسة الفورية: {new Date().toLocaleTimeString('ar-SA')}
          </Badge>
       </div>
 
       {/* Grid of Briefs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
          <AnimatePresence mode="popLayout">
             {filteredItems.map((item, idx) => (
                <motion.div
                  key={item.id}
-                 initial={{ opacity: 0, y: 20 }}
+                 initial={{ opacity: 0, y: 15 }}
                  animate={{ opacity: 1, y: 0 }}
-                 exit={{ opacity: 0, scale: 0.95 }}
-                 transition={{ delay: idx * 0.1 }}
+                 exit={{ opacity: 0, scale: 0.98 }}
+                 transition={{ delay: idx * 0.05 }}
                >
-                  <Card className={`rounded-[2.5rem] border-none shadow-xl h-full transition-all hover:scale-[1.02] border-t-4 ${
-                     item.priority === 'high' ? 'bg-rose-50/30' : 
-                     item.priority === 'medium' ? 'bg-slate-50' : 'bg-zinc-50'
-                  }`}>
-                     <CardHeader className="p-8 pb-4">
+                  <Card className={`rounded-xl border border-slate-200/70 shadow-sm h-full transition-all hover:border-slate-300 bg-white`}>
+                     <CardHeader className="p-5 pb-3">
                         <div className="flex items-start justify-between">
-                           <div className={`p-4 rounded-3xl ${
-                              item.priority === 'high' ? 'bg-rose-500 text-white' : 
-                              item.priority === 'medium' ? 'bg-slate-900 text-white' : 'bg-white border text-primary'
+                           <div className={`p-2 rounded-lg ${
+                              item.priority === 'high' ? 'bg-rose-50 text-rose-700 border border-rose-100' : 
+                              item.priority === 'medium' ? 'bg-slate-50 text-slate-800 border border-slate-200' : 'bg-slate-50 text-slate-600 border border-slate-200'
                            }`}>
-                              <item.icon className="w-6 h-6" />
+                              <item.icon className="w-5 h-5" />
                            </div>
-                           <Badge className={`border-none px-3 py-1 font-black ${
-                              item.priority === 'high' ? 'bg-rose-100 text-rose-700' :
-                              item.priority === 'medium' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
+                           <Badge variant="outline" className={`border-none px-2 py-0.5 font-bold text-[9px] ${
+                              item.priority === 'high' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                              item.priority === 'medium' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-slate-50 text-slate-600 border border-slate-100'
                            }`}>
                               {item.category}
                            </Badge>
                         </div>
-                        <CardTitle className="text-xl font-black mt-6 tracking-tight">{item.title}</CardTitle>
-                        <CardDescription className="text-sm font-bold text-slate-500 mt-2 leading-relaxed">{item.description}</CardDescription>
+                        <CardTitle className="text-sm font-bold text-slate-800 mt-4 tracking-tight">{item.title}</CardTitle>
+                        <CardDescription className="text-xs font-semibold text-slate-500 mt-1 leading-relaxed">{item.description}</CardDescription>
                      </CardHeader>
-                     <CardContent className="p-8 pt-6 border-t border-slate-100">
-                        <div className="space-y-4">
+                     <CardContent className="p-5 pt-4 border-t border-slate-100 bg-slate-50/40">
+                        <div className="space-y-3">
                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black uppercase text-slate-400">الإجراء المقترح</span>
-                              <Button variant="ghost" size="sm" className="text-primary font-black text-xs hover:bg-primary/5 gap-2">
-                                 فتح التفاصيل <ArrowRight className="w-3 h-3" />
+                              <span className="text-[9px] font-bold uppercase text-slate-400">الإجراء المقترح والمستحب</span>
+                              <Button variant="link" size="sm" className="text-blue-600 font-bold text-[11px] h-auto p-0 gap-1 hover:text-blue-700">
+                                 عرض البند والعمليات <ArrowRight className="w-3 h-3" />
                               </Button>
                            </div>
-                           <div className="bg-white/50 p-4 rounded-2xl border border-slate-200">
-                              <p className="text-[11px] font-bold text-slate-700 italic">
-                                 "يُنصح بمراجعة هذا البند قبل نهاية اليوم لضمان عدم تأثر السير العام."
+                           <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-3xs">
+                              <p className="text-[10px] font-bold text-slate-600">
+                                 "يُنصح بمراجعة هذا البند لضمان اتساق العمل الفني والميداني بالمواقع دون تأخير."
                               </p>
                            </div>
                         </div>
@@ -323,21 +319,22 @@ export default function ExecutiveBriefingSystem() {
       </div>
 
       {/* Strategic Vision Footer */}
-      <Card className="rounded-[3rem] bg-gradient-to-br from-indigo-900 to-slate-900 text-white border-none shadow-2xl overflow-hidden relative p-8 md:p-12">
-         <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/20 rounded-full -ml-32 -mb-32 blur-3xl" />
-         <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-            <div className="bg-white/10 p-6 rounded-full backdrop-blur-xl">
-               <Sparkles className="w-12 h-12 text-indigo-400" />
+      <Card className="rounded-xl bg-slate-900 text-white border border-slate-800 shadow-sm relative p-6 md:p-8">
+         <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+            <div className="bg-white/10 p-4 rounded-lg hidden md:block">
+               <Sparkles className="w-8 h-8 text-amber-400" />
             </div>
-            <div className="flex-1 space-y-4 text-center md:text-right">
-               <h3 className="text-2xl font-black tracking-tight">الرؤية الاستراتيجية الأسبوعية</h3>
-               <p className="text-indigo-200 text-sm md:text-base font-medium leading-relaxed">
-                  تذكر أن هدفنا لهذا الشهر هو رفع نسبة كفاءة التسليم الميداني بنسبة 15%. التركيز الحالي يجب أن ينصب على تقليل الفواصل الزمنية بين اعتماد المشتريات وبدء التنفيذ.
+            <div className="flex-1 space-y-2 text-right">
+               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 justify-end">
+                  <Sparkles className="w-4 h-4 text-amber-400 md:hidden" />
+                  التوجيه الاستراتيجي للمؤسسة
+               </h3>
+               <p className="text-slate-300 text-xs font-medium leading-relaxed">
+                  تذكر أن هدفنا التشغيلي تصفير المعلقات وتقليص الفواصل الزمنية المعتادة لإنهاء طلبات المواقع من المواد والمعدات بنسبة 15%. التركيز الحالي ينصب على سلاسة التوريد.
                </p>
-               <div className="flex flex-wrap justify-center md:justify-end gap-3 pt-4">
-                  <Badge className="bg-white/10 text-white border-none py-1.5 px-4 font-black">تحسين العمليات</Badge>
-                  <Badge className="bg-white/10 text-white border-none py-1.5 px-4 font-black">رضا العملاء</Badge>
-                  <Badge className="bg-white/10 text-white border-none py-1.5 px-4 font-black">الجودة الفنية</Badge>
+               <div className="flex flex-wrap justify-end gap-2 pt-2">
+                  <Badge className="bg-white/10 text-white border-none py-0.5 px-2 text-[9px] font-bold">رفع كفاءة الدورة المستندية</Badge>
+                  <Badge className="bg-white/10 text-white border-none py-0.5 px-2 text-[9px] font-bold">انسيابية التوريد الميداني</Badge>
                </div>
             </div>
          </div>

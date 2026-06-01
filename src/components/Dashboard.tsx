@@ -319,8 +319,8 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
     <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto px-4 sm:px-6 mb-24 py-4" dir="rtl">
       {/* Compact Header Section */}
       <div className="flex flex-col gap-0 mb-1 px-2">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+        <div className="flex flex-row items-center justify-start gap-2 md:gap-4 overflow-hidden">
+          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 shrink-0">
             لوحة التحكم
             <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none font-black text-[8px] h-4">V2.1</Badge>
           </h1>
@@ -329,23 +329,23 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="animate-in fade-in slide-in-from-left-4 duration-700 max-w-[150px] md:max-w-xs"
+              className="animate-in fade-in slide-in-from-left-4 duration-700 max-w-[150px] md:max-w-xs overflow-hidden shrink"
             >
               <Dialog>
                 <DialogTrigger asChild>
-                  <span className="text-[9px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20 shadow-sm block truncate cursor-pointer hover:bg-primary/20 transition-colors">
-                    {generalAnnouncement}
+                  <span className="text-[9px] font-bold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 block truncate cursor-pointer hover:bg-slate-100 transition-colors">
+                    📢 {generalAnnouncement}
                   </span>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] rounded-3xl p-6 border-none shadow-2xl" dir="rtl">
+                <DialogContent className="sm:max-w-[425px] rounded-xl p-5 border border-slate-200 bg-white" dir="rtl">
                    <DialogHeader>
-                     <DialogTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
-                       <Bell className="w-5 h-5 text-primary" />
-                       رسالة إدارية
+                     <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                       <Bell className="w-4 h-4 text-slate-600" />
+                       الرسالة العامة والتوجه الإداري
                      </DialogTitle>
                    </DialogHeader>
-                   <div className="mt-4 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
-                     <p className="text-slate-700 font-bold leading-relaxed text-sm">
+                   <div className="mt-3.5 p-4 bg-slate-50 rounded-lg border border-slate-200 flex items-start gap-3.5">
+                     <p className="text-slate-700 font-medium leading-relaxed text-xs">
                        {generalAnnouncement}
                      </p>
                    </div>
@@ -416,8 +416,8 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
         </div>
       )}
 
-      {/* Unified Quick Actions Bar - App-like Feel */}
-      <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md p-2 rounded-[2rem] border border-slate-100 shadow-sm overflow-x-auto no-scrollbar mx-1">
+      {/* Unified Quick Actions Bar - Professional Design */}
+      <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/60 shadow-sm overflow-x-auto no-scrollbar mx-1">
         <div className="flex gap-2 min-w-max px-1">
           <ActionButton icon={Users} label="العمالة" color="bg-primary text-white shadow-md shadow-primary/20" onClick={() => goToTab('workers_management')} />
           <ActionButton icon={Scan} label="رفع ميداني" color="bg-slate-900 text-white shadow-md shadow-black/10" onClick={() => goToTab('camera')} />
@@ -509,10 +509,10 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
 
       {/* Management Quick Insight - Replaces huge cards */}
       {isManager && (aiInsight || briefing.length > 0) && (
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl md:rounded-3xl p-3 md:p-5 flex flex-col md:flex-row gap-4 md:gap-6 shadow-sm">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 md:p-5 flex flex-col md:flex-row gap-4 md:gap-6 shadow-sm">
           {aiInsight && (
             <div className="flex-1 flex gap-2 md:gap-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-indigo-500  flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0">
                 <Zap className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>
               <div>
@@ -526,14 +526,14 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
           )}
           {briefing.length > 0 && (
             <div className="flex-1 flex gap-2 md:gap-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-emerald-500  flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0">
                 <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>
               <div className="w-full">
                 <span className="text-[9px] md:text-[10px] font-black uppercase text-emerald-500 block mb-0.5 md:mb-1">موجز الإدارة</span>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 md:gap-2 mt-0.5 md:mt-1">
                   {briefing.slice(0, 4).map(b => (
-                     <div key={b.id} className="flex items-center gap-1.5 p-1.5 md:p-2 rounded-lg md:rounded-xl bg-white border border-slate-100 text-[9px] md:text-[10px] text-slate-600 font-bold shadow-sm">
+                     <div key={b.id} className="flex items-center gap-1.5 p-1.5 md:p-2 rounded-md bg-white border border-slate-100 text-[9px] md:text-[10px] text-slate-600 font-bold shadow-sm">
                         <b.icon className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-400" />
                         <span className="truncate">{b.text}</span>
                      </div>
@@ -643,7 +643,7 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
         {/* Tactical Intelligence Sidebar */}
         <div className="lg:col-span-4 space-y-8">
           {/* AI Advisor Card */}
-          <Card className="rounded-2xl md:rounded-[2.5rem] border-none shadow-xl bg-slate-900 text-white p-4 md:p-8 relative overflow-hidden group">
+          <Card className="rounded-xl border border-slate-800 shadow-xl bg-slate-950 text-white p-4 md:p-8 relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
             <div className="absolute -top-20 -left-20 w-32 h-32 md:w-64 md:h-64 bg-primary/20 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000" />
             
@@ -693,7 +693,7 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
           </Card>
 
           {/* Quick Transaction Feed */}
-          <Card className="rounded-2xl md:rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
+          <Card className="rounded-xl border border-slate-200/60 shadow-sm bg-white overflow-hidden">
              <CardHeader className="p-4 md:p-8 pb-2 md:pb-4 border-b border-slate-50">
                 <CardTitle className="text-sm md:text-lg font-black text-slate-900">حركات مالية أخيرة</CardTitle>
              </CardHeader>
@@ -731,7 +731,7 @@ function StatCard({ title, value, icon: Icon, color, bg, sub, onClick }: { title
   return (
     <Card 
       onClick={onClick}
-      className={`${bg} rounded-xl md:rounded-[2.5rem] border-none p-2 md:p-6 cursor-pointer transition-all active:scale-95 shadow-sm hover:shadow-md h-full flex flex-col justify-between group`}
+      className={`${bg}/45 bg-white rounded-xl border border-slate-200/60 p-3 md:p-5 cursor-pointer transition-all active:scale-95 shadow-sm hover:shadow-md h-full flex flex-col justify-between group`}
     >
       <div className="flex items-center justify-between mb-1 md:mb-3">
         <div className={`p-1.5 md:p-2.5 rounded-lg md:rounded-2xl bg-white shadow-sm transition-transform group-hover:scale-110 ${color}`}>
@@ -755,13 +755,13 @@ function StatCard({ title, value, icon: Icon, color, bg, sub, onClick }: { title
 function ActionButton({ icon: Icon, label, color, onClick }: any) {
   return (
     <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => {
         onClick?.();
         if ('vibrate' in navigator) navigator.vibrate(10);
       }}
-      className={`${color} flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[11px] font-black tracking-tight border border-transparent transition-all whitespace-nowrap shadow-sm active:shadow-none`}
+      className={`${color} flex items-center gap-2 px-3.5 py-2.0 rounded-lg text-xs font-semibold tracking-tight border border-slate-200/45 transition-all whitespace-nowrap shadow-sm active:shadow-none`}
     >
       <Icon className="w-4 h-4" />
       {label}

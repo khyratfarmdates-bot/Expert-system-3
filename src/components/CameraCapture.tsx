@@ -55,6 +55,8 @@ export default function CameraCapture() {
     }
   }, [mode]);
 
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
   useEffect(() => {
     if (mode === 'auto-scan') {
       startCamera();
@@ -66,12 +68,10 @@ export default function CameraCapture() {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const s = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      setStream(s);
       setIsAutoScanning(true);
       startScanLoop();
     } catch {
@@ -83,12 +83,20 @@ export default function CameraCapture() {
   const stopCamera = () => {
     setIsAutoScanning(false);
     if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
+    if (stream) {
       stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
   };
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
 
   const startScanLoop = () => {
     if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
@@ -405,13 +413,19 @@ export default function CameraCapture() {
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col pt-safe" dir="rtl">
         {/* Video Background */}
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          playsInline 
-          muted 
-          className="w-full h-full object-cover"
-        />
+        {stream ? (
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-slate-900 flex items-center justify-center">
+            <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          </div>
+        )}
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Top UI */}

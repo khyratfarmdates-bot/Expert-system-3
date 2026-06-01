@@ -503,9 +503,22 @@ export default function WorkerView({ workerId, onBack, readOnly = false }: Worke
               const isRecent = data.createdAt?.toMillis ? (Date.now() - data.createdAt.toMillis() < 60000) : true;
               if (isRecent) {
                 try {
-                  const audioUrl = data.priority === 'critical' ? 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3' : 'https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3';
-                  const audio = new Audio(audioUrl);
-                  audio.play().catch(e => console.error("Audio play failed:", e));
+                  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                  if (AudioContext) {
+                    const ctx = new AudioContext();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    const freq = data.priority === 'critical' ? 880 : 587.33;
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 1.5, ctx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.6);
+                  }
                 } catch(e) {}
                 
                 toast.error(data.title || 'إشعار من الإدارة', {
@@ -595,9 +608,24 @@ export default function WorkerView({ workerId, onBack, readOnly = false }: Worke
 
   const testNotifSound = () => {
     try {
-      const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
-      audio.play();
-      toast.info('إذا سمعت الصوت، فإن التنبيهات تعمل جيداً');
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(587.33 * 1.5, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.6);
+        toast.info('إذا سمعت الصوت، فإن التنبيهات تعمل جيداً');
+      } else {
+        toast.error('المستعرض لا يدعم مخرجات الصوت التخليقية');
+      }
     } catch (e) {
       toast.error('لم نتمكن من تشغيل الصوت، تأكد من إعدادات المتصفح');
     }

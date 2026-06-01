@@ -122,7 +122,7 @@ export default function SmartButler() {
   };
 
   return (
-    <div className={`fixed ${isOpen ? 'inset-0 md:inset-auto md:bottom-6 md:left-6' : 'bottom-24 md:bottom-6 left-6'} z-[999] flex flex-col items-end`} dir="rtl">
+    <div className={`fixed ${isOpen ? 'inset-0 md:inset-auto md:bottom-6 md:right-6' : 'bottom-24 md:bottom-6 right-6'} z-[999] flex flex-col items-end`} dir="rtl">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -220,14 +220,14 @@ export default function SmartButler() {
           initial={{ scale: 1 }}
           animate={{ scale: [1, 1.15, 1] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          className="bg-primary text-white w-10.5 h-10.5 md:w-11 md:h-11 rounded-full shadow-2xl flex items-center justify-center relative group"
+          className="bg-primary text-white w-9 h-9 md:w-12 md:h-12 rounded-full shadow-2xl flex items-center justify-center relative group"
         >
-          {isOpen ? <X className="w-5 h-5" /> : <MessageSquare className="w-5 h-5" />}
+          {isOpen ? <X className="w-5 h-5" /> : <MessageSquare className="w-4 h-4 md:w-6 md:h-6" />}
           
-          <div className="absolute -top-0.5 -right-0.5 bg-accent w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] font-bold border-2 border-white shadow-sm">
-             <Sparkles className="w-2 h-2 fill-current" />
+          <div className="absolute -top-0.5 -right-0.5 bg-accent w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-full flex items-center justify-center text-[7px] font-bold border-2 border-white shadow-sm overflow-hidden">
+             <Sparkles className="w-1.5 h-1.5 md:w-2 md:h-2 fill-current" />
           </div>
-          <span className="absolute bottom-full mb-3 left-0 bg-white text-primary px-3 py-1.5 rounded-xl shadow-xl text-[10px] font-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 origin-bottom-left pointer-events-none border border-slate-100">
+          <span className="absolute bottom-full mb-3 right-0 bg-white text-primary px-3 py-1.5 rounded-xl shadow-xl text-[10px] font-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 origin-bottom-right pointer-events-none border border-slate-100">
              هل تحتاج مساعدة؟
           </span>
         </motion.button>

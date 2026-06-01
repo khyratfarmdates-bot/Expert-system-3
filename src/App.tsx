@@ -44,6 +44,7 @@ import {
   Archive as ArchiveIcon,
   Image as ImageIcon,
   MessageCircle,
+  Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -83,6 +84,7 @@ import Expenses from "./components/Expenses";
 import Archive from "./components/Archive";
 import AssetsManagement from "./components/AssetsManagement";
 import Gallery from "./components/Gallery";
+import BankingAndVault from "./components/BankingAndVault";
 
 import Subcontractors from "./components/Subcontractors";
 
@@ -704,27 +706,28 @@ function AppContent() {
                 className="w-8 h-8 object-contain rounded-lg"
               />
             </div>
-            {sysSettings.showWelcomeMessage && (
+            {sysSettings.showWelcomeMessage && sysSettings.generalAnnouncement && (
                <Dialog>
                  <DialogTrigger asChild>
-                   <div className="max-w-[100px] md:max-w-[200px] overflow-hidden truncate cursor-pointer hover:opacity-80 transition-opacity">
-                      <span className="text-[7px] md:text-[9px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10 whitespace-nowrap block truncate">
-                        {sysSettings.generalAnnouncement}
+                   <div className="max-w-[130px] overflow-hidden truncate cursor-pointer hover:opacity-90 transition-opacity ml-2 shrink-0">
+                      <span className="text-[9px] font-bold text-slate-700 bg-slate-50 px-2 py-1 rounded-md border border-slate-200 whitespace-nowrap flex items-center gap-1">
+                        <Volume2 className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="truncate max-w-[80px]">{sysSettings.generalAnnouncement}</span>
                       </span>
                    </div>
                  </DialogTrigger>
-                 <DialogContent className="sm:max-w-[425px] rounded-3xl p-6 border-none shadow-2xl" dir="rtl">
+                 <DialogContent className="sm:max-w-[425px] rounded-xl p-5 border border-slate-200 bg-white" dir="rtl">
                     <DialogHeader>
-                      <DialogTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
-                        <MessageCircle className="w-5 h-5 text-primary" />
-                        رسالة إدارية
+                      <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <Volume2 className="w-4 h-4 text-slate-600" />
+                        الرسالة العامة والتوجه الإداري
                       </DialogTitle>
                     </DialogHeader>
-                    <div className="mt-4 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Bell className="w-5 h-5 text-primary" />
+                    <div className="mt-3.5 p-4 bg-slate-50 rounded-lg border border-slate-200 flex items-start gap-3.5">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 border border-slate-200">
+                        <Bell className="w-4 h-4 text-slate-700" />
                       </div>
-                      <p className="text-slate-700 font-bold leading-relaxed text-sm">
+                      <p className="text-slate-700 font-medium leading-relaxed text-xs">
                         {sysSettings.generalAnnouncement}
                       </p>
                     </div>
@@ -972,29 +975,30 @@ function AppContent() {
               <Menu className="w-6 h-6" />
             </Button>
             <div className="flex flex-col">
-              {sysSettings.showWelcomeMessage && (
+              {sysSettings.showWelcomeMessage && sysSettings.generalAnnouncement && (
                 <Dialog>
                   <DialogTrigger asChild>
-                    <div className="mb-0.5 animate-in fade-in slide-in-from-right-4 duration-1000 delay-500 cursor-pointer hover:opacity-80 transition-opacity">
-                      <div className="inline-flex items-center gap-1.5 bg-primary/10 px-3 py-1 rounded-full border border-primary/20 shadow-sm shadow-primary/5">
-                        <span className="text-[10px] font-black text-primary leading-none max-w-[250px] truncate block">
+                    <div className="mb-0.5 animate-in fade-in slide-in-from-right-4 duration-1000 delay-500 cursor-pointer hover:opacity-90 transition-opacity">
+                      <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2.5 py-0.5 rounded-md border border-slate-200">
+                        <Volume2 className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="text-[10px] font-bold text-slate-700 leading-none max-w-[250px] truncate block">
                           {sysSettings.generalAnnouncement}
                         </span>
                       </div>
                     </div>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px] rounded-3xl p-6 border-none shadow-2xl" dir="rtl">
+                  <DialogContent className="sm:max-w-[425px] rounded-xl p-5 border border-slate-200 bg-white" dir="rtl">
                      <DialogHeader>
-                       <DialogTitle className="text-xl font-black text-slate-800 flex items-center gap-2">
-                         <MessageCircle className="w-5 h-5 text-primary" />
-                         رسالة إدارية
+                       <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                         <Volume2 className="w-4 h-4 text-slate-600" />
+                         الرسالة العامة والتوجه الإداري
                        </DialogTitle>
                      </DialogHeader>
-                     <div className="mt-4 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
-                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                         <Bell className="w-5 h-5 text-primary" />
+                     <div className="mt-3.5 p-4 bg-slate-50 rounded-lg border border-slate-200 flex items-start gap-3.5">
+                       <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 border border-slate-200">
+                         <Bell className="w-4 h-4 text-slate-700" />
                        </div>
-                       <p className="text-slate-700 font-bold leading-relaxed text-sm">
+                       <p className="text-slate-700 font-medium leading-relaxed text-xs">
                          {sysSettings.generalAnnouncement}
                        </p>
                      </div>
@@ -1067,7 +1071,8 @@ function AppContent() {
                   />
                 )}
                 {/* Finance Group */}
-                {(activeTab === "financials" || activeTab === "banking") && <Financials />}
+                {activeTab === "financials" && <Financials />}
+                {activeTab === "banking" && <BankingAndVault />}
                 {activeTab === "expenses" && <Expenses />}
                 {activeTab === "archive" && <Archive />}
                 {activeTab === "gallery" && <Gallery />}
