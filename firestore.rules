@@ -15,7 +15,7 @@ service cloud.firestore {
 
     // Connection Test
     match /_connection_test_/{docId} {
-      allow read: if true;
+      allow read: if isSignedIn();
     }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
@@ -82,7 +82,7 @@ service cloud.firestore {
     // ===============================================================
 
     match /system/settings {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
@@ -188,6 +188,12 @@ service cloud.firestore {
     }
 
     match /projectNotes/{noteId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isElevated() || (isSignedIn() && existing().createdBy == request.auth.uid);
+    }
+
+    match /subcontractorNotes/{noteId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isElevated() || (isSignedIn() && existing().createdBy == request.auth.uid);

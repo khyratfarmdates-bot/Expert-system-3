@@ -40,6 +40,7 @@ import {
   Landmark,
   Receipt,
   Settings,
+  Building2,
   Scan,
   Archive as ArchiveIcon,
   Image as ImageIcon,
@@ -87,6 +88,7 @@ import Gallery from "./components/Gallery";
 import BankingAndVault from "./components/BankingAndVault";
 
 import Subcontractors from "./components/Subcontractors";
+import CompanyProfile from "./components/CompanyProfile";
 
 const scrollbarStyles = `
   .no-scrollbar::-webkit-scrollbar {
@@ -220,6 +222,7 @@ function AppContent() {
       title: "عام",
       items: [
         { id: "dashboard", label: "الرئيسية", icon: LayoutDashboard, roles: ["manager", "supervisor", "employee"] },
+        { id: "company_profile", label: "هوية الشركة", icon: Building2, roles: ["manager"] },
         { id: "briefing", label: "موجز AI", icon: Zap, roles: ["manager"] },
       ],
     },
@@ -1061,6 +1064,7 @@ function AppContent() {
                 transition={{ duration: 0.2 }}
               >
                 {activeTab === "dashboard" && <Dashboard goToTab={setActiveTab} />}
+                {activeTab === "company_profile" && <CompanyProfile />}
                 {activeTab === "analytics" && (
                   <Analytics onBack={() => setActiveTab("dashboard")} />
                 )}

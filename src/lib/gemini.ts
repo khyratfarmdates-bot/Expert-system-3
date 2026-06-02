@@ -91,7 +91,7 @@ export const quickAnalyzeInvoice = async (dataUrl: string): Promise<QuickScanRes
     }
     return { isValidInvoice: false, isBlurry: false, errorReason: "لم يتم التعرف" };
   } catch (error) {
-    console.error("Batch scan error:", error);
+    console.warn("Batch scan warning:", error);
     return { isValidInvoice: false, isBlurry: true, errorReason: "خطأ فني" };
   }
 };
@@ -155,17 +155,53 @@ export const analyzeInvoice = async (dataUrl: string): Promise<InvoiceData> => {
     throw new Error("لم يتم إرجاع أي نص من الذكاء الاصطناعي");
   } catch (error: unknown) {
     const err = error as any;
-    console.error("Error analyzing invoice:", err);
-    if (err.status || err.details) {
-      console.error("Detailed Error:", JSON.stringify(err, null, 2));
-    }
+    console.warn("Invoice analysis warning:", err.message || err);
     throw new Error(err.message || "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي");
   }
 };
 
+export const generateLocalSpendingAnalysis = (projectData: Partial<Project>, transactions: Partial<Transaction>[]): string => {
+  const projName = projectData.title || projectData.name || "المشروع التجريبي";
+  const budget = Number(projectData.budget) || 0;
+  const progress = Number(projectData.progress) || 0;
+
+  // Filter transactions for this project, or default to all if none explicitly linked
+  const projectTxs = transactions && transactions.length > 0
+    ? transactions.filter(t => !t.projectId || t.projectId === projectData.id)
+    : [];
+
+  const totalExpenses = projectTxs
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const totalIncome = projectTxs
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  if (budget <= 0) {
+    const balance = totalIncome - totalExpenses;
+    return `📋 مؤشر أداء مشروع (${projName}): يسير بنسق منتظم بنسبة إنجاز مقدرة بـ ${progress}%. بلغ إجمالي المقبوضات المسجلة ${totalIncome.toLocaleString('en-US')} ريال في حين بلغت المصروفات التشغيلية ${totalExpenses.toLocaleString('en-US')} ريال (صافي السيولة المتوفرة: ${balance.toLocaleString('en-US')} ريال).`;
+  }
+
+  const spendRatio = Math.round((totalExpenses / budget) * 100);
+
+  if (spendRatio > 100) {
+    return `⚠️ تنبيه حرج لمشروع (${projName}): الصرف الفعلي تجاوز قيمة الميزانية الإجمالية بنسبة ${spendRatio}% (المصروفات: ${totalExpenses.toLocaleString('en-US')} ريال مقابل ميزانية مرصودة ${budget.toLocaleString('en-US')} ريال). يوصى بإيقاف الصرف مؤقتاً ومراجعة بنود التكاليف.`;
+  }
+
+  if (spendRatio >= 70) {
+    return `⚠️ إشعار احترازي لمشروع (${projName}): تدفق الصرف يقترب من الحد الأقصى بنسبة ${spendRatio}% من الميزانية المحددة (${totalExpenses.toLocaleString('en-US')} ريال من أصل ${budget.toLocaleString('en-US')} ريال)، بينما نسبة الإنجاز الفعلي للمشروع عند ${progress}%. ننصح بتدقيق التكاليف القادمة.`;
+  }
+
+  return `📈 أداء مستقر وتدفق مالي آمن لمشروع (${projName}): نسبة المصروفات آمنة وتحت السيطرة بنسبة ${spendRatio}% من الميزانية الكلية (المصروفات الفعلية: ${totalExpenses.toLocaleString('en-US')} ريال من ميزانية مرصودة بقيمة ${budget.toLocaleString('en-US')} ريال)، متماشياً مع نسبة الإنجاز الحالية البالغة ${progress}%.`;
+};
+
 export const analyzeProjectSpending = async (projectData: Partial<Project>, transactions: Partial<Transaction>[]): Promise<string | null> => {
   const ai = getGeminiClient();
-  if (!ai) return "خدمة التحليل متوقفة: مفتاح API غير متوفر.";
+  if (!ai) {
+    // If API client is not configured, fallback gracefully to our rule-based analysis
+    return generateLocalSpendingAnalysis(projectData, transactions);
+  }
   
   try {
     const prompt = `
@@ -180,13 +216,11 @@ export const analyzeProjectSpending = async (projectData: Partial<Project>, tran
       contents: [{ parts: [{ text: prompt }] }],
     });
 
-    return response.text || null;
+    return response.text || generateLocalSpendingAnalysis(projectData, transactions);
   } catch (error: unknown) {
     const err = error as any;
-    console.error("Error analyzing spending:", err);
-    if (err.status || err.details) {
-      console.error("Detailed Error:", JSON.stringify(err, null, 2));
-    }
-    return null;
+    console.warn("Project spending analysis fell back to local calculations:", err.message || err);
+    // Fallback smoothly to rule-based analysis instead of returning null and breaking dashboard display
+    return generateLocalSpendingAnalysis(projectData, transactions);
   }
 };

@@ -541,7 +541,7 @@ export default function SystemSettings() {
                 <Label className="font-bold text-xs text-slate-500">العنوان الرسمي</Label>
                 <Input 
                   value={settings.companyAddress}
-                  placeholder="مثال: الرياض، حي الملز"
+                  placeholder="مثال: المدينة، الحي، الشارع"
                   onChange={(e) => setSettings({...settings, companyAddress: e.target.value})}
                   className="h-11 rounded-xl text-right"
                 />

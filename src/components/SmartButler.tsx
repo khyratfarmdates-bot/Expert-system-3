@@ -122,7 +122,7 @@ export default function SmartButler() {
   };
 
   return (
-    <div className={`fixed ${isOpen ? 'inset-0 md:inset-auto md:bottom-6 md:right-6' : 'bottom-24 md:bottom-6 right-6'} z-[999] flex flex-col items-end`} dir="rtl">
+    <div className={`fixed ${isOpen ? 'inset-0 md:inset-auto md:bottom-6 md:left-6' : 'bottom-24 md:bottom-6 left-6'} z-[999] flex flex-col items-start`} dir="rtl">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -227,7 +227,7 @@ export default function SmartButler() {
           <div className="absolute -top-0.5 -right-0.5 bg-accent w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-full flex items-center justify-center text-[7px] font-bold border-2 border-white shadow-sm overflow-hidden">
              <Sparkles className="w-1.5 h-1.5 md:w-2 md:h-2 fill-current" />
           </div>
-          <span className="absolute bottom-full mb-3 right-0 bg-white text-primary px-3 py-1.5 rounded-xl shadow-xl text-[10px] font-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 origin-bottom-right pointer-events-none border border-slate-100">
+          <span className="absolute bottom-full mb-3 left-0 bg-white text-primary px-3 py-1.5 rounded-xl shadow-xl text-[10px] font-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 origin-bottom-left pointer-events-none border border-slate-100">
              هل تحتاج مساعدة؟
           </span>
         </motion.button>

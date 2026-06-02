@@ -370,12 +370,53 @@ export default function CameraCapture() {
     }
   };
 
+  const convertToPngBlob = (dataUrl: string): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas context not available'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Canvas convert failed'));
+          }
+        }, 'image/png');
+      };
+      img.onerror = () => {
+        reject(new Error('Image load failed'));
+      };
+      img.src = dataUrl;
+    });
+  };
+
   const handleCopy = async () => {
     if (!capturedImage) return;
     try {
       if (capturedImage.startsWith('data:image/')) {
         const response = await fetch(capturedImage);
-        const blob = await response.blob();
+        let blob = await response.blob();
+        
+        if (blob.type !== 'image/png') {
+          try {
+            blob = await convertToPngBlob(capturedImage);
+          } catch (convErr) {
+            console.warn("Failed converting image to PNG, copying URL instead:", convErr);
+            await navigator.clipboard.writeText(capturedImage);
+            toast.success('تم نسخ رابط الصورة كبديل لتعدي توافق المتصفح');
+            return;
+          }
+        }
+        
         await navigator.clipboard.write([
           new ClipboardItem({ [blob.type]: blob })
         ]);
@@ -384,8 +425,18 @@ export default function CameraCapture() {
         await navigator.clipboard.writeText(capturedImage);
         toast.success('تم نسخ رابط البيانات للحافظة');
       }
-    } catch {
-      toast.error('فشل النسخ للمحافظة');
+    } catch (err) {
+      console.warn("Copy error, falling back to writing text:", err);
+      try {
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(capturedImage);
+          toast.success('تم نسخ رابط الصورة بنجاح');
+        } else {
+          toast.error('فشل النسخ للحافظة');
+        }
+      } catch (innerErr) {
+        toast.error('فشل النسخ للحافظة');
+      }
     }
   };
 

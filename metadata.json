@@ -1,6 +1,6 @@
 {
   "name": "مشروع تجريبي لفحص المستودع",
   "description": "تطبيق متطور لإدارة وفحص المخزون، يتيح تتبع المنتجات ومراقبة مستويات التوفر مع واجهة مستخدم عصرية تدعم اللغة العربية.",
-  "requestFramePermissions": [],
-  "majorCapabilities": []
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

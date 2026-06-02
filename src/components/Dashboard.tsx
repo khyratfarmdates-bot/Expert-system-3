@@ -92,6 +92,8 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
           const txs = tSnap.docs.map(d => d.data());
           const insight = await analyzeProjectSpending(project, txs);
           setAiInsight(insight);
+        } else {
+          setAiInsight("مرحباً بك! لا توجد مشاريع مسجلة حالياً لبدء التحليل المالي الذكي. يمكنك إضافة مشروعك الأول من علامة تبويب المشاريع.");
         }
       } catch (e) {
         console.error("AI Insight Error:", e);
@@ -546,100 +548,6 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
-        {/* Main Operating Area */}
-        <div className="lg:col-span-8 space-y-4 md:space-y-8">
-          <Card className="rounded-2xl md:rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
-            <CardHeader className="border-b border-slate-50 p-4 md:p-8">
-               <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-sm md:text-xl font-black text-slate-900">سجل عمال اليومية</CardTitle>
-                    <CardDescription className="text-[10px] md:text-sm font-bold text-slate-400 mt-0.5">مراجعة اليوميات والأجور</CardDescription>
-                  </div>
-                  <Button 
-                    onClick={() => goToTab('workers_management')}
-                    variant="ghost" 
-                    className="text-primary font-black text-[10px] md:text-xs hover:bg-primary/5 rounded-lg h-8 md:h-10 px-3 md:px-4"
-                  >
-                    عرض الكل
-                  </Button>
-               </div>
-            </CardHeader>
-            <CardContent className="p-3 md:p-8">
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4">
-                  {workers.length > 0 ? workers.slice(0, 4).map((worker) => (
-                    <div 
-                      key={worker.id}
-                      onClick={() => goToTab('workers_management')}
-                      className="group flex items-center gap-3 md:gap-4 p-3 md:p-5 rounded-xl md:rounded-[1.5rem] bg-slate-50/50 border border-transparent hover:border-primary/20 hover:bg-white hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer"
-                    >
-                      <div className="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-2xl bg-white shadow-sm flex items-center justify-center text-sm md:text-lg font-black text-primary border border-slate-100 group-hover:scale-110 transition-transform">
-                        {worker.name[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-black text-slate-900 text-[11px] md:text-sm truncate">{worker.name}</h4>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[8px] md:text-[10px] text-slate-400 font-bold uppercase tracking-tight">{worker.role || 'عامل'}</span>
-                          <span className="w-0.5 h-0.5 md:w-1 md:h-1 rounded-full bg-slate-300" />
-                          <span className="text-[8px] md:text-[10px] font-black text-primary">{worker.dailyRate} ر.س</span>
-                        </div>
-                      </div>
-                      <ChevronLeft className="w-3 h-3 md:w-4 md:h-4 text-slate-300 group-hover:text-primary transition-colors" />
-                    </div>
-                  )) : (
-                    <div className="col-span-full py-6 md:py-10 text-center space-y-2 md:space-y-3">
-                       <Users className="w-8 h-8 md:w-12 md:h-12 text-slate-200 mx-auto" />
-                       <p className="text-[10px] md:text-sm font-bold text-slate-400 italic">لا يوجد عمال مسجلين</p>
-                    </div>
-                  )}
-               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl md:rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
-            <CardHeader className="border-b border-slate-50 p-4 md:p-8 flex flex-row items-center justify-between">
-               <div>
-                  <CardTitle className="text-sm md:text-xl font-black text-slate-900">مؤشر الإنتاجية التشغيلية</CardTitle>
-                  <CardDescription className="text-[10px] md:text-sm font-bold text-slate-400 mt-0.5">توزيع الإنتاجية المالية أسبوعياً</CardDescription>
-               </div>
-            </CardHeader>
-            <CardContent className="p-3 md:p-8">
-               <div className="h-[180px] md:h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2c7a7d" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#2c7a7d" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 700 }}
-                        dy={8}
-                      />
-                      <YAxis hide />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 20px rgba(0,0,0,0.1)', fontFamily: 'Cairo', fontSize: '10px' }}
-                        cursor={{ stroke: '#2c7a7d', strokeWidth: 2 }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke="#2c7a7d" 
-                        strokeWidth={3}
-                        fillOpacity={1} 
-                        fill="url(#colorValue)" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-               </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Tactical Intelligence Sidebar */}
         <div className="lg:col-span-4 space-y-8">
           {/* AI Advisor Card */}
@@ -720,6 +628,100 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
                   </div>
                 )}
              </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Operating Area */}
+        <div className="lg:col-span-8 space-y-4 md:space-y-8">
+          <Card className="rounded-2xl md:rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
+            <CardHeader className="border-b border-slate-50 p-4 md:p-8">
+               <div className="flex items-center justify-between">
+                  <div>
+                     <CardTitle className="text-sm md:text-xl font-black text-slate-900">سجل عمال اليومية</CardTitle>
+                     <CardDescription className="text-[10px] md:text-sm font-bold text-slate-400 mt-0.5">مراجعة اليوميات والأجور</CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => goToTab('workers_management')}
+                    variant="ghost" 
+                    className="text-primary font-black text-[10px] md:text-xs hover:bg-primary/5 rounded-lg h-8 md:h-10 px-3 md:px-4"
+                  >
+                    عرض الكل
+                  </Button>
+               </div>
+            </CardHeader>
+            <CardContent className="p-3 md:p-8">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4">
+                  {workers.length > 0 ? workers.slice(0, 4).map((worker) => (
+                    <div 
+                      key={worker.id}
+                      onClick={() => goToTab('workers_management')}
+                      className="group flex items-center gap-3 md:gap-4 p-3 md:p-5 rounded-xl md:rounded-[1.5rem] bg-slate-50/50 border border-transparent hover:border-primary/20 hover:bg-white hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer"
+                    >
+                      <div className="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-2xl bg-white shadow-sm flex items-center justify-center text-sm md:text-lg font-black text-primary border border-slate-100 group-hover:scale-110 transition-transform">
+                        {worker.name[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-black text-slate-900 text-[11px] md:text-sm truncate">{worker.name}</h4>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                           <span className="text-[8px] md:text-[10px] text-slate-400 font-bold uppercase tracking-tight">{worker.role || 'عامل'}</span>
+                           <span className="w-0.5 h-0.5 md:w-1 md:h-1 rounded-full bg-slate-300" />
+                           <span className="text-[8px] md:text-[10px] font-black text-primary">{worker.dailyRate} ر.س</span>
+                        </div>
+                      </div>
+                      <ChevronLeft className="w-3 h-3 md:w-4 md:h-4 text-slate-300 group-hover:text-primary transition-colors" />
+                    </div>
+                  )) : (
+                    <div className="col-span-full py-6 md:py-10 text-center space-y-2 md:space-y-3">
+                       <Users className="w-8 h-8 md:w-12 md:h-12 text-slate-200 mx-auto" />
+                       <p className="text-[10px] md:text-sm font-bold text-slate-400 italic">لا يوجد عمال مسجلين</p>
+                    </div>
+                  )}
+               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl md:rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
+            <CardHeader className="border-b border-slate-50 p-4 md:p-8 flex flex-row items-center justify-between">
+               <div>
+                  <CardTitle className="text-sm md:text-xl font-black text-slate-900">مؤشر الإنتاجية التشغيلية</CardTitle>
+                  <CardDescription className="text-[10px] md:text-sm font-bold text-slate-400 mt-0.5">توزيع الإنتاجية المالية أسبوعياً</CardDescription>
+               </div>
+            </CardHeader>
+            <CardContent className="p-3 md:p-8">
+               <div className="h-[180px] md:h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2c7a7d" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#2c7a7d" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 700 }}
+                        dy={8}
+                      />
+                      <YAxis hide />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 20px rgba(0,0,0,0.1)', fontFamily: 'Cairo', fontSize: '10px' }}
+                        cursor={{ stroke: '#2c7a7d', strokeWidth: 2 }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="#2c7a7d" 
+                        strokeWidth={3}
+                        fillOpacity={1} 
+                        fill="url(#colorValue)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+               </div>
+            </CardContent>
           </Card>
         </div>
       </div>
