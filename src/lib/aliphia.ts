@@ -7,17 +7,7 @@ let cachedCredentials: { username?: string, password?: string, apiKey?: string }
 export const getAliphiaCredentials = async () => {
   if (cachedCredentials) return cachedCredentials;
 
-  // 1. أولوية القراءة من ملف .env.local كما طلب المستخدم
-  if (import.meta.env.VITE_ALIPHIA_USERNAME && import.meta.env.VITE_ALIPHIA_API_KEY) {
-    cachedCredentials = {
-      username: import.meta.env.VITE_ALIPHIA_USERNAME,
-      password: import.meta.env.VITE_ALIPHIA_PASSWORD || '',
-      apiKey: import.meta.env.VITE_ALIPHIA_API_KEY
-    };
-    return cachedCredentials;
-  }
-
-  // 2. القراءة من التخزين المحلي كبديل (يمنع خطأ صلاحيات فايربيس)
+  // 1. القراءة من التخزين المحلي كأولوية أولى (إعدادات المستخدم يدوياً من الواجهة)
   try {
     const local = localStorage.getItem('aliphia_credentials');
     if (local) {
@@ -26,6 +16,16 @@ export const getAliphiaCredentials = async () => {
     }
   } catch(e) {
     console.error("Failed to load local credentials", e);
+  }
+
+  // 2. القراءة من ملف البيئة كاحتياطي افتراضي
+  if (import.meta.env.VITE_ALIPHIA_USERNAME && import.meta.env.VITE_ALIPHIA_API_KEY) {
+    cachedCredentials = {
+      username: import.meta.env.VITE_ALIPHIA_USERNAME,
+      password: import.meta.env.VITE_ALIPHIA_PASSWORD || '',
+      apiKey: import.meta.env.VITE_ALIPHIA_API_KEY
+    };
+    return cachedCredentials;
   }
   
   return null;
@@ -61,15 +61,31 @@ export const fetchAliphiaClients = async () => {
   }
 
   try {
-    const response = await fetch(`${ALIPHIA_API_URL}/client/active.json`, {
+    const response = await fetch(`${ALIPHIA_API_URL}/clients/active`, {
       method: 'GET',
       headers: await getHeaders(),
     });
     if (!response.ok) throw new Error('فشل جلب بيانات العملاء من ألف ياء');
     const data = await response.json();
     
-    // Aliphia likely returns an array or an object with data
-    const clientsList = Array.isArray(data) ? data : (data.data || []);
+    // استخراج قائمة العملاء بمرونة سواء كانت مصفوفة (Array) أو كائن (Object)
+    let clientsList: any[] = [];
+    if (Array.isArray(data)) {
+      clientsList = data;
+    } else if (data.response && (data.response.clients || data.response.client)) {
+      const rawClients = data.response.clients || data.response.client;
+      clientsList = Array.isArray(rawClients) 
+        ? rawClients 
+        : Object.values(rawClients);
+    } else if (data.response) {
+      clientsList = Array.isArray(data.response) 
+        ? data.response 
+        : Object.values(data.response);
+    } else if (data.data) {
+      clientsList = Array.isArray(data.data) 
+        ? data.data 
+        : Object.values(data.data);
+    }
     
     return clientsList.map((c: any) => ({
       id: c.client_id?.toString() || c.id?.toString(),
@@ -123,6 +139,54 @@ export const createAliphiaDocument = async (type: 'invoice' | 'quotation', docDa
   }
 };
 
+export const createAliphiaClient = async (clientData: { name: string; phone?: string; email?: string }) => {
+  const creds = await getAliphiaCredentials();
+  if (!creds) {
+    console.warn("⚠️ مفاتيح Aliphia غير متوفرة. يتم محاكاة إنشاء العميل.");
+    return {
+      success: true,
+      client: {
+        id: 'AL-' + Math.floor(Math.random() * 10000),
+        name: clientData.name,
+        phone: clientData.phone || '',
+        email: clientData.email || ''
+      }
+    };
+  }
+
+  try {
+    const formData = new URLSearchParams();
+    formData.append('client_name', clientData.name);
+    if (clientData.phone) formData.append('client_phone', clientData.phone);
+    if (clientData.email) formData.append('client_email', clientData.email);
+
+    const response = await fetch(`${ALIPHIA_API_URL}/client`, {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: formData.toString()
+    });
+
+    if (!response.ok) throw new Error('فشل إنشاء العميل في ألف ياء');
+    const data = await response.json();
+    
+    const newId = data.response?.client_id || data.data?.client_id || data.id || Math.floor(Math.random() * 10000).toString();
+    
+    return {
+      success: true,
+      client: {
+        id: newId.toString(),
+        name: clientData.name,
+        phone: clientData.phone || '',
+        email: clientData.email || ''
+      }
+    };
+  } catch (error) {
+    console.error('Aliphia create client error:', error);
+    throw error;
+  }
+};
+
+
 export const checkAliphiaConnection = async () => {
   const start = Date.now();
   const creds = await getAliphiaCredentials();
@@ -133,7 +197,7 @@ export const checkAliphiaConnection = async () => {
 
   try {
     const headers = await getHeaders();
-    const response = await fetch(`${ALIPHIA_API_URL}/client/active.json`, {
+    const response = await fetch(`${ALIPHIA_API_URL}/clients/active`, {
       method: 'GET',
       headers,
     });
@@ -142,9 +206,79 @@ export const checkAliphiaConnection = async () => {
     if (response.ok) {
       return { status: 'connected', latency, message: 'متصل ومستقر' };
     } else {
+      let errorText = '';
+      try {
+        const errJson = await response.json();
+        errorText = errJson.error || errJson.message || '';
+      } catch (e) {
+        // Fallback text check
+      }
+
+      if (errorText.toLowerCase().includes('hourly limit') || response.status === 429) {
+        return { 
+          status: 'error', 
+          latency, 
+          message: 'تم تجاوز الحد المسموح به للطلبات في الساعة (انتظر حتى نهاية الساعة)' 
+        };
+      }
+
       return { status: 'error', latency, message: 'بيانات غير صحيحة أو الخادم يرفض الاتصال' };
     }
   } catch (error) {
     return { status: 'error', latency: Date.now() - start, message: 'المتصفح أو الخادم يمنع الاتصال' };
+  }
+};
+
+
+export const fetchAliphiaInvoices = async () => {
+  const creds = await getAliphiaCredentials();
+  if (!creds) return [];
+
+  try {
+    const response = await fetch(`${ALIPHIA_API_URL}/invoice`, {
+      method: 'GET',
+      headers: await getHeaders(),
+    });
+    if (!response.ok) throw new Error('فشل جلب الفواتير من ألف ياء');
+    const data = await response.json();
+    
+    // استخراج الفواتير بمرونة
+    const list = 
+      Array.isArray(data) ? data : 
+      (data.response && Array.isArray(data.response.invoices) ? data.response.invoices :
+      (data.response && Array.isArray(data.response.invoice) ? data.response.invoice :
+      (data.response && typeof data.response === 'object' ? Object.values(data.response) :
+      (data.data || []))));
+      
+    return list;
+  } catch (error) {
+    console.error('Aliphia invoices fetch error:', error);
+    return [];
+  }
+};
+
+export const fetchAliphiaQuotations = async () => {
+  const creds = await getAliphiaCredentials();
+  if (!creds) return [];
+
+  try {
+    const response = await fetch(`${ALIPHIA_API_URL}/quote`, {
+      method: 'GET',
+      headers: await getHeaders(),
+    });
+    if (!response.ok) throw new Error('فشل جلب عروض الأسعار من ألف ياء');
+    const data = await response.json();
+    
+    const list = 
+      Array.isArray(data) ? data : 
+      (data.response && Array.isArray(data.response.quotes) ? data.response.quotes :
+      (data.response && Array.isArray(data.response.quote) ? data.response.quote :
+      (data.response && typeof data.response === 'object' ? Object.values(data.response) :
+      (data.data || []))));
+      
+    return list;
+  } catch (error) {
+    console.error('Aliphia quotes fetch error:', error);
+    return [];
   }
 };
