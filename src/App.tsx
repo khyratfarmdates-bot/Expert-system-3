@@ -89,6 +89,9 @@ import BankingAndVault from "./components/BankingAndVault";
 
 import Subcontractors from "./components/Subcontractors";
 import CompanyProfile from "./components/CompanyProfile";
+import SalesRepDashboard from "./components/SalesRepDashboard";
+import SalesRepsManagement from "./components/SalesRepsManagement";
+import SalesRepProfile from "./components/SalesRepProfile";
 
 const scrollbarStyles = `
   .no-scrollbar::-webkit-scrollbar {
@@ -233,6 +236,8 @@ function AppContent() {
         { id: "financials", label: "المالية", icon: Wallet, roles: ["manager"] },
         { id: "approvals", label: "الاعتمادات", icon: ShieldCheck, roles: ["manager"] },
         { id: "sales", label: "المبيعات", icon: TrendingUp, roles: ["manager"] },
+        { id: "sales_reps", label: "إدارة المناديب", icon: Users, roles: ["manager"] },
+        { id: "sales_rep_dashboard", label: "لوحة المبيعات الذكية", icon: LayoutDashboard, roles: ["manager", "sales_rep"] },
         { id: "expenses", label: "المصروفات", icon: Receipt, roles: ["manager"] },
         { id: "banking", label: "البنوك", icon: Landmark, roles: ["manager"] },
       ],
@@ -304,9 +309,15 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (profile && !isTabAllowed(activeTab)) {
-      setActiveTab("dashboard");
-      toast.error("ليس لديك صلاحية الوصول لهذه الصفحة");
+    if (profile) {
+      if (activeTab === "dashboard" && profile.role === "sales_rep") {
+        setActiveTab("sales_rep_dashboard");
+        return;
+      }
+      if (!isTabAllowed(activeTab)) {
+        setActiveTab(profile.role === "sales_rep" ? "sales_rep_dashboard" : "dashboard");
+        toast.error("ليس لديك صلاحية الوصول لهذه الصفحة");
+      }
     }
   }, [profile, activeTab]);
 
@@ -1029,7 +1040,7 @@ function AppContent() {
             </Button>
           </div>
           <div
-            onClick={() => setActiveTab("profile")}
+            onClick={() => setActiveTab(profile?.role === "sales_rep" ? "sales_rep_profile" : "profile")}
             className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 px-4 py-2 rounded-2xl transition-all group active:scale-95"
           >
             <div className="text-left">
@@ -1039,6 +1050,8 @@ function AppContent() {
               <div className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
                 {profile?.role === "manager"
                   ? "مدير عام المؤسسة"
+                  : profile?.role === "sales_rep"
+                  ? "مندوب مبيعات"
                   : "عضو الفريق"}
               </div>
             </div>
@@ -1074,6 +1087,12 @@ function AppContent() {
                     onBack={() => setActiveTab("dashboard")}
                   />
                 )}
+                {activeTab === "sales_rep_profile" && (
+                  <SalesRepProfile
+                    salesRepId={user.uid}
+                    onBack={() => setActiveTab("sales_rep_dashboard")}
+                  />
+                )}
                 {/* Finance Group */}
                 {activeTab === "financials" && <Financials />}
                 {activeTab === "banking" && <BankingAndVault />}
@@ -1081,6 +1100,8 @@ function AppContent() {
                 {activeTab === "archive" && <Archive />}
                 {activeTab === "gallery" && <Gallery />}
                 {activeTab === "sales" && <Sales />}
+                {activeTab === "sales_reps" && <SalesRepsManagement />}
+                {activeTab === "sales_rep_dashboard" && <SalesRepDashboard />}
                 {activeTab === "subcontractors" && <Subcontractors />}
                 
                 {/* Purchases Group */}

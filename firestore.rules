@@ -108,7 +108,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && (isElevated() || (isOwner(userId) && !('role' in incoming())));
       allow update: if isElevated() || 
                     (isOwner(userId) && incoming().role == existing().role) ||
-                    (isSignedIn() && request.auth.token.email.lower() == existing().email.lower() && incoming().keys().hasOnly(['uid']) && existing().uid == null);
+                    (isSignedIn() && request.auth.token.email.lower() == existing().email.lower() && incoming().diff(existing()).affectedKeys().hasOnly(['uid']));
       allow delete: if isAdmin();
     }
 
@@ -144,6 +144,13 @@ service cloud.firestore {
         incoming().status == existing().status
       );
       allow delete: if isManager() || (isSignedIn() && existing().createdBy == request.auth.uid);
+    }
+
+    match /quotations/{quoteId} {
+      allow read: if isElevated() || (isSignedIn() && existing().salesRepId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().salesRepId == request.auth.uid;
+      allow update: if isManager() || (isSignedIn() && existing().salesRepId == request.auth.uid);
+      allow delete: if isManager();
     }
 
     match /notifications/{notId} {

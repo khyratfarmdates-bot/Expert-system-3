@@ -1,5 +1,5 @@
 // Common interfaces for the application
-export type UserRole = 'manager' | 'supervisor' | 'employee' | 'worker';
+export type UserRole = 'manager' | 'supervisor' | 'employee' | 'worker' | 'sales_rep';
 
 export interface UserProfile {
   id: string;
@@ -15,6 +15,10 @@ export interface UserProfile {
   phone?: string;
   nationality?: string;
   joinedAt?: string;
+  // Sales Rep specific fields
+  compensationType?: 'salary' | 'commission_only';
+  commissionRate?: number;
+  baseSalary?: number;
 }
 
 export interface ProjectMilestone {
@@ -157,4 +161,15 @@ export interface SystemSettings {
   workingHoursStart: string;
   workingHoursEnd: string;
   allowManualAttendance: boolean;
+}
+
+export interface Quotation {
+  id: string;
+  salesRepId: string;
+  salesRepName: string;
+  clientName: string;
+  totalAmount: number;
+  items: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: any;
 }

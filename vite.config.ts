@@ -12,6 +12,15 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
     base: '/',
+    server: {
+      proxy: {
+        '/api_public': {
+          target: 'https://aliphia.com/v1',
+          changeOrigin: true,
+          secure: false,
+        }
+      }
+    },
     plugins: [react(), tailwindcss(), tsconfigPaths()],
     resolve: {
       alias: {

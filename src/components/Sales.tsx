@@ -10,6 +10,8 @@ import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp } from 
 import { toast } from "sonner";
 import { useAuth } from "../lib/AuthContext";
 import { sendNotification } from "../lib/notifications";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AIQuotationBuilder from "./AIQuotationBuilder";
 
 export default function Sales() {
   const { profile } = useAuth();
@@ -68,9 +70,19 @@ export default function Sales() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
+    <Tabs defaultValue="overview" className="w-full space-y-6">
+      <div className="flex justify-center mb-6">
+        <TabsList className="bg-white shadow-sm border border-slate-100 p-1.5 rounded-2xl inline-flex flex-row-reverse">
+          <TabsTrigger value="overview" className="rounded-xl font-bold py-2.5 px-6 text-sm">نظرة عامة على المبيعات</TabsTrigger>
+          <TabsTrigger value="ai_pricing" className="rounded-xl font-bold py-2.5 px-6 text-sm gap-2 flex items-center">
+             التسعير الذكي (AI)
+          </TabsTrigger>
+        </TabsList>
+      </div>
+
+      <TabsContent value="overview" className="space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
           <h2 className="text-2xl font-black text-slate-800">المبيعات والإيرادات</h2>
           <p className="text-sm font-bold text-slate-500">إدارة مبيعات المنتجات أو الخدمات وإيرادات المشاريع، وإصدار الفواتير.</p>
         </div>
@@ -173,6 +185,11 @@ export default function Sales() {
            </div>
          )}
       </div>
-    </div>
+      </TabsContent>
+
+      <TabsContent value="ai_pricing" className="space-y-6">
+         <AIQuotationBuilder />
+      </TabsContent>
+    </Tabs>
   );
 }
