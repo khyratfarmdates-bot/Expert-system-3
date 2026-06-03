@@ -33,7 +33,7 @@ app.use(express.urlencoded({ extended: true }));
 // Aliphia API Proxy - يحل مشكلة CORS في الإنتاج
 // يعمل على /api_public/* ويعيد التوجيه لخوادم ألف ياء
 // ======================================================
-app.all('/api_public/*', async (req, res) => {
+app.all('/api_public/:path*', async (req, res) => {
   // محاولة القراءة أولاً من الترويسات المرسلة من العميل (الواجهة الأمامية)
   let authHeader = req.headers['authorization'];
   let apiKey = req.headers['x-keyali-api'];
