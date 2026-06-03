@@ -9,8 +9,13 @@ try {
   const dotenv = require('dotenv');
   dotenv.config({ path: '.env.local' });
   dotenv.config({ path: '.env' });
+  console.log("🔑 [Aliphia Config] Loaded environment variables:", {
+    VITE_ALIPHIA_USERNAME: process.env.VITE_ALIPHIA_USERNAME || 'NOT FOUND',
+    VITE_ALIPHIA_API_KEY: process.env.VITE_ALIPHIA_API_KEY ? 'FOUND (length: ' + process.env.VITE_ALIPHIA_API_KEY.length + ')' : 'NOT FOUND',
+    VITE_ALIPHIA_PASSWORD: process.env.VITE_ALIPHIA_PASSWORD ? 'FOUND' : 'NOT FOUND'
+  });
 } catch(e) {
-  // dotenv might not be available in production, env vars set externally
+  console.log("ℹ️ [Aliphia Config] dotenv skipped (in production environments, variables should be set in environment directly).");
 }
 
 
@@ -28,37 +33,48 @@ app.use(express.urlencoded({ extended: true }));
 // Aliphia API Proxy - يحل مشكلة CORS في الإنتاج
 // يعمل على /api_public/* ويعيد التوجيه لخوادم ألف ياء
 // ======================================================
-app.all('/api_public/*splat', async (req, res) => {
-  const username = process.env.VITE_ALIPHIA_USERNAME;
-  const password = process.env.VITE_ALIPHIA_PASSWORD || '';
-  const apiKey   = process.env.VITE_ALIPHIA_API_KEY;
+app.all('/api_public/*', async (req, res) => {
+  // محاولة القراءة أولاً من الترويسات المرسلة من العميل (الواجهة الأمامية)
+  let authHeader = req.headers['authorization'];
+  let apiKey = req.headers['x-keyali-api'];
 
-  if (!username || !apiKey) {
-    return res.status(401).json({ error: 'Aliphia credentials not configured on server' });
+  // إذا لم يرسلها العميل، نستخدم بيئة السيرفر كبديل
+  if (!authHeader || !apiKey) {
+    const username = process.env.VITE_ALIPHIA_USERNAME;
+    const password = process.env.VITE_ALIPHIA_PASSWORD || '';
+    const serverApiKey = process.env.VITE_ALIPHIA_API_KEY;
+
+    if (username && serverApiKey) {
+      const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
+      authHeader = `Basic ${basicAuth}`;
+      apiKey = serverApiKey;
+    }
   }
 
-  // بناء الرابط الكامل مع أي query strings
-  const aliphiaPath = req.path.replace('/api_public', '');
-  const queryString = Object.keys(req.query).length ? '?' + new URLSearchParams(req.query).toString() : '';
-  const aliphiaUrl  = `https://aliphia.com/v1/api_public${aliphiaPath}${queryString}`;
+  if (!authHeader || !apiKey) {
+    return res.status(401).json({ error: 'Aliphia credentials not configured on client or server' });
+  }
 
-  const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
+  // بناء الرابط الكامل بطريقة مضمونة ومباشرة مع معلمات الاستعلام
+  const aliphiaUrl = 'https://aliphia.com/v1/api_public' + req.originalUrl.substring('/api_public'.length);
 
   const headers = {
-    'Authorization': `Basic ${basicAuth}`,
+    'Authorization': authHeader,
     'X-KEYALI-API': apiKey,
     'Content-Type': 'application/x-www-form-urlencoded',
     'Accept': 'application/json',
   };
 
   try {
-    const aliphiaRes = await fetch(aliphiaUrl, {
+    const fetchOptions = {
       method: req.method,
       headers,
       body: ['POST', 'PUT', 'PATCH'].includes(req.method)
         ? new URLSearchParams(req.body).toString()
         : undefined,
-    });
+    };
+
+    const aliphiaRes = await fetch(aliphiaUrl, fetchOptions);
 
     const contentType = aliphiaRes.headers.get('content-type') || '';
     res.status(aliphiaRes.status);
