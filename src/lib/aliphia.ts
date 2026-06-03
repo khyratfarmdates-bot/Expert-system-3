@@ -2,26 +2,55 @@
 
 const ALIPHIA_API_URL = '/api_public';
 
-const hasCredentials = () => {
-  return !!(import.meta.env.VITE_ALIPHIA_USERNAME && import.meta.env.VITE_ALIPHIA_PASSWORD && import.meta.env.VITE_ALIPHIA_API_KEY);
+let cachedCredentials: { username?: string, password?: string, apiKey?: string } | null = null;
+
+export const getAliphiaCredentials = async () => {
+  if (cachedCredentials) return cachedCredentials;
+
+  // 1. أولوية القراءة من ملف .env.local كما طلب المستخدم
+  if (import.meta.env.VITE_ALIPHIA_USERNAME && import.meta.env.VITE_ALIPHIA_API_KEY) {
+    cachedCredentials = {
+      username: import.meta.env.VITE_ALIPHIA_USERNAME,
+      password: import.meta.env.VITE_ALIPHIA_PASSWORD || '',
+      apiKey: import.meta.env.VITE_ALIPHIA_API_KEY
+    };
+    return cachedCredentials;
+  }
+
+  // 2. القراءة من التخزين المحلي كبديل (يمنع خطأ صلاحيات فايربيس)
+  try {
+    const local = localStorage.getItem('aliphia_credentials');
+    if (local) {
+      cachedCredentials = JSON.parse(local);
+      return cachedCredentials;
+    }
+  } catch(e) {
+    console.error("Failed to load local credentials", e);
+  }
+  
+  return null;
 };
 
-const getHeaders = () => {
-  const username = import.meta.env.VITE_ALIPHIA_USERNAME || '';
-  const password = import.meta.env.VITE_ALIPHIA_PASSWORD || '';
-  const apiKey = import.meta.env.VITE_ALIPHIA_API_KEY || '';
+export const saveAliphiaCredentials = async (creds: { username: string, password: string, apiKey: string }) => {
+  localStorage.setItem('aliphia_credentials', JSON.stringify(creds));
+  cachedCredentials = creds;
+};
 
-  const basicAuth = btoa(`${username}:${password}`);
-
+const getHeaders = async () => {
+  const creds = await getAliphiaCredentials();
+  if (!creds?.username || !creds?.apiKey) return {};
+  
+  const basicAuth = btoa(`${creds.username}:${creds.password}`);
   return {
     'Authorization': `Basic ${basicAuth}`,
-    'X-KEYALI-API': apiKey,
+    'X-KEYALI-API': creds.apiKey,
     'Content-Type': 'application/x-www-form-urlencoded'
   };
 };
 
 export const fetchAliphiaClients = async () => {
-  if (!hasCredentials()) {
+  const creds = await getAliphiaCredentials();
+  if (!creds) {
     console.warn("⚠️ مفاتيح Aliphia غير متوفرة. يتم استخدام بيانات تجريبية.");
     // Fallback Mock Data
     return [
@@ -34,7 +63,7 @@ export const fetchAliphiaClients = async () => {
   try {
     const response = await fetch(`${ALIPHIA_API_URL}/client/active.json`, {
       method: 'GET',
-      headers: getHeaders(),
+      headers: await getHeaders(),
     });
     if (!response.ok) throw new Error('فشل جلب بيانات العملاء من ألف ياء');
     const data = await response.json();
@@ -55,7 +84,8 @@ export const fetchAliphiaClients = async () => {
 };
 
 export const createAliphiaDocument = async (type: 'invoice' | 'quotation', docData: any) => {
-  if (!hasCredentials()) {
+  const creds = await getAliphiaCredentials();
+  if (!creds) {
     console.warn(`⚠️ مفاتيح Aliphia غير متوفرة. سيتم محاكاة إنشاء ${type}.`);
     // Fallback Mock Create
     return {
@@ -81,7 +111,7 @@ export const createAliphiaDocument = async (type: 'invoice' | 'quotation', docDa
 
     const response = await fetch(`${ALIPHIA_API_URL}${endpoint}`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: await getHeaders(),
       body: formData.toString()
     });
     
@@ -95,23 +125,26 @@ export const createAliphiaDocument = async (type: 'invoice' | 'quotation', docDa
 
 export const checkAliphiaConnection = async () => {
   const start = Date.now();
-  if (!hasCredentials()) {
-    return { status: 'disconnected', latency: 0, message: 'مفاتيح الربط (API Keys) مفقودة' };
+  const creds = await getAliphiaCredentials();
+  
+  if (!creds?.username || !creds?.apiKey) {
+    return { status: 'disconnected', latency: 0, message: 'مفاتيح الربط غير مضافة (اضغط هنا للإعداد)' };
   }
 
   try {
+    const headers = await getHeaders();
     const response = await fetch(`${ALIPHIA_API_URL}/client/active.json`, {
       method: 'GET',
-      headers: getHeaders(),
+      headers,
     });
     const latency = Date.now() - start;
     
     if (response.ok) {
       return { status: 'connected', latency, message: 'متصل ومستقر' };
     } else {
-      return { status: 'error', latency, message: 'خوادم ألف ياء ترفض الاتصال (تأكد من صحة المفاتيح)' };
+      return { status: 'error', latency, message: 'بيانات غير صحيحة أو الخادم يرفض الاتصال' };
     }
   } catch (error) {
-    return { status: 'disconnected', latency: Date.now() - start, message: 'لا يوجد استجابة من خوادم ألف ياء' };
+    return { status: 'error', latency: Date.now() - start, message: 'المتصفح أو الخادم يمنع الاتصال' };
   }
 };

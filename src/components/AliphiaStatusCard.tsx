@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { checkAliphiaConnection } from '../lib/aliphia';
-import { Server, Wifi, WifiOff, AlertTriangle, Activity } from 'lucide-react';
+import { Server, Wifi, WifiOff, AlertTriangle, Activity, Settings } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import AliphiaSettingsModal from './AliphiaSettingsModal';
 
 export default function AliphiaStatusCard() {
   const [statusInfo, setStatusInfo] = useState<{status: string, latency: number, message: string} | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const performCheck = async () => {
     setIsChecking(true);
@@ -28,10 +30,13 @@ export default function AliphiaStatusCard() {
   const isDisconnected = statusInfo?.status === 'disconnected';
 
   return (
-    <Card className={`rounded-xl border-none shadow-sm overflow-hidden transition-colors duration-500 ${
-      isConnected ? 'bg-emerald-50' : 
-      isError ? 'bg-amber-50' : 
-      'bg-red-50'
+    <>
+    <Card 
+      onClick={() => setIsSettingsOpen(true)}
+      className={`rounded-xl border-none shadow-sm overflow-hidden transition-colors duration-500 cursor-pointer hover:shadow-md ${
+      isConnected ? 'bg-emerald-50 hover:bg-emerald-100' : 
+      isError ? 'bg-amber-50 hover:bg-amber-100' : 
+      'bg-red-50 hover:bg-red-100'
     }`}>
       <CardContent className="p-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -64,15 +69,26 @@ export default function AliphiaStatusCard() {
           </div>
         </div>
 
-        {isConnected && statusInfo?.latency > 0 && (
+        {isConnected && statusInfo?.latency > 0 ? (
           <div className="flex flex-col items-end text-xs text-slate-500 font-medium">
             <div className="flex items-center gap-1">
               <Activity className="w-3 h-3" /> استجابة
             </div>
             <span>{statusInfo.latency} ms</span>
           </div>
+        ) : (
+          <div className="flex items-center text-xs text-slate-500 font-medium gap-1">
+            <Settings className="w-4 h-4" /> الإعدادات
+          </div>
         )}
       </CardContent>
     </Card>
+    
+    <AliphiaSettingsModal 
+      open={isSettingsOpen} 
+      onOpenChange={setIsSettingsOpen} 
+      onSuccess={performCheck} 
+    />
+    </>
   );
 }
