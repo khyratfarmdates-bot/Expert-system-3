@@ -489,10 +489,23 @@ export default function EmployeeProfile({ employeeId, onBack }: EmployeeProfileP
                       إضافة تحديث للملف
                     </Button>
                   )}
-                  <Button variant="outline" className="rounded-xl gap-2 font-bold h-11 px-6 border-slate-200 hover:bg-slate-50">
+                  <Button variant="outline" className="rounded-xl gap-2 font-bold h-11 px-6 border-slate-200 hover:bg-slate-50" onClick={() => window.open(`mailto:${employee.email}`)}>
                     <Mail className="w-4 h-4" />
                     مراسلة الموظف
                   </Button>
+                  {employee.phone && (
+                    <Button 
+                      onClick={() => {
+                        const message = `مرحباً أخي ${employee.name}، `;
+                        const whatsappUrl = `https://wa.me/${employee.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+                        window.open(whatsappUrl, '_blank');
+                      }}
+                      className="rounded-xl gap-2 font-black h-11 px-6 bg-[#25D366] hover:bg-[#1ebe57] text-white shadow-md transition-all active:scale-95"
+                    >
+                      <Phone className="w-4 h-4" />
+                      تواصل عبر واتساب
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -851,7 +864,7 @@ export default function EmployeeProfile({ employeeId, onBack }: EmployeeProfileP
                      <InfoItem label="البريد الإلكتروني" value={employee.email} icon={Mail} />
                      <InfoItem label="المسمى الوظيفي" value={employee.role} icon={Briefcase} />
                      <InfoItem label="الراتب الشهري" value={`${(employee.salary || 0).toLocaleString()} ر.س`} icon={CreditCard} />
-                     <InfoItem label="رقم الجوال" value="+966 50 XXX XXXX" icon={Phone} />
+                     <InfoItem label="رقم الجوال" value={employee.phone || 'غير متوفر'} icon={Phone} />
                      <InfoItem label="العنوان / الفرع" value="الرياض - حي الرائد" icon={MapPin} />
                      <InfoItem label="تاريخ مباشرة العمل" value={employee.joinedAt ? new Date(employee.joinedAt).toLocaleDateString() : '-'} icon={Calendar} />
                   </div>

@@ -1,26 +1,30 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bot, X, Send, Loader2, MessageSquare, Sparkles, FileText, AlertTriangle, Headset } from 'lucide-react';
+import { Bot, X, Send, Loader2, MessageSquare, Sparkles, FileText, AlertTriangle, Headset, Phone, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'sonner';
 
 export default function SmartButler() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<{role: 'user' | 'bot' | 'system', text: string}[]>([
+  const [messages, setMessages] = useState<any[]>([
     { role: 'bot', text: 'مرحباً بك في نظام خبراء الرسم! أنا مساعدك الذكي المتكامل. كيف يمكنني خدمتك اليوم؟' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showOptions, setShowOptions] = useState(true);
+  const [botEmployees, setBotEmployees] = useState<any[]>([]);
+  const [botEmpSearch, setBotEmpSearch] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const QUICK_ACTIONS = [
     { label: 'تحدث مع مساعد خبراء', id: 'expert', icon: <Sparkles className="w-4 h-4" />, prompt: 'أريد التحدث مع مساعد الخبراء للحصول على استشارة فنية أو إدارية.' },
     { label: 'شرح ودليل النظام', id: 'guide', icon: <FileText className="w-4 h-4 text-emerald-500" />, prompt: 'أريد قراءة دليل استخدام النظام والتعرف على مميزاته وخصائصه.' },
+    { label: 'مراسلة موظف بالواتساب', id: 'whatsapp_employee', icon: <Phone className="w-4 h-4 text-green-500" />, prompt: 'أريد مراسلة أحد الموظفين أو إرسال ملفات له عبر الواتساب.' },
     { label: 'تقديم طلب', id: 'request', icon: <FileText className="w-4 h-4" />, prompt: 'أرغب في تقديم طلب جديد (إجازة، عهدة، أو طلب شراء).' },
     { label: 'تقديم شكوى', id: 'complaint', icon: <AlertTriangle className="w-4 h-4" />, prompt: 'أرغب في تسجيل شكوى أو ملاحظة بخصوص العمل.' },
     { label: 'محادثة مع الإدارة', id: 'management', icon: <Headset className="w-4 h-4" />, prompt: 'أرغب في إرسال رسالة مباشرة للإدارة العليا.' }
@@ -46,6 +50,18 @@ export default function SmartButler() {
   }, []);
 
   useEffect(() => {
+    const fetchBotEmployees = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'users'));
+        setBotEmployees(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (e) {
+        console.warn("Could not fetch users list for bot search", e);
+      }
+    };
+    fetchBotEmployees();
+  }, []);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
@@ -55,6 +71,36 @@ export default function SmartButler() {
     setShowOptions(false);
     setInput(action.prompt);
     setTimeout(() => handleSend(action.prompt), 100);
+  };
+
+  const handleSendWhatsAppTemplate = (emp: any, templateType: 'general' | 'payslip' | 'attendance') => {
+    let message = '';
+    const name = emp.name || 'الموظف';
+    const cleanPhone = (emp.phone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone) {
+      toast.error('لا يوجد رقم هاتف متاح للموظف');
+      return;
+    }
+    
+    // إضافة رمز الدولة إذا بدأ الرقم بـ 05 أو 5
+    let formattedPhone = cleanPhone;
+    if (formattedPhone.startsWith('05')) {
+      formattedPhone = '966' + formattedPhone.substring(1);
+    } else if (formattedPhone.startsWith('5')) {
+      formattedPhone = '966' + formattedPhone;
+    }
+    
+    if (templateType === 'general') {
+      message = `مرحباً أخي ${name}،\nنود إشعارك بـ: `;
+    } else if (templateType === 'payslip') {
+      const salary = emp.salary || emp.baseSalary || 0;
+      message = `السلام عليكم أخي ${name}،\nمرفق تفاصيل مستحقاتك المالية لشهر ${new Date().toLocaleString('ar-SA', { month: 'long' })}:\n• الراتب الأساسي: ${salary.toLocaleString()} ر.س\n• الحالة: جاهز للاستلام\n\nيرجى مراجعة المحاسب للتوقيع على مسير الرواتب.`;
+    } else if (templateType === 'attendance') {
+      message = `السلام عليكم أخي ${name}،\nيرجى الالتزام بتسجيل الحضور والانصراف اليومي عبر تطبيق المنصة الذكية فور دخولك موقع العمل لتجنب أي خصومات.\nشكراً لتعاونك.`;
+    }
+    
+    const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
   };
 
   const handleSend = async (overrideInput?: string) => {
@@ -73,7 +119,7 @@ export default function SmartButler() {
       try {
         const projectsSnap = await getDocs(query(collection(db, 'projects'), limit(10)));
         projectsCtx = projectsSnap.docs.map(d => ({ name: d.data().title || d.data().name || 'بدون اسم', status: d.data().status }));
-        const empSnap = await getDocs(query(collection(db, 'employees'), limit(10)));
+        const empSnap = await getDocs(query(collection(db, 'users'), limit(10)));
         empCount = empSnap.size;
       } catch (e) {
         console.warn("Could not fetch full context for bot due to permissions:", e);
@@ -108,6 +154,11 @@ export default function SmartButler() {
             responseText = 'أنا خبير الأنظمة وتمت برمجتي لتسهيل تنقلك داخل المنصة ومساعدتك في العثور على الأقسام المناسبة لطلباتك.';
          } else if (textLower.includes('المالية') || textLower.includes('رواتب') || textLower.includes('محاسبة') || textLower.includes('مستحق')) {
             responseText = 'لقسم المالية والرواتب، يجب امتلاك صلاحيات مدير أو مشرف، ويمكنك إيجادها في قسم "المالية والمصروفات". والمستحقات الشخصية في ملفك المهني.';
+         } else if (textLower.includes('واتساب') || textLower.includes('واتس') || textLower.includes('مراسلة') || textLower.includes('ارسال') || textLower.includes('إرسال') || textLower.includes('رقم') || textLower.includes('هاتف') || textLower.includes('جوال') || userMsg === 'أريد مراسلة أحد الموظفين أو إرسال ملفات له عبر الواتساب.') {
+            responseText = 'حسناً! إليك واجهة مراسلة الموظفين وتوليد الرسائل الجاهزة عبر الواتساب. يمكنك البحث واختيار نوع الإشعار لإرساله بضغطة زر واحدة:';
+            setMessages(prev => [...prev, { role: 'bot', text: responseText, type: 'whatsapp_helper' }]);
+            setIsLoading(false);
+            return;
          }
 
          setMessages(prev => [...prev, { role: 'bot', text: responseText }]);
@@ -136,9 +187,9 @@ export default function SmartButler() {
                 <div className="flex items-center gap-3">
                   <div className="bg-white p-1 rounded-lg">
                     {logoUrl ? (
-                      <img src={logoUrl} alt="" className="w-8 h-8 object-contain" />
+                       <img src={logoUrl} alt="" className="w-8 h-8 object-contain" />
                     ) : (
-                      <Bot className="w-6 h-6 text-primary" />
+                       <Bot className="w-6 h-6 text-primary" />
                     )}
                   </div>
                   <div>
@@ -156,7 +207,7 @@ export default function SmartButler() {
                   className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-200"
                 >
                   {messages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                    <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-start' : 'items-end'} gap-1.5`}>
                       <div className={`max-w-[85%] p-3 rounded-2xl text-[13px] font-medium leading-relaxed ${
                         msg.role === 'user' 
                         ? 'bg-slate-100 text-slate-800' 
@@ -164,6 +215,84 @@ export default function SmartButler() {
                       }`}>
                         {msg.text}
                       </div>
+
+                      {msg.type === 'whatsapp_helper' && (
+                        <div className="w-full max-w-[95%] p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 text-right animate-in fade-in duration-300">
+                          <p className="text-xs font-black text-slate-700">ابحث عن الموظف لمراسلته:</p>
+                          <div className="relative">
+                            <input 
+                              type="text" 
+                              placeholder="اسم الموظف أو القسم..." 
+                              value={botEmpSearch} 
+                              onChange={(e) => setBotEmpSearch(e.target.value)} 
+                              className="w-full h-9 pr-8 pl-3 rounded-xl border border-slate-200 text-xs font-bold text-right focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                            />
+                            <Search className="absolute right-2.5 top-2.5 w-4 h-4 text-slate-400" />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+                            {botEmployees
+                              .filter(emp => 
+                                !botEmpSearch ||
+                                emp.name?.toLowerCase().includes(botEmpSearch.toLowerCase()) ||
+                                emp.role?.toLowerCase().includes(botEmpSearch.toLowerCase()) ||
+                                emp.department?.toLowerCase().includes(botEmpSearch.toLowerCase())
+                              )
+                              .map(emp => (
+                                <div key={emp.id} className="p-2 bg-white rounded-xl border border-slate-100 flex items-center justify-between gap-2 shadow-sm">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Avatar className="w-8 h-8 rounded-lg shrink-0">
+                                      <AvatarImage src={emp.photoURL} />
+                                      <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-black rounded-lg">
+                                        {emp.name?.[0]}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="text-right min-w-0">
+                                      <p className="text-xs font-black text-slate-800 truncate">{emp.name}</p>
+                                      <p className="text-[9px] text-slate-400 font-mono truncate">{emp.phone || 'بدون رقم جوال'}</p>
+                                    </div>
+                                  </div>
+                                  
+                                  {emp.phone ? (
+                                    <div className="flex gap-1 shrink-0">
+                                      <button
+                                        onClick={() => handleSendWhatsAppTemplate(emp, 'general')}
+                                        className="bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white text-[9px] font-black px-2 py-1 rounded-lg border border-emerald-100 transition-colors"
+                                        title="إرسال إشعار عام"
+                                      >
+                                        إشعار
+                                      </button>
+                                      <button
+                                        onClick={() => handleSendWhatsAppTemplate(emp, 'payslip')}
+                                        className="bg-blue-50 text-blue-600 hover:bg-blue-500 hover:text-white text-[9px] font-black px-2 py-1 rounded-lg border border-blue-100 transition-colors"
+                                        title="إرسال تفاصيل الراتب"
+                                      >
+                                        راتب
+                                      </button>
+                                      <button
+                                        onClick={() => handleSendWhatsAppTemplate(emp, 'attendance')}
+                                        className="bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white text-[9px] font-black px-2 py-1 rounded-lg border border-amber-100 transition-colors"
+                                        title="تنبيه حضور"
+                                      >
+                                        حضور
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[9px] text-slate-350 italic font-bold">يرجى إضافة هاتف</span>
+                                  )}
+                                </div>
+                              ))
+                            }
+                            {botEmployees.filter(emp => 
+                              !botEmpSearch ||
+                              emp.name?.toLowerCase().includes(botEmpSearch.toLowerCase()) ||
+                              emp.role?.toLowerCase().includes(botEmpSearch.toLowerCase()) ||
+                              emp.department?.toLowerCase().includes(botEmpSearch.toLowerCase())
+                            ).length === 0 && (
+                              <p className="text-center text-[11px] text-slate-400 font-bold py-4">لا يوجد موظف مطابق</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                   

@@ -88,6 +88,7 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
     email: '',
     photoURL: '',
     salary: 0,
+    phone: '',
     isSponsored: false,
     iqamaNumber: '',
     iqamaExpiry: '',
@@ -111,6 +112,7 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
         email: '',
         photoURL: '',
         salary: 0,
+        phone: '',
         isSponsored: false,
         iqamaNumber: '',
         iqamaExpiry: '',
@@ -276,7 +278,7 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
       setIsDialogOpen(false);
       setFormData({ 
         name: '', role: 'employee', dept: 'الإنتاج', email: '', 
-        photoURL: '', salary: 0, isSponsored: false, 
+        photoURL: '', salary: 0, phone: '', isSponsored: false, 
         iqamaNumber: '', iqamaExpiry: '', iqamaPhotoURL: '', 
         drivingLicenseNumber: '', drivingLicenseExpiry: '', drivingLicensePhotoURL: '', 
         passportNumber: '', passportExpiry: '', passportPhotoURL: '', 
@@ -536,6 +538,17 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
                         className="h-10 rounded-xl"
                       />
                     </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label htmlFor="phone" className="font-bold text-gray-700 text-sm">رقم الهاتف / الواتساب</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone || ''}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        placeholder="05XXXXXXXX"
+                        className="h-10 rounded-xl text-right font-mono"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -768,6 +781,7 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
                         {emp.name}
                       </h3>
                       <p className="text-xs text-slate-400 truncate mt-0.5">{emp.email}</p>
+                      {emp.phone && <p className="text-[10px] text-slate-500 font-bold font-mono mt-0.5" dir="ltr">📞 {emp.phone}</p>}
                     </div>
                     <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                       <DropdownMenu>
@@ -789,6 +803,7 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
                                 dept: emp.department || 'الإنتاج',
                                 photoURL: emp.photoURL || '',
                                 salary: emp.salary || 0,
+                                phone: emp.phone || '',
                                 isSponsored: emp.isSponsored || false,
                                 iqamaNumber: emp.iqamaNumber || '',
                                 iqamaExpiry: emp.iqamaExpiry || '',
@@ -914,6 +929,17 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 className="h-11 rounded-lg text-right"
+              />
+            </div>
+            <div className="space-y-2 text-right">
+              <Label htmlFor="edit_phone" className="font-bold text-gray-700">رقم الهاتف / الواتساب</Label>
+              <Input 
+                id="edit_phone" 
+                type="tel"
+                value={formData.phone || ''}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                placeholder="05XXXXXXXX"
+                className="h-11 rounded-lg text-right font-mono"
               />
             </div>
 
