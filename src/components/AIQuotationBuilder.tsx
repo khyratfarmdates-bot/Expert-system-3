@@ -1,542 +1,432 @@
 import React, { useState } from 'react';
-import { Camera, Upload, Zap, Loader2, Plus, Trash2, FileText, Send, CheckCircle2, UserPlus } from 'lucide-react';
+import {
+  Camera, Upload, Zap, Loader2, Plus, Trash2,
+  FileText, Send, CheckCircle2, UserPlus, Share2,
+  ExternalLink, Receipt, X
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { GoogleGenAI } from "@google/genai";
-import { useAuth } from '../lib/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { collection, addDoc } from 'firebase/firestore';
+import { useAuth } from '../lib/AuthContext';
 import AliphiaClientSelector, { AliphiaClient } from './AliphiaClientSelector';
-import { createAliphiaDocument } from '../lib/aliphia';
 import AliphiaStatusCard from './AliphiaStatusCard';
+import { createAliphiaDocument } from '../lib/aliphia';
 
-interface QuotationItem {
+interface Item {
   id: string;
   name: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-  description: string;
+  qty: number;
+  price: number;
+  desc: string;
 }
 
-interface BuilderProps {
+interface Props {
   type?: 'quotation' | 'invoice';
 }
 
-export default function AIQuotationBuilder({ type = 'quotation' }: BuilderProps) {
-  const { profile, user } = useAuth();
-  const isManager = profile?.role === 'manager';
-  
-  const [photoURL, setPhotoURL] = useState<string>('');
-  const [isScanning, setIsScanning] = useState(false);
-  const [items, setItems] = useState<QuotationItem[]>([]);
-  const [client, setClient] = useState<AliphiaClient | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [quotationLink, setQuotationLink] = useState<string | null>(null);
-  const [reps, setReps] = useState<{id: string, name: string}[]>([]);
-  const [selectedRepId, setSelectedRepId] = useState<string>('');
+const emptyItem = (): Item => ({
+  id: Math.random().toString(36).slice(2),
+  name: '', qty: 1, price: 0, desc: ''
+});
 
-  const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState<string>('');
-  const [docStatus, setDocStatus] = useState<string>('draft');
-  const [terms, setTerms] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
-  
-  const [advancePayment, setAdvancePayment] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<string>('cash');
+export default function AIQuotationBuilder({ type = 'quotation' }: Props) {
+  const { user } = useAuth();
+  const isQuote = type === 'quotation';
+  const label   = isQuote ? 'عرض السعر' : 'الفاتورة';
 
-  React.useEffect(() => {
-    if (isManager) {
-      const fetchReps = async () => {
-        const q = query(collection(db, 'users'), where('role', '==', 'sales_rep'));
-        const snap = await getDocs(q);
-        setReps(snap.docs.map(d => ({ id: d.id, name: d.data().name })));
-      };
-      fetchReps();
-    }
-  }, [isManager]);
+  // ── State ──────────────────────────────────────────────
+  const [client,      setClient]      = useState<AliphiaClient | null>(null);
+  const [items,       setItems]       = useState<Item[]>([emptyItem()]);
+  const [issueDate,   setIssueDate]   = useState(new Date().toISOString().split('T')[0]);
+  const [dueDate,     setDueDate]     = useState('');
+  const [notes,       setNotes]       = useState('');
+  const [photoURL,    setPhotoURL]    = useState('');
+  const [isScanning,  setIsScanning]  = useState(false);
+  const [isSending,   setIsSending]   = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // نتيجة الإرسال
+  const [result, setResult] = useState<{
+    docNumber?: string;
+    pdfUrl?: string;
+    clientName?: string;
+    total: number;
+  } | null>(null);
+
+  // ── Calculations ───────────────────────────────────────
+  const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
+  const vat      = subtotal * 0.15;
+  const total    = subtotal + vat;
+
+  // ── Helpers ────────────────────────────────────────────
+  const updateItem = (id: string, field: keyof Item, val: any) =>
+    setItems(p => p.map(i => i.id === id ? { ...i, [field]: val } : i));
+
+  const removeItem = (id: string) =>
+    setItems(p => p.length > 1 ? p.filter(i => i.id !== id) : p);
+
+  // ── AI Scan ────────────────────────────────────────────
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 2000000) {
-      toast.error('حجم الملف كبير جداً (الحد الأقصى 2 ميجابايت)');
-      return;
-    }
-
+    if (file.size > 3_000_000) { toast.error('الملف أكبر من 3 ميجابايت'); return; }
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setPhotoURL(reader.result as string);
-    };
+    reader.onloadend = () => setPhotoURL(reader.result as string);
     reader.readAsDataURL(file);
   };
 
   const scanDocument = async () => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "MY_GEMINI_API_KEY";
-    if (!photoURL) {
-      toast.error('يرجى رفع صورة أولاً');
-      return;
-    }
-    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-      toast.error('مفتاح الذكاء الاصطناعي غير متوفر');
-      return;
-    }
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!photoURL) { toast.error('ارفع الصورة أولاً'); return; }
+    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') { toast.error('مفتاح الذكاء الاصطناعي غير متوفر'); return; }
 
     setIsScanning(true);
-    const loadingToast = toast.loading('جاري قراءة البيانات وتفريغها بواسطة الذكاء الاصطناعي...');
-
+    const tid = toast.loading('جاري قراءة الوثيقة...');
     try {
       const ai = new GoogleGenAI({ apiKey });
-      const prompt = `Analyze this document/image which contains a request for quotation, bill of quantities, or handwritten list of items.
-      Extract the line items and format them as a strict JSON array of objects.
-      Each object must exactly match this structure:
-      {
-        "name": "string (The name of the item or service)",
-        "quantity": number (The quantity, default to 1 if not specified),
-        "description": "string (Any extra details or specifications, or empty string)"
-      }
-      If prices are mentioned, you can ignore them as the sales rep will price them manually, or you can add them. But output ONLY the JSON array. Example: [{"name": "Item 1", "quantity": 2, "description": ""}]`;
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: {
-          parts: [
-            { inlineData: { mimeType: "image/jpeg", data: photoURL.split(',')[1] } },
-            { text: prompt }
-          ]
-        },
-        config: { responseMimeType: "application/json" }
+      const res = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: { parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: photoURL.split(',')[1] } },
+          { text: `Extract line items from this document. Return ONLY a JSON array like:
+[{"name":"item name","qty":1,"price":0,"desc":"optional details"}]
+Rules: qty and price must be numbers. If price unknown set to 0.` }
+        ]},
+        config: { responseMimeType: 'application/json' }
       });
-
-      const resultText = response.text || '[]';
-      const parsedItems = JSON.parse(resultText);
-      
-      if (Array.isArray(parsedItems)) {
-        const newItems: QuotationItem[] = parsedItems.map((item: any, index: number) => ({
-          id: Math.random().toString(36).substr(2, 9),
-          name: item.name || `بند غير معروف ${index + 1}`,
-          quantity: Number(item.quantity) || 1,
-          unitPrice: 0,
-          total: 0,
-          description: item.description || ''
-        }));
-        setItems(newItems);
-        toast.success('تم استخراج البنود بنجاح!');
+      const parsed = JSON.parse(res.text || '[]');
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setItems(parsed.map((x: any) => ({
+          id: Math.random().toString(36).slice(2),
+          name: x.name || '', qty: Number(x.qty) || 1,
+          price: Number(x.price) || 0, desc: x.desc || ''
+        })));
+        toast.success(`✅ تم استخراج ${parsed.length} بند`);
+        setPhotoURL('');
       } else {
-        toast.error('صيغة الاستخراج غير صحيحة');
+        toast.error('لم يتم العثور على بنود');
       }
-    } catch (error) {
-      console.error(error);
-      toast.error('حدث خطأ أثناء تحليل الصورة');
+    } catch (e) {
+      toast.error('فشل التحليل');
     } finally {
       setIsScanning(false);
-      toast.dismiss(loadingToast);
+      toast.dismiss(tid);
     }
   };
 
-  const updateItem = (id: string, field: keyof QuotationItem, value: any) => {
-    setItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const updated = { ...item, [field]: value };
-        if (field === 'quantity' || field === 'unitPrice') {
-          updated.total = Number(updated.quantity) * Number(updated.unitPrice);
-        }
-        return updated;
-      }
-      return item;
-    }));
-  };
+  // ── Send to Aliphia ────────────────────────────────────
+  const handleSend = async () => {
+    if (!client) { toast.error('اختر العميل أولاً'); return; }
+    if (items.every(i => !i.name)) { toast.error('أضف بنداً واحداً على الأقل'); return; }
 
-  const removeItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  const addItem = () => {
-    setItems(prev => [...prev, {
-      id: Math.random().toString(36).substr(2, 9),
-      name: '',
-      quantity: 1,
-      unitPrice: 0,
-      total: 0,
-      description: ''
-    }]);
-  };
-
-  const grandTotal = items.reduce((sum, item) => sum + item.total, 0);
-  const tax = grandTotal * 0.15; // 15% VAT
-
-  const generateAliphiaQuotation = async () => {
-    if (!client) {
-      toast.error('يرجى اختيار العميل أولاً');
-      return;
-    }
-    if (items.length === 0) {
-      toast.error(`يرجى إضافة بنود ل${type === 'quotation' ? 'عرض السعر' : 'الفاتورة'}`);
-      return;
-    }
-    if (isManager && !selectedRepId) {
-      toast.error('يرجى تحديد المندوب أولاً');
-      return;
-    }
-
-    setIsSubmitting(true);
-    const targetRepId = isManager ? selectedRepId : user?.uid;
-    const toastId = toast.loading(`جاري توليد و${type === 'quotation' ? 'عرض السعر' : 'تصدير الفاتورة'}...`);
-
+    setIsSending(true);
+    const tid = toast.loading(`جاري إنشاء ${label} في ألف ياء...`);
     try {
-      // Create record in Firebase first (for our dashboard history)
-      const newRecord = {
-        salesRepId: targetRepId,
-        clientName: client.name,
-        clientId: client.id,
-        items: items.map(i => i.name).join(', '),
-        totalAmount: grandTotal + tax,
-        status: isManager ? docStatus : 'pending',
-        type: type,
-        issueDate,
-        dueDate,
-        terms,
-        notes,
-        ...(type === 'invoice' && {
-          advancePayment: advancePayment ? Number(advancePayment) : 0,
-          paymentMethod,
-          balance: (grandTotal + tax) - (advancePayment ? Number(advancePayment) : 0),
-        }),
-        createdAt: new Date().toISOString()
-      };
-      
-      const collectionName = type === 'quotation' ? 'quotations' : 'invoices';
-      await addDoc(collection(db, collectionName), newRecord);
-
-      // Call Aliphia REAL API
-      const aliphiaResponse = await createAliphiaDocument(type, {
+      const docData = {
         client_id: client.id,
         date: issueDate,
-        date_due: dueDate,
-        terms: terms,
-        notes: notes,
-        items: items.map(i => ({
-          name: i.name,
-          quantity: i.quantity,
-          price: i.unitPrice,
-          description: i.description
+        date_due: dueDate || undefined,
+        notes,
+        items: items.filter(i => i.name).map(i => ({
+          name: i.name, quantity: i.qty, price: i.price, description: i.desc
         }))
-        // Note: Map receipt fields if invoice
-      });
-      
-      setQuotationLink(aliphiaResponse.pdf_url || `https://aliphia.com/v1/invoices/${type === 'quotation' ? 'Q' : 'INV'}-${Math.floor(Math.random() * 1000)}.pdf`);
-      toast.success(isManager ? 'تم الاعتماد والإنشاء بنجاح!' : 'تم الإرسال للاعتماد بنجاح!');
-      
-      setTimeout(() => {
-        toast('تم الإشعار عبر الواتساب بنجاح', {
-          icon: <Send className="w-4 h-4 text-emerald-500" />,
-        });
-      }, 1000);
+      };
 
-    } catch (error) {
-      toast.error('حدث خطأ أثناء المعالجة');
+      // حفظ في Firebase
+      await addDoc(collection(db, isQuote ? 'quotations' : 'invoices'), {
+        type,
+        clientName: client.name,
+        clientId: client.id,
+        items: items.filter(i => i.name).map(i => i.name).join(', '),
+        totalAmount: total,
+        issueDate, dueDate, notes,
+        createdBy: user?.uid,
+        createdAt: new Date().toISOString()
+      });
+
+      // إرسال لألف ياء
+      const res = await createAliphiaDocument(type, docData);
+
+      // استخراج البيانات من استجابة ألف ياء بمرونة
+      const docNum = res?.response?.quote_number || res?.response?.invoice_number ||
+                     res?.quote_number || res?.invoice_number ||
+                     res?.response?.id || res?.id || '—';
+      const pdfUrl = res?.response?.pdf_url || res?.pdf_url || '';
+
+      setResult({ docNumber: String(docNum), pdfUrl, clientName: client.name, total });
+      toast.success(`🎉 تم إنشاء ${label} بنجاح!`, { id: tid });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`فشل: ${err.message || 'خطأ غير معروف'}`, { id: tid });
     } finally {
-      setIsSubmitting(false);
-      toast.dismiss(toastId);
+      setIsSending(false);
     }
   };
 
-  if (quotationLink) {
+  const shareWhatsApp = () => {
+    if (!result) return;
+    const text = `السلام عليكم ورحمة الله وبركاته،\n\nأهلاً بك أخي ${result.clientName}.\n\nمرفق ${label} رقم *${result.docNumber}* بقيمة *${result.total.toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ر.س* شاملاً ضريبة القيمة المضافة.${result.pdfUrl ? `\n\nيمكنك الاطلاع عليها من الرابط:\n${result.pdfUrl}` : ''}\n\nشكراً لتعاملكم معنا.`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const reset = () => {
+    setClient(null); setItems([emptyItem()]);
+    setIssueDate(new Date().toISOString().split('T')[0]);
+    setDueDate(''); setNotes(''); setPhotoURL(''); setResult(null);
+  };
+
+  // ── Success Screen ─────────────────────────────────────
+  if (result) {
     return (
-      <Card className="max-w-2xl mx-auto rounded-[2rem] border-none shadow-xl overflow-hidden animate-in zoom-in-95 duration-500 bg-emerald-50">
-        <CardContent className="p-12 flex flex-col items-center text-center space-y-6">
-          <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-            <CheckCircle2 className="w-12 h-12 text-emerald-600" />
+      <div className="max-w-lg mx-auto" dir="rtl">
+        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-8 text-center text-white">
+            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-black">تم الإنشاء بنجاح! 🎉</h2>
+            <p className="text-emerald-100 mt-1 font-medium">
+              {isQuote ? 'عرض السعر' : 'الفاتورة'} جاهز في ألف ياء
+            </p>
           </div>
-          <h2 className="text-3xl font-black text-slate-800">
-            {type === 'quotation' ? 'تم إنشاء العرض بنجاح!' : 'تم إنشاء الفاتورة بنجاح!'}
-          </h2>
-          <p className="text-slate-600 font-medium max-w-md leading-relaxed">
-            لقد تم إنشاء {type === 'quotation' ? 'عرض السعر' : 'الفاتورة'} في نظام "ألف ياء" بنجاح، وتم إرسال نسخة إليك عبر الواتساب لتتمكن من تحويلها لعميلك.
-          </p>
-          <div className="flex gap-4 w-full max-w-sm mt-8">
-            <Button 
-              className="flex-1 rounded-xl h-12 bg-emerald-600 hover:bg-emerald-700 font-bold"
-              onClick={() => window.open(quotationLink, '_blank')}
-            >
-              <FileText className="w-4 h-4 ml-2" />
-              عرض ملف PDF
-            </Button>
-            <Button 
-              variant="outline"
-              className="flex-1 rounded-xl h-12 border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-bold"
-              onClick={() => {
-                setQuotationLink(null);
-                setItems([]);
-                setPhotoURL('');
-                setClient(null);
-              }}
-            >
-              عرض جديد
-            </Button>
+
+          {/* Details */}
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-50 rounded-2xl p-4 text-center">
+                <p className="text-xs font-bold text-slate-400 mb-1">رقم المستند</p>
+                <p className="text-xl font-black text-slate-800 font-mono">{result.docNumber}</p>
+              </div>
+              <div className="bg-emerald-50 rounded-2xl p-4 text-center">
+                <p className="text-xs font-bold text-slate-400 mb-1">الإجمالي</p>
+                <p className="text-xl font-black text-emerald-700 font-mono">
+                  {result.total.toLocaleString('ar-SA', { minimumFractionDigits: 2 })} <span className="text-sm font-normal">ر.س</span>
+                </p>
+              </div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-3 flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-600">👤 {result.clientName}</span>
+              <span className="text-xs text-slate-400">العميل</span>
+            </div>
+
+            {/* Actions */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Button
+                onClick={shareWhatsApp}
+                className="h-12 rounded-2xl bg-[#25D366] hover:bg-[#1ebe57] text-white font-bold gap-2"
+              >
+                <Share2 className="w-4 h-4" /> واتساب
+              </Button>
+              {result.pdfUrl ? (
+                <Button
+                  onClick={() => window.open(result.pdfUrl, '_blank')}
+                  className="h-12 rounded-2xl bg-slate-800 hover:bg-black text-white font-bold gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" /> فتح PDF
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="h-12 rounded-2xl font-bold"
+                  onClick={reset}
+                >
+                  إنشاء جديد
+                </Button>
+              )}
+            </div>
+            {result.pdfUrl && (
+              <Button variant="ghost" onClick={reset} className="w-full text-slate-400 hover:text-slate-600 font-bold text-sm">
+                + إنشاء {isQuote ? 'عرض سعر' : 'فاتورة'} جديد
+              </Button>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
+  // ── Main Form ──────────────────────────────────────────
   return (
-    <div className="space-y-6 max-w-5xl mx-auto p-4 sm:p-0">
-      
-      {/* Aliphia Connection Status Widget (Manager Only) */}
-      {isManager && (
-        <div className="mb-4">
-          <AliphiaStatusCard />
-        </div>
-      )}
+    <div className="max-w-4xl mx-auto space-y-4" dir="rtl">
 
-      <div className="flex flex-col md:flex-row gap-6">
-        
-        {/* Left Side: Upload & Client */}
-        <div className="w-full md:w-1/3 space-y-6">
-          <Card className="rounded-2xl border-none shadow-md overflow-hidden bg-white">
-            <CardHeader className="bg-slate-50 border-b border-slate-100 pb-3">
-              <CardTitle className="text-base font-black text-slate-800 flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-primary" />
-                بيانات التخصيص والعميل
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              {isManager && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500">تخصيص العرض لمندوب:</Label>
-                  <Select value={selectedRepId} onValueChange={setSelectedRepId}>
-                    <SelectTrigger className="w-full text-right h-10 rounded-xl">
-                      <SelectValue placeholder="اختر المندوب المستفيد" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {reps.map(rep => (
-                        <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+      {/* حالة الاتصال */}
+      <AliphiaStatusCard />
+
+      {/* ── الصف الأول: العميل + التواريخ ── */}
+      <Card className="rounded-2xl border-slate-100 shadow-sm">
+        <CardContent className="p-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 space-y-2">
+              <Label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                <UserPlus className="w-4 h-4 text-primary" /> العميل
+              </Label>
+              <AliphiaClientSelector onSelect={setClient} selectedClientId={client?.id} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500">العميل المستهدف:</Label>
-                <AliphiaClientSelector onSelect={setClient} selectedClientId={client?.id} />
+                <Label className="text-xs font-bold text-slate-500">تاريخ الإصدار</Label>
+                <Input type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} className="h-10 rounded-xl text-sm" />
               </div>
-              
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500">تاريخ الإصدار:</Label>
-                  <Input type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} className="h-10 rounded-xl" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500">تاريخ الاستحقاق:</Label>
-                  <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="h-10 rounded-xl" />
-                </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-500">تاريخ الانتهاء</Label>
+                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="h-10 rounded-xl text-sm" />
               </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-              {isManager && (
-                <div className="space-y-2 pt-2">
-                  <Label className="text-xs font-bold text-slate-500">حالة المستند:</Label>
-                  <Select value={docStatus} onValueChange={setDocStatus}>
-                    <SelectTrigger className="w-full text-right h-10 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">مسودة</SelectItem>
-                      <SelectItem value="approved">مُعتمد</SelectItem>
-                      <SelectItem value="sent">مُرسل للعميل</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              
-              {type === 'invoice' && (
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-3 mt-2">
-                  <Label className="text-xs font-bold text-primary flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> سند قبض (دفعة مقدمة)
-                  </Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-slate-500">المبلغ المدفوع</Label>
-                      <Input type="number" placeholder="0.00" value={advancePayment} onChange={e => setAdvancePayment(e.target.value)} className="h-8 rounded-lg text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-slate-500">طريقة الدفع</Label>
-                      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                        <SelectTrigger className="h-8 rounded-lg text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">نقداً</SelectItem>
-                          <SelectItem value="bank_transfer">تحويل بنكي</SelectItem>
-                          <SelectItem value="pos">شبكة (POS)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  {advancePayment && Number(advancePayment) > 0 && (
-                    <div className="text-xs font-bold text-slate-600 flex justify-between bg-white p-2 rounded-lg border border-slate-100">
-                      <span>الرصيد المتبقي:</span>
-                      <span className="text-red-500">{((grandTotal + tax) - Number(advancePayment)).toFixed(2)} ر.س</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* ── الصف الثاني: البنود + مسح الذكاء الاصطناعي ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-          <Card className="rounded-2xl border-none shadow-md overflow-hidden bg-white">
-            <CardHeader className="bg-slate-50 border-b border-slate-100 pb-3">
-              <CardTitle className="text-base font-black text-slate-800 flex items-center gap-2">
-                <Camera className="w-4 h-4 text-primary" />
-                تفريغ بالذكاء الاصطناعي
+        {/* البنود (2/3 عرض) */}
+        <Card className="md:col-span-2 rounded-2xl border-slate-100 shadow-sm">
+          <CardHeader className="pb-3 pt-4 px-5 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-black text-slate-700 flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-primary" />
+              البنود والتسعير
+            </CardTitle>
+            <Button size="sm" variant="outline" onClick={() => setItems(p => [...p, emptyItem()])} className="h-7 px-2 rounded-lg text-xs font-bold gap-1">
+              <Plus className="w-3 h-3" /> إضافة بند
+            </Button>
+          </CardHeader>
+          <CardContent className="px-5 pb-4 space-y-2">
+            {/* رأس الجدول */}
+            <div className="grid grid-cols-[1fr_64px_96px_32px] gap-2 text-[10px] font-black text-slate-400 uppercase px-1">
+              <span>البند</span><span className="text-center">الكمية</span><span className="text-center">السعر</span><span />
+            </div>
+
+            {items.map(item => (
+              <div key={item.id} className="grid grid-cols-[1fr_64px_96px_32px] gap-2 items-start">
+                <div className="space-y-1">
+                  <Input
+                    value={item.name}
+                    onChange={e => updateItem(item.id, 'name', e.target.value)}
+                    placeholder="اسم المنتج أو الخدمة"
+                    className="h-9 rounded-xl text-sm font-bold"
+                  />
+                  <Input
+                    value={item.desc}
+                    onChange={e => updateItem(item.id, 'desc', e.target.value)}
+                    placeholder="مواصفات إضافية (اختياري)"
+                    className="h-7 rounded-lg text-xs bg-slate-50"
+                  />
+                </div>
+                <Input
+                  type="number" value={item.qty || ''}
+                  onChange={e => updateItem(item.id, 'qty', Number(e.target.value))}
+                  className="h-9 rounded-xl text-center font-mono text-sm"
+                  placeholder="1"
+                />
+                <Input
+                  type="number" value={item.price || ''}
+                  onChange={e => updateItem(item.id, 'price', Number(e.target.value))}
+                  className="h-9 rounded-xl text-center font-mono text-sm"
+                  placeholder="0.00"
+                />
+                <Button
+                  variant="ghost" size="icon"
+                  onClick={() => removeItem(item.id)}
+                  className="h-9 w-9 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+
+            {/* الإجمالي */}
+            <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
+              <div className="flex justify-between text-xs font-bold text-slate-500">
+                <span className="font-mono">{subtotal.toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ر.س</span>
+                <span>المجموع الفرعي</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold text-slate-400">
+                <span className="font-mono">{vat.toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ر.س</span>
+                <span>ضريبة القيمة المضافة 15%</span>
+              </div>
+              <div className="flex justify-between text-base font-black text-slate-800 bg-slate-50 px-4 py-2.5 rounded-xl">
+                <span className="font-mono text-primary">{total.toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ر.س</span>
+                <span>الإجمالي النهائي</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* الذكاء الاصطناعي (1/3 عرض) */}
+        <div className="space-y-3">
+          <Card className="rounded-2xl border-slate-100 shadow-sm">
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="text-sm font-black text-slate-700 flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-primary" /> مسح ذكي بـ AI
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 flex flex-col items-center gap-4 text-center">
+            <CardContent className="px-4 pb-4 space-y-3">
               {photoURL ? (
-                <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-slate-200 group">
-                  <img src={photoURL} alt="Scan" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Label htmlFor="ai-upload" className="cursor-pointer bg-white text-slate-800 px-4 py-2 rounded-xl font-bold text-sm hover:scale-105 transition-transform">
-                      تغيير الصورة
-                    </Label>
-                  </div>
+                <div className="relative rounded-xl overflow-hidden aspect-square">
+                  <img src={photoURL} alt="scan" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => setPhotoURL('')}
+                    className="absolute top-2 left-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
               ) : (
-                <Label htmlFor="ai-upload" className="w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-slate-300 hover:border-primary hover:bg-primary/5 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all">
-                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                    <Upload className="w-8 h-8" />
-                  </div>
-                  <span className="text-sm font-bold text-slate-500">ارفع صورة الطلب أو كراسة الشروط</span>
-                  <span className="text-xs text-slate-400">JPEG, PNG, WEBP</span>
+                <Label
+                  htmlFor="ai-scan-upload"
+                  className="flex flex-col items-center justify-center gap-2 aspect-square rounded-xl border-2 border-dashed border-slate-200 hover:border-primary hover:bg-primary/5 cursor-pointer transition-all text-center p-4"
+                >
+                  <Upload className="w-8 h-8 text-slate-300" />
+                  <span className="text-xs font-bold text-slate-400">ارفع صورة كراسة الشروط أو طلب التوريد</span>
                 </Label>
               )}
-              <input id="ai-upload" type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-              
-              <Button 
-                onClick={scanDocument} 
+              <input id="ai-scan-upload" type="file" accept="image/*" className="hidden" onChange={handleFile} />
+              <Button
+                onClick={scanDocument}
                 disabled={!photoURL || isScanning}
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-accent hover:opacity-90 font-black text-md text-white shadow-lg shadow-primary/20 gap-2 mt-2"
+                className="w-full h-10 rounded-xl bg-gradient-to-r from-primary to-violet-600 text-white font-bold text-xs gap-2 shadow-md shadow-primary/20 disabled:opacity-50"
               >
-                {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-                استخراج البنود آلياً
+                {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                {isScanning ? 'جاري التحليل...' : 'استخراج البنود تلقائياً'}
               </Button>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Right Side: Items & Pricing */}
-        <div className="w-full md:w-2/3">
-          <Card className="rounded-2xl border-none shadow-md bg-white h-full flex flex-col">
-            <CardHeader className="bg-slate-50 border-b border-slate-100 pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-black text-slate-800 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" />
-                تفاصيل {type === 'quotation' ? 'العرض' : 'الفاتورة'} والتسعير
-              </CardTitle>
-              <Button size="sm" variant="outline" onClick={addItem} className="h-7 px-2 rounded-lg gap-1 font-bold text-xs">
-                <Plus className="w-3.5 h-3.5" /> إضافة بند
-              </Button>
-            </CardHeader>
-            <CardContent className="p-6 flex-1 flex flex-col">
-              {items.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-400 space-y-4 py-12">
-                  <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
-                    <FileText className="w-8 h-8 text-slate-300" />
-                  </div>
-                  <p className="font-medium">استخدم الذكاء الاصطناعي لاستخراج البنود أو أضفها يدوياً</p>
-                </div>
-              ) : (
-                <div className="space-y-4 flex-1">
-                  <div className="bg-slate-100 rounded-xl p-3 flex gap-2 font-black text-slate-600 text-xs text-center items-center">
-                    <div className="w-8"></div>
-                    <div className="flex-1 text-right pr-2">وصف البند</div>
-                    <div className="w-16">الكمية</div>
-                    <div className="w-24">سعر الوحدة</div>
-                    <div className="w-24">الإجمالي</div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {items.map((item) => (
-                      <div key={item.id} className="flex gap-2 items-start animate-in fade-in slide-in-from-bottom-2">
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="h-11 w-8 shrink-0 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        <div className="flex-1 space-y-2">
-                          <Input value={item.name} onChange={(e) => updateItem(item.id, 'name', e.target.value)} placeholder="اسم المنتج/الخدمة" className="h-11 text-right font-bold rounded-xl" />
-                          <Input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} placeholder="مواصفات إضافية (اختياري)" className="h-8 text-xs text-right bg-slate-50 rounded-lg" />
-                        </div>
-                        <Input type="number" value={item.quantity || ''} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} className="w-16 h-11 text-center font-mono rounded-xl" placeholder="1" />
-                        <Input type="number" value={item.unitPrice || ''} onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)} className="w-24 h-11 text-center font-mono rounded-xl" placeholder="0.00" />
-                        <div className="w-24 h-11 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center font-black font-mono text-primary text-sm shrink-0">
-                          {item.total.toFixed(2)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-8 pt-6 border-t border-slate-100 space-y-3">
-                    <div className="flex justify-between text-sm font-bold text-slate-500 px-4">
-                      <span>المجموع الفرعي:</span>
-                      <span className="font-mono">{grandTotal.toFixed(2)} ر.س</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-bold text-slate-500 px-4">
-                      <span>ضريبة القيمة المضافة (15%):</span>
-                      <span className="font-mono">{tax.toFixed(2)} ر.س</span>
-                    </div>
-                    <div className="flex justify-between text-xl font-black text-slate-800 bg-slate-50 p-4 rounded-2xl">
-                      <span>الإجمالي النهائي:</span>
-                      <span className="font-mono text-primary">{(grandTotal + tax).toFixed(2)} ر.س</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-4 mt-6">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500">الشروط والأحكام:</Label>
-                  <Textarea 
-                    value={terms} 
-                    onChange={e => setTerms(e.target.value)} 
-                    placeholder="سياسة الاسترجاع، شروط الدفع، صلاحية العرض..." 
-                    className="resize-none h-20 rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500">ملاحظات (تظهر للعميل):</Label>
-                  <Input 
-                    value={notes} 
-                    onChange={e => setNotes(e.target.value)} 
-                    placeholder="ملاحظات عامة حول الفاتورة أو العرض..." 
-                    className="rounded-xl"
-                  />
-                </div>
-              </div>
-              
-              <Button 
-                onClick={generateAliphiaQuotation}
-                disabled={items.length === 0 || isSubmitting || grandTotal === 0 || (isManager && !selectedRepId)}
-                className={`w-full h-12 mt-6 rounded-xl font-black text-sm gap-2 shadow-md transition-all active:scale-95 ${
-                  isManager 
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                    : 'bg-primary hover:bg-primary/90 text-white'
-                }`}
-              >
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (isManager ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />)}
-                {isManager 
-                  ? `اعتماد فوري وإنشاء ${type === 'quotation' ? 'العرض' : 'الفاتورة'}` 
-                  : 'إرسال للإدارة للاعتماد'
-                }
-              </Button>
+          {/* ملاحظات */}
+          <Card className="rounded-2xl border-slate-100 shadow-sm">
+            <CardContent className="p-4 space-y-1">
+              <Label className="text-xs font-bold text-slate-500">ملاحظات (تظهر للعميل)</Label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="شروط الدفع، صلاحية العرض..."
+                rows={3}
+                className="w-full text-xs rounded-xl border border-slate-200 p-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 bg-slate-50 font-medium"
+              />
             </CardContent>
           </Card>
         </div>
-
       </div>
+
+      {/* ── زر الإرسال ── */}
+      <Button
+        onClick={handleSend}
+        disabled={isSending || !client || items.every(i => !i.name) || total === 0}
+        className="w-full h-14 rounded-2xl font-black text-base gap-3 shadow-lg shadow-emerald-500/20 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white transition-all active:scale-[0.99]"
+      >
+        {isSending ? (
+          <><Loader2 className="w-5 h-5 animate-spin" /> جاري الإنشاء في ألف ياء...</>
+        ) : isQuote ? (
+          <><Send className="w-5 h-5" /> إنشاء عرض السعر وإرساله لألف ياء</>
+        ) : (
+          <><Receipt className="w-5 h-5" /> إصدار الفاتورة وإرسالها لألف ياء</>
+        )}
+      </Button>
     </div>
   );
 }

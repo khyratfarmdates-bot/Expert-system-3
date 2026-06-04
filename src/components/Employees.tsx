@@ -101,6 +101,31 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
     contractURL: ''
   });
 
+  // إعادة تعيين النموذج عند فتح نافذة الإضافة
+  useEffect(() => {
+    if (isDialogOpen) {
+      setFormData({
+        name: '',
+        role: filterRole || 'employee',
+        dept: 'الرئيسي',
+        email: '',
+        photoURL: '',
+        salary: 0,
+        isSponsored: false,
+        iqamaNumber: '',
+        iqamaExpiry: '',
+        iqamaPhotoURL: '',
+        drivingLicenseNumber: '',
+        drivingLicenseExpiry: '',
+        drivingLicensePhotoURL: '',
+        passportNumber: '',
+        passportExpiry: '',
+        passportPhotoURL: '',
+        contractURL: ''
+      });
+    }
+  }, [isDialogOpen]);
+
   const handleAIScan = async (imageType: 'iqama' | 'license' | 'passport') => {
     const imageData = imageType === 'iqama' ? formData.iqamaPhotoURL :
                      imageType === 'license' ? formData.drivingLicensePhotoURL :
@@ -455,99 +480,103 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
                 </Button>
               }
             />
-            <DialogContent className="sm:max-w-[425px] text-right" dir="rtl">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-primary">إضافة موظف جديد</DialogTitle>
-                <DialogDescription className="text-muted-foreground">أدخل بيانات الموظف الجديد في النظام.</DialogDescription>
+            <DialogContent className="max-w-2xl w-full text-right" dir="rtl">
+              <DialogHeader className="pb-2 border-b border-slate-100">
+                <DialogTitle className="text-xl font-bold text-primary flex items-center gap-2">
+                  <UserPlus className="w-5 h-5" />
+                  إضافة موظف جديد
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground text-sm">أدخل بيانات الموظف الجديد في النظام.</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleAddEmployee} className="space-y-4 py-4 text-right overflow-y-auto max-h-[70vh] px-1">
-                {/* Photo Upload Section */}
-                <div className="flex flex-col items-center gap-4 mb-6">
-                  <div className="relative group">
-                    <Avatar className="w-24 h-24 rounded-3xl border-4 border-slate-100 shadow-lg">
-                      {formData.photoURL ? (
-                        <AvatarImage src={formData.photoURL} />
-                      ) : (
-                        <AvatarFallback className="bg-slate-100 text-slate-400">
-                          <User className="w-10 h-10" />
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <Label htmlFor="photo-upload" className="absolute -bottom-2 -right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
-                      <Plus className="w-4 h-4 text-white" />
-                      <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'photoURL')} />
-                    </Label>
+              <form onSubmit={handleAddEmployee} className="py-4 text-right" dir="rtl">
+                {/* الصف العلوي: الصورة + المعلومات الأساسية */}
+                <div className="flex gap-5 items-start mb-4">
+                  {/* الصورة */}
+                  <div className="flex flex-col items-center gap-2 shrink-0">
+                    <div className="relative">
+                      <Avatar className="w-20 h-20 rounded-2xl border-4 border-slate-100 shadow-lg">
+                        {formData.photoURL ? (
+                          <AvatarImage src={formData.photoURL} />
+                        ) : (
+                          <AvatarFallback className="bg-slate-100 text-slate-400 rounded-2xl">
+                            <User className="w-8 h-8" />
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <Label htmlFor="photo-upload" className="absolute -bottom-2 -right-2 w-7 h-7 bg-primary rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
+                        <Plus className="w-3.5 h-3.5 text-white" />
+                        <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'photoURL')} />
+                      </Label>
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">الصورة</span>
                   </div>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase">صورة الموظف الرسمية</span>
+
+                  {/* المعلومات الأساسية */}
+                  <div className="flex-1 grid grid-cols-2 gap-3">
+                    <div className="col-span-2 space-y-1">
+                      <Label htmlFor="name" className="font-bold text-gray-700 text-sm">الاسم الكامل</Label>
+                      <Input
+                        id="name"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        placeholder="محمد أحمد..."
+                        className="h-10 rounded-xl text-right"
+                      />
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label htmlFor="email" className="font-bold text-gray-700 text-sm">البريد الإلكتروني</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        placeholder="user@example.com"
+                        className="h-10 rounded-xl"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="font-bold text-gray-700">الاسم الكامل</Label>
-                  <Input 
-                    id="name" 
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="محمد أحمد..." 
-                    className="h-11 rounded-lg text-right"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="font-bold text-gray-700">البريد الإلكتروني</Label>
-                  <Input 
-                    id="email" 
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="user@example.com" 
-                    className="h-11 rounded-lg text-right"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="salary" className="font-bold text-gray-700">الراتب الشهري (ر.س)</Label>
-                  <Input 
-                    id="salary" 
-                    type="number"
-                    value={formData.salary}
-                    onChange={(e) => setFormData({...formData, salary: Number(e.target.value)})}
-                    placeholder="0.00" 
-                    className="h-11 rounded-lg text-right font-mono"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-bold text-gray-700">القسم</Label>
-                    <Select 
-                      value={formData.dept} 
-                      onValueChange={(v) => setFormData({...formData, dept: v})}
-                    >
-                      <SelectTrigger className="w-full text-right h-11 rounded-lg">
-                        <SelectValue placeholder="اختر القسم" />
+                {/* الصف الثاني: الراتب + القسم + الدور */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="salary" className="font-bold text-gray-700 text-sm">الراتب (ر.س)</Label>
+                    <Input
+                      id="salary"
+                      type="number"
+                      value={formData.salary || ''}
+                      onChange={(e) => setFormData({...formData, salary: Number(e.target.value)})}
+                      placeholder="0"
+                      className="h-10 rounded-xl text-right font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="font-bold text-gray-700 text-sm">القسم</Label>
+                    <Select value={formData.dept} onValueChange={(v) => setFormData({...formData, dept: v})}>
+                      <SelectTrigger className="w-full text-right h-10 rounded-xl">
+                        <SelectValue placeholder="القسم" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="الإنتاج">الإنتاج</SelectItem>
                         <SelectItem value="التصميم">التصميم</SelectItem>
                         <SelectItem value="المالية">المالية</SelectItem>
                         <SelectItem value="الإدارة">الإدارة</SelectItem>
+                        <SelectItem value="الرئيسي">الرئيسي</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold text-gray-700">الدور</Label>
-                    <Select 
-                      value={formData.role} 
-                      onValueChange={(v) => setFormData({...formData, role: v as any})}
-                    >
-                      <SelectTrigger className="w-full text-right h-11 rounded-lg">
-                        <SelectValue placeholder="اختر الدور" />
+                  <div className="space-y-1">
+                    <Label className="font-bold text-gray-700 text-sm">الدور</Label>
+                    <Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v as any})}>
+                      <SelectTrigger className="w-full text-right h-10 rounded-xl">
+                        <SelectValue placeholder="الدور" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="employee">موظف</SelectItem>
-                        <SelectItem value="supervisor">مشرف</SelectItem>
-                        <SelectItem value="manager">مدير</SelectItem>
+                        <SelectItem value="employee">👤 موظف</SelectItem>
+                        <SelectItem value="supervisor">🔵 مشرف</SelectItem>
+                        <SelectItem value="manager">👑 مدير</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -588,129 +617,89 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
                               </Button>
                             )}
                           </div>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label className="text-[11px] font-bold">رقم الإقامة</Label>
-                              <Input 
-                                placeholder="XXXXXXXXXX" 
-                                value={formData.iqamaNumber} 
-                                onChange={(e) => setFormData({...formData, iqamaNumber: e.target.value})} 
-                                className="h-10 text-xs text-right" 
-                              />
+                          {/* إقامة - شبكة مدمجة */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="col-span-1 space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-500">رقم الإقامة</Label>
+                              <Input placeholder="XXXXXXXXXX" value={formData.iqamaNumber} onChange={(e) => setFormData({...formData, iqamaNumber: e.target.value})} className="h-9 text-xs text-right" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label className="text-[11px] font-bold">تاريخ انتهاء الإقامة</Label>
-                                <Input type="date" value={formData.iqamaExpiry} onChange={(e) => setFormData({...formData, iqamaExpiry: e.target.value})} className="h-10 text-xs text-right" />
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-[11px] font-bold">صورة الإقامة</Label>
-                                <div className="flex gap-2">
-                                  <Button type="button" variant="outline" className="h-10 text-[10px] flex-1 border-dashed" onClick={() => document.getElementById('iqama-up')?.click()}>
-                                    {formData.iqamaPhotoURL ? 'تم الرفع' : 'ارفع الصورة'}
-                                  </Button>
-                                  <input id="iqama-up" type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'iqamaPhotoURL')} />
-                                </div>
-                              </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-500">تاريخ الانتهاء</Label>
+                              <Input type="date" value={formData.iqamaExpiry} onChange={(e) => setFormData({...formData, iqamaExpiry: e.target.value})} className="h-9 text-xs" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-500">صورة الإقامة</Label>
+                              <Button type="button" variant="outline" className={`h-9 text-[10px] w-full border-dashed ${formData.iqamaPhotoURL ? 'border-emerald-400 text-emerald-600' : ''}`} onClick={() => document.getElementById('iqama-up')?.click()}>
+                                {formData.iqamaPhotoURL ? '✓ تم' : 'رفع'}
+                              </Button>
+                              <input id="iqama-up" type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'iqamaPhotoURL')} />
                             </div>
                           </div>
                         </div>
 
-                        {/* License Section */}
-                        <div className="p-4 bg-slate-50 rounded-2xl space-y-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-black text-slate-500 uppercase tracking-wider">رخصة القيادة</p>
+                        {/* رخصة القيادة */}
+                        <div className="p-3 bg-slate-50 rounded-xl">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-[11px] font-black text-slate-500 uppercase">🚗 رخصة القيادة</p>
                             {formData.drivingLicensePhotoURL && (
-                              <Button 
-                                type="button" 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-7 text-[10px] gap-1.5 text-primary bg-primary/5 hover:bg-primary/10 rounded-lg"
-                                onClick={() => handleAIScan('license')}
-                              >
-                                <Zap className="w-3 h-3" />
-                                مسح ذكي
+                              <Button type="button" size="sm" variant="ghost" className="h-6 text-[10px] gap-1 text-primary" onClick={() => handleAIScan('license')}>
+                                <Zap className="w-3 h-3" /> مسح ذكي
                               </Button>
                             )}
                           </div>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label className="text-[11px] font-bold">رقم الرخصة</Label>
-                              <Input 
-                                placeholder="XXXXXXXXXX" 
-                                value={formData.drivingLicenseNumber} 
-                                onChange={(e) => setFormData({...formData, drivingLicenseNumber: e.target.value})} 
-                                className="h-10 text-xs text-right" 
-                              />
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-500">رقم الرخصة</Label>
+                              <Input placeholder="XXXXXXXXXX" value={formData.drivingLicenseNumber} onChange={(e) => setFormData({...formData, drivingLicenseNumber: e.target.value})} className="h-9 text-xs text-right" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label className="text-[11px] font-bold">تاريخ انتهاء الرخصة</Label>
-                                <Input type="date" value={formData.drivingLicenseExpiry} onChange={(e) => setFormData({...formData, drivingLicenseExpiry: e.target.value})} className="h-10 text-xs text-right" />
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-[11px] font-bold">صورة الرخصة</Label>
-                                <div className="flex gap-2">
-                                  <Button type="button" variant="outline" className="h-10 text-[10px] flex-1 border-dashed" onClick={() => document.getElementById('license-up')?.click()}>
-                                    {formData.drivingLicensePhotoURL ? 'تم الرفع' : 'ارفع الصورة'}
-                                  </Button>
-                                  <input id="license-up" type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'drivingLicensePhotoURL')} />
-                                </div>
-                              </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-500">تاريخ الانتهاء</Label>
+                              <Input type="date" value={formData.drivingLicenseExpiry} onChange={(e) => setFormData({...formData, drivingLicenseExpiry: e.target.value})} className="h-9 text-xs" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-500">صورة الرخصة</Label>
+                              <Button type="button" variant="outline" className={`h-9 text-[10px] w-full border-dashed ${formData.drivingLicensePhotoURL ? 'border-emerald-400 text-emerald-600' : ''}`} onClick={() => document.getElementById('license-up')?.click()}>
+                                {formData.drivingLicensePhotoURL ? '✓ تم' : 'رفع'}
+                              </Button>
+                              <input id="license-up" type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'drivingLicensePhotoURL')} />
                             </div>
                           </div>
                         </div>
 
-                        {/* Passport Section */}
-                        <div className="p-4 bg-slate-50 rounded-2xl space-y-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-black text-slate-500 uppercase tracking-wider">جواز السفر</p>
+                        {/* جواز السفر */}
+                        <div className="p-3 bg-slate-50 rounded-xl">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-[11px] font-black text-slate-500 uppercase">✈️ جواز السفر</p>
                             {formData.passportPhotoURL && (
-                              <Button 
-                                type="button" 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-7 text-[10px] gap-1.5 text-primary bg-primary/5 hover:bg-primary/10 rounded-lg"
-                                onClick={() => handleAIScan('passport')}
-                              >
-                                <Zap className="w-3 h-3" />
-                                مسح ذكي
+                              <Button type="button" size="sm" variant="ghost" className="h-6 text-[10px] gap-1 text-primary" onClick={() => handleAIScan('passport')}>
+                                <Zap className="w-3 h-3" /> مسح ذكي
                               </Button>
                             )}
                           </div>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label className="text-[11px] font-bold">رقم الجواز</Label>
-                              <Input 
-                                placeholder="XXXXXXXXXX" 
-                                value={formData.passportNumber} 
-                                onChange={(e) => setFormData({...formData, passportNumber: e.target.value})} 
-                                className="h-10 text-xs text-right" 
-                              />
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-500">رقم الجواز</Label>
+                              <Input placeholder="XXXXXXXXXX" value={formData.passportNumber} onChange={(e) => setFormData({...formData, passportNumber: e.target.value})} className="h-9 text-xs text-right" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label className="text-[11px] font-bold">تاريخ انتهاء الجواز</Label>
-                                <Input type="date" value={formData.passportExpiry} onChange={(e) => setFormData({...formData, passportExpiry: e.target.value})} className="h-10 text-xs text-right" />
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-[11px] font-bold">صورة الجواز</Label>
-                                <div className="flex gap-2">
-                                  <Button type="button" variant="outline" className="h-10 text-[10px] flex-1 border-dashed" onClick={() => document.getElementById('passport-up')?.click()}>
-                                    {formData.passportPhotoURL ? 'تم الرفع' : 'ارفع الصورة'}
-                                  </Button>
-                                  <input id="passport-up" type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'passportPhotoURL')} />
-                                </div>
-                              </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-500">تاريخ الانتهاء</Label>
+                              <Input type="date" value={formData.passportExpiry} onChange={(e) => setFormData({...formData, passportExpiry: e.target.value})} className="h-9 text-xs" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold text-slate-500">صورة الجواز</Label>
+                              <Button type="button" variant="outline" className={`h-9 text-[10px] w-full border-dashed ${formData.passportPhotoURL ? 'border-emerald-400 text-emerald-600' : ''}`} onClick={() => document.getElementById('passport-up')?.click()}>
+                                {formData.passportPhotoURL ? '✓ تم' : 'رفع'}
+                              </Button>
+                              <input id="passport-up" type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'passportPhotoURL')} />
                             </div>
                           </div>
                         </div>
 
-                        {/* Contract Section */}
-                        <div className="p-4 bg-emerald-50 rounded-2xl space-y-4 border border-emerald-100">
-                          <p className="text-xs font-black text-emerald-600 uppercase tracking-wider">عقد العمل</p>
-                          <Button type="button" variant="outline" className="w-full h-11 text-xs border-dashed border-emerald-300 text-emerald-700 bg-white" onClick={() => document.getElementById('contract-up')?.click()}>
-                            {formData.contractURL ? 'تم رفع العقد الموثق' : 'ارفع نسخة رقمية من العقد'}
+                        {/* عقد العمل */}
+                        <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                          <p className="text-[11px] font-black text-emerald-700 flex-1">📄 عقد العمل</p>
+                          <Button type="button" variant="outline" className="h-9 text-[10px] px-4 border-dashed border-emerald-300 text-emerald-700 bg-white" onClick={() => document.getElementById('contract-up')?.click()}>
+                            {formData.contractURL ? '✓ تم رفع العقد' : 'رفع العقد'}
                           </Button>
                           <input id="contract-up" type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleFileUpload(e, 'contractURL')} />
                         </div>
@@ -718,13 +707,14 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
                     )}
                   </AnimatePresence>
                 </div>
-                <DialogFooter className="pt-4">
-                  <Button 
-                    type="submit" 
+
+                <DialogFooter className="pt-3 border-t border-slate-100">
+                  <Button
+                    type="submit"
                     disabled={isSubmitting}
-                    className="w-full h-12 rounded-xl bg-primary hover:bg-black font-bold text-lg"
+                    className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 font-bold text-base"
                   >
-                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'إضافة الموظف'}
+                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : '✓ إضافة الموظف'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -743,124 +733,132 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
         />
       </div>
 
-      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full py-20 text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
           </div>
         ) : filteredEmployees.length > 0 ? (
           filteredEmployees.map((emp) => (
-            <Card 
-              key={emp.id} 
-              className="group relative rounded-[2rem] border-none bg-white shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer"
+            <div
+              key={emp.id}
+              className="group relative bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer"
               onClick={() => onSelectEmployee?.(emp.id)}
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-all group-hover:bg-primary/10 group-hover:scale-150" />
-              
-              <CardContent className="p-2 sm:p-6 relative z-10">
-                <div className="flex items-start justify-between mb-2 sm:mb-6">
-                  <div className="relative">
-                    <Avatar className="w-10 h-10 sm:w-20 sm:h-20 rounded-lg sm:rounded-[1.5rem] border-2 sm:border-4 border-white shadow-md sm:shadow-xl group-hover:scale-110 transition-transform duration-500">
-                      <AvatarImage src={emp.photoURL} />
-                      <AvatarFallback className="bg-slate-900 text-white font-black text-[10px] sm:text-xl">{emp.name?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-3 h-3 sm:w-6 sm:h-6 bg-emerald-500 border-2 sm:border-4 border-white rounded-full shadow-lg" />
-                  </div>
-                  
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-8 sm:w-8 text-slate-400 rounded-full hover:bg-slate-100">
-                            <MoreVertical className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </Button>
-                        }
-                      />
-                      <DropdownMenuContent align="end" className="text-right">
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            setSelectedEmployee(emp);
-                            setFormData({ 
-                              name: emp.name, 
-                              email: emp.email, 
-                              role: emp.role, 
-                              dept: emp.department || 'الإنتاج',
-                              photoURL: emp.photoURL || '',
-                              salary: emp.salary || 0,
-                              isSponsored: emp.isSponsored || false,
-                              iqamaNumber: emp.iqamaNumber || '',
-                              iqamaExpiry: emp.iqamaExpiry || '',
-                              iqamaPhotoURL: emp.iqamaPhotoURL || '',
-                              drivingLicenseNumber: emp.drivingLicenseNumber || '',
-                              drivingLicenseExpiry: emp.drivingLicenseExpiry || '',
-                              drivingLicensePhotoURL: emp.drivingLicensePhotoURL || '',
-                              passportNumber: emp.passportNumber || '',
-                              passportExpiry: emp.passportExpiry || '',
-                              passportPhotoURL: emp.passportPhotoURL || '',
-                              contractURL: emp.contractURL || ''
-                            });
-                            setIsEditDialogOpen(true);
-                          }} 
-                          className="flex items-center justify-end gap-2 text-xs"
-                        >
-                          <span>تعديل البيانات</span>
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            setSelectedEmployee(emp);
-                            setIsDeleteConfirmOpen(true);
-                          }} 
-                          className="flex items-center justify-end gap-2 text-xs text-red-600"
-                        >
-                          <span>حذف الموظف</span>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+              {/* شريط لوني علوي حسب الدور */}
+              <div className={`h-1 w-full ${emp.role === 'manager' ? 'bg-gradient-to-r from-violet-500 to-purple-600' : emp.role === 'supervisor' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`} />
+
+              <div className="p-4 flex items-center gap-4">
+                {/* الصورة */}
+                <div className="relative shrink-0">
+                  <Avatar className="w-14 h-14 rounded-xl border-2 border-slate-100 shadow group-hover:scale-105 transition-transform duration-300">
+                    <AvatarImage src={emp.photoURL} />
+                    <AvatarFallback className="bg-slate-900 text-white font-black text-lg rounded-xl">
+                      {emp.name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full" />
                 </div>
 
-                <div className="space-y-0.5 sm:space-y-1">
-                  <h3 className="text-[10px] sm:text-xl font-black text-primary tracking-tight group-hover:text-accent transition-colors truncate leading-tight">{emp.name}</h3>
-                  <div className="flex sm:items-center flex-col sm:flex-row gap-0.5 sm:gap-2">
-                    <Badge variant="outline" className="text-[6px] sm:text-[10px] px-1 py-0 font-black border-slate-200 text-slate-500 uppercase tracking-widest w-fit">
-                      {emp.role === 'manager' ? 'مدير' : emp.role === 'supervisor' ? 'مشرف' : 'الفريق'}
+                {/* المعلومات */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="font-black text-slate-800 text-sm leading-tight truncate group-hover:text-primary transition-colors">
+                        {emp.name}
+                      </h3>
+                      <p className="text-xs text-slate-400 truncate mt-0.5">{emp.email}</p>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 rounded-lg hover:bg-slate-100">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          }
+                        />
+                        <DropdownMenuContent align="end" className="text-right">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedEmployee(emp);
+                              setFormData({
+                                name: emp.name,
+                                email: emp.email,
+                                role: emp.role,
+                                dept: emp.department || 'الإنتاج',
+                                photoURL: emp.photoURL || '',
+                                salary: emp.salary || 0,
+                                isSponsored: emp.isSponsored || false,
+                                iqamaNumber: emp.iqamaNumber || '',
+                                iqamaExpiry: emp.iqamaExpiry || '',
+                                iqamaPhotoURL: emp.iqamaPhotoURL || '',
+                                drivingLicenseNumber: emp.drivingLicenseNumber || '',
+                                drivingLicenseExpiry: emp.drivingLicenseExpiry || '',
+                                drivingLicensePhotoURL: emp.drivingLicensePhotoURL || '',
+                                passportNumber: emp.passportNumber || '',
+                                passportExpiry: emp.passportExpiry || '',
+                                passportPhotoURL: emp.passportPhotoURL || '',
+                                contractURL: emp.contractURL || ''
+                              });
+                              setIsEditDialogOpen(true);
+                            }}
+                            className="flex items-center justify-end gap-2 text-xs"
+                          >
+                            <span>تعديل البيانات</span>
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedEmployee(emp);
+                              setIsDeleteConfirmOpen(true);
+                            }}
+                            className="flex items-center justify-end gap-2 text-xs text-red-600"
+                          >
+                            <span>حذف الموظف</span>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* الدور والقسم */}
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <Badge className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-0 ${
+                      emp.role === 'manager'
+                        ? 'bg-violet-100 text-violet-700'
+                        : emp.role === 'supervisor'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      {emp.role === 'manager' ? '👑 مدير' : emp.role === 'supervisor' ? '🔵 مشرف' : '🟢 موظف'}
                     </Badge>
-                    <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-slate-200" />
-                    <span className="text-[7px] sm:text-[11px] font-bold text-slate-400 truncate leading-none">{emp.department || 'الإنتاج'}</span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {emp.department || 'الإنتاج'}
+                    </span>
+                    {emp.salary ? (
+                      <span className="text-[10px] font-bold text-slate-500 mr-auto">
+                        {emp.salary.toLocaleString()} ر.س
+                      </span>
+                    ) : null}
                   </div>
                 </div>
+              </div>
 
-                <div className="mt-3 sm:mt-8 pt-2 sm:pt-6 border-t border-slate-50 grid grid-cols-2 gap-1 sm:gap-4">
-                  <div className="flex flex-col gap-0.5 sm:gap-1">
-                    <span className="text-[6px] sm:text-[9px] font-black text-slate-400 uppercase tracking-tighter">المهنية</span>
-                    <div className="flex items-center gap-0.5 sm:gap-1.5 text-[8px] sm:text-[11px] font-bold text-emerald-600">
-                      <Activity className="w-2 h-2 sm:w-3 sm:h-3" />
-                      نشط
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-0.5 sm:gap-1 items-end">
-                    <span className="text-[6px] sm:text-[9px] font-black text-slate-400 uppercase tracking-tighter">الأداء</span>
-                    <div className="flex items-center gap-0.5 sm:gap-1 text-[8px] sm:text-[11px] font-black text-primary">
-                      <TrendingUp className="w-2 h-2 sm:w-3 sm:h-3 text-emerald-500" />
-                      94%
-                    </div>
-                  </div>
-                </div>
-
-                <Button 
+              {/* زر الملف */}
+              <div className="px-4 pb-4">
+                <Button
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectEmployee?.(emp.id);
                   }}
-                  className="w-full mt-3 sm:mt-6 bg-slate-900 group-hover:bg-primary text-white rounded-lg sm:rounded-2xl font-black text-[8px] sm:text-xs h-6 sm:h-12 transition-all duration-300 px-0"
+                  className="w-full h-9 rounded-xl bg-slate-50 hover:bg-primary text-slate-600 hover:text-white border border-slate-100 hover:border-primary font-bold text-xs transition-all duration-300"
                 >
-                  <span className="hidden sm:inline">استعراض الملف المهني</span>
-                  <span className="sm:hidden">الملف</span>
+                  استعراض الملف المهني
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))
         ) : (
           <div className="col-span-full py-12 text-center text-muted-foreground font-medium">

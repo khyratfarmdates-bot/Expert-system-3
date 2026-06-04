@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getAliphiaCredentials, saveAliphiaCredentials, checkAliphiaConnection } from '../lib/aliphia';
 import { toast } from 'sonner';
-import { Server, KeyRound, Mail, Lock } from 'lucide-react';
+import { Server, KeyRound, Mail, Lock, User, Hash, Percent, ExternalLink, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -14,10 +14,13 @@ interface Props {
 }
 
 export default function AliphiaSettingsModal({ open, onOpenChange, onSuccess }: Props) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [username, setUsername]         = useState('');
+  const [password, setPassword]         = useState('');
+  const [apiKey, setApiKey]             = useState('');
+  const [userId, setUserId]             = useState('');
+  const [invoiceGroupId, setInvoiceGroupId] = useState('1');
+  const [taxRateId, setTaxRateId]       = useState('');
+  const [isVerifying, setIsVerifying]   = useState(false);
   const [hasLocalCreds, setHasLocalCreds] = useState(false);
 
   useEffect(() => {
@@ -28,33 +31,33 @@ export default function AliphiaSettingsModal({ open, onOpenChange, onSuccess }: 
           setUsername(creds.username || '');
           setPassword(creds.password || '');
           setApiKey(creds.apiKey || '');
+          setUserId(creds.userId || '');
+          setInvoiceGroupId(creds.invoiceGroupId || '1');
+          setTaxRateId(creds.taxRateId || '');
         }
       });
     }
   }, [open]);
 
-
   const handleSave = async () => {
     if (!username || !password || !apiKey) {
-      toast.error('الرجاء تعبئة جميع الحقول المطلوبة');
+      toast.error('الرجاء تعبئة: البريد، كلمة المرور، ومفتاح API');
       return;
     }
 
     setIsVerifying(true);
-    const toastId = toast.loading('جاري التحقق من صحة بيانات الربط...');
+    const toastId = toast.loading('جاري التحقق من الاتصال...');
     
     try {
-      // حفظ مبدئي للفحص
-      await saveAliphiaCredentials({ username, password, apiKey });
-      
+      await saveAliphiaCredentials({ username, password, apiKey, userId, invoiceGroupId, taxRateId });
       const checkResult = await checkAliphiaConnection();
       
       if (checkResult.status === 'connected') {
-        toast.success('تم ربط حساب ألف ياء بنجاح!', { id: toastId });
+        toast.success('✅ تم الربط بنجاح!', { id: toastId });
         if (onSuccess) onSuccess();
         onOpenChange(false);
       } else {
-        toast.error('البيانات غير صحيحة أو يوجد خلل في الاتصال', { id: toastId });
+        toast.error('بيانات غير صحيحة أو يوجد خلل في الاتصال', { id: toastId });
       }
     } catch (e) {
       toast.error('حدث خطأ أثناء الاتصال', { id: toastId });
@@ -65,84 +68,124 @@ export default function AliphiaSettingsModal({ open, onOpenChange, onSuccess }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" dir="rtl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-lg" dir="rtl">
+        <DialogHeader className="border-b border-slate-100 pb-3">
+          <DialogTitle className="flex items-center gap-2 text-lg font-bold">
             <Server className="w-5 h-5 text-emerald-600" />
-            إعدادات ربط خوادم ألف ياء
+            إعدادات ربط منصة ألف ياء
           </DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <p className="text-sm text-slate-500 mb-4">
-            أدخل بيانات حسابك في منصة ألف ياء لتفعيل الربط المباشر مع العروض والفواتير. ستُحفظ هذه البيانات بشكل آمن في قاعدة بياناتك الخاصة.
-          </p>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2"><Mail className="w-4 h-4 text-slate-400"/> البريد الإلكتروني</Label>
-            <Input 
-              dir="ltr"
-              value={username} 
-              onChange={e => setUsername(e.target.value)}
-              placeholder="example@gmail.com" 
-            />
+        <div className="py-2 space-y-5">
+
+          {/* ── بيانات تسجيل الدخول ── */}
+          <div className="space-y-3">
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">بيانات تسجيل الدخول</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 space-y-1">
+                <Label className="text-xs font-bold flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> البريد الإلكتروني</Label>
+                <Input dir="ltr" value={username} onChange={e => setUsername(e.target.value)} placeholder="example@gmail.com" className="h-10 rounded-xl" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> كلمة المرور</Label>
+                <Input type="password" dir="ltr" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="h-10 rounded-xl" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5" /> مفتاح API</Label>
+                <Input type="password" dir="ltr" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="ali_xxxxx" className="h-10 rounded-xl" />
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2"><Lock className="w-4 h-4 text-slate-400"/> كلمة المرور</Label>
-            <Input 
-              type="password"
-              dir="ltr"
-              value={password} 
-              onChange={e => setPassword(e.target.value)}
-              placeholder="********" 
-            />
-          </div>
+          {/* ── إعدادات المستندات ── */}
+          <div className="p-4 bg-slate-50 rounded-2xl space-y-3 border border-slate-100">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-black text-slate-500 uppercase tracking-widest">إعدادات إنشاء المستندات</p>
+              <a
+                href="https://aliphia.com/en/api-docs/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 hover:underline"
+              >
+                <ExternalLink className="w-3 h-3" /> وثائق API
+              </a>
+            </div>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2"><KeyRound className="w-4 h-4 text-slate-400"/> مفتاح الربط (API Key)</Label>
-            <Input 
-              type="password"
-              dir="ltr"
-              value={apiKey} 
-              onChange={e => setApiKey(e.target.value)}
-              placeholder="ali_xxxxxxxxxxxxx" 
-            />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold flex items-center gap-1"><User className="w-3 h-3" /> User ID</Label>
+                <Input
+                  dir="ltr"
+                  value={userId}
+                  onChange={e => setUserId(e.target.value)}
+                  placeholder="1"
+                  className="h-9 rounded-xl text-center font-mono text-sm"
+                />
+                <p className="text-[9px] text-slate-400">رقمك في ألف ياء</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold flex items-center gap-1"><Hash className="w-3 h-3" /> Group ID</Label>
+                <Input
+                  dir="ltr"
+                  value={invoiceGroupId}
+                  onChange={e => setInvoiceGroupId(e.target.value)}
+                  placeholder="1"
+                  className="h-9 rounded-xl text-center font-mono text-sm"
+                />
+                <p className="text-[9px] text-slate-400">مجموعة الترقيم</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold flex items-center gap-1"><Percent className="w-3 h-3" /> Tax ID</Label>
+                <Input
+                  dir="ltr"
+                  value={taxRateId}
+                  onChange={e => setTaxRateId(e.target.value)}
+                  placeholder="4"
+                  className="h-9 rounded-xl text-center font-mono text-sm"
+                />
+                <p className="text-[9px] text-slate-400">معرّف ضريبة 15%</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 p-2.5 bg-amber-50 rounded-xl border border-amber-100">
+              <span className="text-sm">💡</span>
+              <p className="text-[10px] text-amber-700 font-bold leading-relaxed">
+                لمعرفة User ID: سجل دخول لألف ياء ← الإعدادات ← إدارة المستخدمين. لمعرفة Tax ID: اذهب لإعدادات الضرائب وانسخ رقم ضريبة 15%.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex justify-between items-center pt-2 border-t border-slate-100">
           {hasLocalCreds && (
-            <Button 
+            <Button
               type="button"
-              variant="ghost" 
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 font-bold text-xs rounded-xl h-10 px-3" 
+              variant="ghost"
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 text-xs h-9 rounded-xl px-3"
               onClick={() => {
                 localStorage.removeItem('aliphia_credentials');
-                setUsername('');
-                setPassword('');
-                setApiKey('');
+                setUsername(''); setPassword(''); setApiKey('');
+                setUserId(''); setInvoiceGroupId('1'); setTaxRateId('');
                 setHasLocalCreds(false);
-                toast.success('تم مسح البيانات المحلية والعودة لإعدادات السيرفر الافتراضية');
+                toast.success('تم مسح البيانات');
                 if (onSuccess) onSuccess();
                 onOpenChange(false);
               }}
             >
-              حذف البيانات المحلية
+              حذف البيانات
             </Button>
           )}
-          <div className="flex gap-3 mr-auto">
-            <Button variant="outline" className="rounded-xl h-10" onClick={() => onOpenChange(false)}>إلغاء</Button>
-            <Button 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-10" 
-              onClick={handleSave} 
+          <div className="flex gap-2 mr-auto">
+            <Button variant="outline" className="rounded-xl h-9 text-sm" onClick={() => onOpenChange(false)}>إلغاء</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-9 text-sm gap-2"
+              onClick={handleSave}
               disabled={isVerifying}
             >
-              {isVerifying ? 'جاري التحقق...' : 'تحقق وحفظ البيانات'}
+              {isVerifying ? 'جاري التحقق...' : <><CheckCircle2 className="w-4 h-4" /> تحقق وحفظ</>}
             </Button>
           </div>
         </div>
-
       </DialogContent>
     </Dialog>
   );
