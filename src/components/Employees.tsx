@@ -148,7 +148,7 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
       IMPORTANT: If the date is Hijri, convert it to Gregorian if possible.`;
       
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents: {
           parts: [
             { inlineData: { mimeType: "image/jpeg", data: imageData?.split(',')?.[1] || '' } },
