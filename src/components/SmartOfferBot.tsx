@@ -294,7 +294,20 @@ export default function SmartOfferBot() {
       // Create Aliphia record
       const res = await createAliphiaDocument(docType, docData);
 
-      // Save Quotation local status in Firebase
+      const docNum = res?.response?.quote_number || res?.response?.invoice_number ||
+                     res?.quote_number || res?.invoice_number ||
+                     res?.response?.id || res?.id || '—';
+      const pdfUrl = res?.response?.pdf_url || res?.pdf_url || '';
+      const aliphiaId = res?.response?.id || res?.id || '';
+
+      const filteredItems = extractedItems.filter(i => i.name).map(i => ({
+        name: i.name,
+        qty: i.qty,
+        price: i.price * (1 - discountPercent / 100),
+        desc: i.desc || ''
+      }));
+
+      // Save Quotation/Invoice local status in Firebase
       await addDoc(collection(db, docType === 'quotation' ? 'quotations' : 'invoices'), {
         clientName: selectedClient.name,
         clientId: selectedClient.id,
@@ -303,13 +316,13 @@ export default function SmartOfferBot() {
         status: docType === 'quotation' ? 'pending' : 'approved',
         salesRepId: profile?.uid || '',
         salesRepName: profile?.name || '',
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        docNumber: String(docNum),
+        pdfUrl: pdfUrl,
+        aliphiaId: aliphiaId,
+        docType: docType,
+        itemsDetail: filteredItems
       });
-
-      const docNum = res?.response?.quote_number || res?.response?.invoice_number ||
-                     res?.quote_number || res?.invoice_number ||
-                     res?.response?.id || res?.id || '—';
-      const pdfUrl = res?.response?.pdf_url || res?.pdf_url || '';
 
       setResult({
         type: docType,

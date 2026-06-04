@@ -776,7 +776,7 @@ export default function Archive({ initialType }: { initialType?: ArchiveType }) 
                   <ArchiveIcon className="w-4 h-4 text-primary" />
                   كل البيانات المسجلة بالنظام (Raw Data)
                 </h4>
-                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden text-sm">
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto text-sm">
                   <table className="w-full text-right w-full">
                     <tbody className="divide-y divide-slate-100">
                       {selectedItem.rawData && Object.entries(selectedItem.rawData).map(([key, value]) => (

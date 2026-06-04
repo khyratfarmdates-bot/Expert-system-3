@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Target, ShieldCheck, Heart } from 'lucide-react';
+import { Sparkles, Target, ShieldCheck, Heart, User } from 'lucide-react';
 
 interface WelcomeOverlayProps {
   user: any;
@@ -35,16 +35,20 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({ user, profile, s
     if (!roleData || typeof roleData !== 'object') {
       const defaults: any = {
         manager: {
-          title: "مرحباً أيها القائد",
-          tips: ["راجع لوحة التقارير لمتابعة الأداء", "تأكد من الموافقات المعلقة", "رؤيتك اليوم تصنع نجاح الغد"]
+          title: "مرحباً أيها القائد والمدير",
+          tips: ["راجع لوحة التقارير لمتابعة الأداء اليومي", "تأكد من طلبات الموافقات والاعتمادات المعلقة", "رؤيتك وقيادتك اليوم تصنع نجاح الغد"]
         },
         supervisor: {
-          title: "أهلاً بك يا مشرفنا",
-          tips: ["تابع حضور وانصراف فريقك", "تأكد من سير العمل في المواقع", "دعمك للفريق هو سر الجودة"]
+          title: "أهلاً بك يا مشرفنا الفني",
+          tips: ["تابع حضور وانصراف فريقك بدقة", "تأكد من سير وسلامة العمل في مواقع المشاريع", "دعمك الفني والمهني هو سر الجودة المستدامة"]
         },
         employee: {
-          title: "يسعدنا وجودك معنا",
-          tips: ["سجل حضورك الآن لتبدأ يومك", "راجع مهامك اليومية بدقة", "إنجازك الصغير اليوم يكمل نجاحنا"]
+          title: "يسعدنا وجودك ومشاركتنا العمل اليوم",
+          tips: ["سجل حضورك اليومي الآن لتبدأ مهامك", "راجع جدول أعمالك ومهامك اليومية بدقة", "إنجازك الصغير والمستمر اليوم يكمل قصة نجاحنا"]
+        },
+        sales_rep: {
+          title: "أهلاً بك يا شريك النجاح والمبيعات",
+          tips: ["استخدم المساعد الذكي لتوليد أفضل عروضك", "تابع سجل فواتيرك الصادرة ومستحقاتك أولاً بأول", "تواصلك الاحترافي مع العملاء يصنع الفرق"]
         }
       };
       roleData = defaults[role] || defaults.employee;
@@ -55,85 +59,103 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({ user, profile, s
 
   const content = getRoleContent();
 
+  const getTipIcon = (idx: number) => {
+    switch (idx) {
+      case 0: return <ShieldCheck className="w-4 h-4 text-teal-400" />;
+      case 1: return <Target className="w-4 h-4 text-emerald-400" />;
+      default: return <Heart className="w-4 h-4 text-amber-400" />;
+    }
+  };
+
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
-          style={{ background: `radial-gradient(circle at center, white 0%, ${sysSettings.primaryColor}05 100%)` }}
+          exit={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950"
+          style={{ 
+            background: 'radial-gradient(circle at center, #0b1a1c 0%, #030809 100%)',
+            fontFamily: "'Cairo', sans-serif"
+          }}
         >
-          <div className="max-w-md w-full px-8 text-center space-y-8">
+          {/* Subtle Glowing Background Elements */}
+          <div className="absolute top-[20%] right-[10%] w-[30rem] h-[30rem] bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-[20%] left-[10%] w-[30rem] h-[30rem] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="max-w-md w-full px-6 text-center space-y-8 relative z-10">
             {/* Logo Animation */}
             <motion.div
-              initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
+              initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
               animate={{ scale: 1, opacity: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              transition={{ type: "spring", stiffness: 200, damping: 22 }}
               className="relative inline-block"
             >
-              <div className="absolute -inset-4 bg-primary/20 rounded-full blur-2xl animate-pulse" />
-              <img 
-                src={sysSettings.logoUrl} 
-                alt="Logo" 
-                className="w-32 h-32 object-contain relative rounded-3xl shadow-2xl bg-white p-2 border-4 border-primary/10"
-              />
+              <div className="absolute -inset-6 bg-teal-500/10 rounded-full blur-2xl animate-pulse" />
+              <div className="relative p-2 bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] shadow-2xl">
+                <img 
+                  src={sysSettings.logoUrl} 
+                  alt="Logo" 
+                  className="w-28 h-28 object-contain rounded-2xl border border-slate-700 bg-white p-1"
+                />
+              </div>
             </motion.div>
 
-            {/* Greeting */}
+            {/* Greeting Header */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="space-y-2"
+              transition={{ delay: 0.25 }}
+              className="space-y-3"
             >
-              <h1 className="text-3xl font-black text-slate-900 flex items-center justify-center gap-2">
+              <h1 className="text-2xl md:text-3xl font-black text-white flex items-center justify-center gap-2">
                 {content.title}
-                <Sparkles className="w-6 h-6 text-amber-400" />
+                <Sparkles className="w-5 h-5 text-amber-400 animate-spin-slow" />
               </h1>
-              <p className="text-xl font-bold text-primary italic">
-                {profile?.name || user?.displayName}
-              </p>
+              
+              <div className="flex items-center justify-center gap-2 text-teal-400 font-bold bg-teal-500/10 px-4 py-2 rounded-full w-fit mx-auto border border-teal-500/20 shadow-inner">
+                <User className="w-4 h-4" />
+                <span className="text-sm tracking-wide">{profile?.name || user?.displayName}</span>
+              </div>
             </motion.div>
 
-            {/* Tips/Advice Section */}
-            <div className="space-y-3 pt-4">
+            {/* Tips Card List */}
+            <div className="space-y-3 pt-3">
               {content.tips.map((tip: string, idx: number) => (
                 <motion.div
                   key={idx}
-                  initial={{ x: -30, opacity: 0 }}
+                  initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.6 + (idx * 0.2) }}
-                  className="flex items-center gap-3 bg-white/50 backdrop-blur-sm p-3 rounded-2xl border border-slate-100 shadow-sm transition-all hover:bg-white"
+                  transition={{ delay: 0.5 + (idx * 0.15) }}
+                  className="flex items-center gap-3.5 bg-slate-900/40 backdrop-blur-md p-4 rounded-2xl border border-slate-800/80 shadow-lg transition-all hover:bg-slate-900/60 hover:border-slate-700/50 group"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    {idx === 0 ? <ShieldCheck className="w-4 h-4 text-primary" /> : 
-                     idx === 1 ? <Target className="w-4 h-4 text-primary" /> : 
-                     <Heart className="w-4 h-4 text-primary" />}
+                  <div className="w-9 h-9 rounded-xl bg-slate-800/80 border border-slate-700/50 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    {getTipIcon(idx)}
                   </div>
-                  <span className="text-sm font-black text-slate-600 text-right w-full">{tip}</span>
+                  <span className="text-xs font-black text-slate-300 text-right w-full leading-relaxed">{tip}</span>
                 </motion.div>
               ))}
             </div>
 
-            {/* Progress/Loading */}
+            {/* Progress & Loading Text */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1.5 }}
-              className="pt-8 flex flex-col items-center gap-2"
+              transition={{ delay: 1.3 }}
+              className="pt-6 flex flex-col items-center gap-2.5"
             >
-              <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
                 <motion.div 
                   initial={{ width: "0%" }}
                   animate={{ width: "100%" }}
                   transition={{ duration: 3.5, ease: "linear" }}
-                  className="h-full bg-primary"
+                  className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full shadow-[0_0_8px_rgba(20,184,166,0.5)]"
                 />
               </div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">جاري مواءمة بيئة العمل...</p>
+              <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">جاري مزامنة وتهيئة لوحة التحكم...</p>
             </motion.div>
+
           </div>
         </motion.div>
       )}

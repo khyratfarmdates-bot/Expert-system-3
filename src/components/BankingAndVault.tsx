@@ -236,12 +236,13 @@ export default function BankingAndVault() {
           setIsAddDialogOpen(open);
           if (!open) resetForm();
         }}>
-          <DialogTrigger asChild>
-            <Button className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white gap-2 px-5 h-10 md:h-11 shadow-sm transition-all text-xs md:text-sm font-semibold cursor-pointer shrink-0">
-              <Plus className="w-4.5 h-4.5" />
-              <span>إضافة حساب / خزينة</span>
-            </Button>
-          </DialogTrigger>
+          <Button
+            className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white gap-2 px-5 h-10 md:h-11 shadow-sm transition-all text-xs md:text-sm font-semibold cursor-pointer shrink-0"
+            onClick={() => setIsAddDialogOpen(true)}
+          >
+            <Plus className="w-4.5 h-4.5" />
+            <span>إضافة حساب / خزينة</span>
+          </Button>
           <DialogContent className="sm:max-w-[480px] rounded-xl p-6 border border-slate-200 shadow-xl" dir="rtl">
             <DialogHeader className="space-y-1.5 text-right">
               <DialogTitle className="text-lg font-bold text-slate-900">{isEditing ? 'تعديل بيانات الحساب' : 'إضافة حساب جديد'}</DialogTitle>

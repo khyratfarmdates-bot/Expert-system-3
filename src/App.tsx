@@ -46,12 +46,14 @@ import {
   Image as ImageIcon,
   MessageCircle,
   Volume2,
+  Factory,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
+import { Badge } from "@/components/ui/badge";
 
 import GlobalNotificationListener from "./components/GlobalNotificationListener";
 
@@ -220,22 +222,17 @@ function AppContent() {
   const [showPublicWorkerOnboarding, setShowPublicWorkerOnboarding] =
     useState(false);
 
-  const menuGroups = [
+  const menuGroups: any[] = [
     {
       id: "dashboardGroup",
-      title: "عام",
       items: [
         { id: "dashboard", label: "الرئيسية", icon: LayoutDashboard, roles: ["manager", "supervisor", "employee"] },
-        { id: "company_profile", label: "هوية الشركة", icon: Building2, roles: ["manager"] },
         { id: "briefing", label: "موجز AI", icon: Zap, roles: ["manager"] },
       ],
     },
     {
-      id: "finance",
-      title: "المالية",
+      id: "salesGroup",
       items: [
-        { id: "financials", label: "المالية", icon: Wallet, roles: ["manager"] },
-        { id: "approvals", label: "الاعتمادات", icon: ShieldCheck, roles: ["manager"] },
         {
           id: "sales_group",
           label: "المبيعات",
@@ -247,6 +244,14 @@ function AppContent() {
             { id: "sales_reps", label: "إدارة المناديب", roles: ["manager"] },
           ]
         },
+      ]
+    },
+    {
+      id: "finance",
+      title: "المالية",
+      items: [
+        { id: "financials", label: "المالية", icon: Wallet, roles: ["manager"] },
+        { id: "approvals", label: "الاعتمادات", icon: ShieldCheck, roles: ["manager"] },
         { id: "expenses", label: "المصروفات", icon: Receipt, roles: ["manager"] },
         { id: "banking", label: "البنوك", icon: Landmark, roles: ["manager"] },
       ],
@@ -266,7 +271,7 @@ function AppContent() {
       items: [
         { id: "inventory", label: "المخزن", icon: Package, roles: ["manager", "supervisor"] },
         { id: "assets", label: "الأصول", icon: ShieldCheck, roles: ["manager", "supervisor"] },
-        { id: "production", label: "الإنتاج", icon: Settings, roles: ["manager", "supervisor"] },
+        { id: "production", label: "الإنتاج", icon: Factory, roles: ["manager", "supervisor"] },
       ],
     },
     {
@@ -565,20 +570,40 @@ function AppContent() {
 
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen bg-[#1a4d4e] flex flex-col items-center justify-center relative overflow-hidden" dir="rtl">
+      <div 
+        className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden" 
+        dir="rtl"
+        style={{ 
+          background: 'radial-gradient(circle at center, #0f2a2c 0%, #030809 100%)',
+          fontFamily: "'Cairo', sans-serif"
+        }}
+      >
+        {/* Animated ambient background elements */}
+        <div className="absolute top-[-20%] right-[-20%] w-[35rem] h-[35rem] bg-teal-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-[-20%] left-[-20%] w-[35rem] h-[35rem] bg-emerald-500/5 rounded-full blur-3xl animate-pulse [animation-delay:2s]" />
+        
         <motion.div 
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="z-10 flex flex-col items-center"
         >
-          <div className="w-32 h-32 bg-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/20 mb-8 animate-pulse">
-             <img src="https://i.imgur.com/yYZDeHZ.jpg" alt="Logo" className="w-full h-full object-contain rounded-xl" />
+          {/* Pulsing Glowing Logo Container */}
+          <div className="relative mb-8">
+            <div className="absolute -inset-4 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-[2.5rem] blur-xl opacity-35 animate-pulse" />
+            <div className="relative w-36 h-36 bg-slate-900/60 backdrop-blur-2xl rounded-[2.5rem] p-6 shadow-2xl border border-slate-800 flex items-center justify-center">
+              <img 
+                src="https://i.imgur.com/yYZDeHZ.jpg" 
+                alt="Logo" 
+                className="w-full h-full object-contain rounded-2xl shadow-inner border border-slate-700 bg-white p-1" 
+              />
+            </div>
           </div>
+
           <motion.h1 
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.3 }}
             className="text-white text-3xl font-black tracking-tight mb-2"
           >
             نظام خبراء الرسم
@@ -586,20 +611,23 @@ function AppContent() {
           <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.6 }}
-            transition={{ delay: 0.6 }}
-            className="text-white font-bold text-sm tracking-[0.2em]"
+            transition={{ delay: 0.5 }}
+            className="text-teal-400 font-bold text-xs tracking-[0.25em]"
           >
-            جاري تهيئة النظام الرقمي...
+            جاري تهيئة البيئة الرقمية...
           </motion.p>
+          
+          {/* Spinner Loader */}
+          <div className="mt-8 flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 bg-white rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+            <span className="w-2.5 h-2.5 bg-teal-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+            <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-bounce"></span>
+          </div>
         </motion.div>
 
-        {/* Decorative elements */}
-        <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-primary/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-64 h-64 bg-primary/20 rounded-full blur-3xl" />
-        
-        <div className="absolute bottom-10 flex items-center gap-2">
-           <Zap className="w-4 h-4 text-primary animate-bounce" />
-           <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Powered by Advanced AI</span>
+        <div className="absolute bottom-10 flex items-center gap-2 text-white/30 text-[9px] font-black tracking-widest">
+           <Zap className="w-3.5 h-3.5 text-teal-500 animate-pulse" />
+           <span>POWERED BY ADVANCED INTELLIGENCE</span>
         </div>
       </div>
     );
@@ -645,75 +673,103 @@ function AppContent() {
   if (!user) {
     return (
       <div
-        className="min-h-screen bg-[#f0f7f7] flex flex-col items-center justify-center p-4 relative overflow-hidden"
+        className="min-h-screen bg-slate-950 flex flex-col lg:flex-row relative overflow-hidden text-right"
         dir="rtl"
         style={{ fontFamily: "'Cairo', sans-serif" }}
       >
-        {/* Abstract Background Shapes */}
-        <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        {/* Ambient Glowing Orbs */}
+        <div className="absolute top-[-10%] right-[-10%] w-[35rem] h-[35rem] bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[35rem] h-[35rem] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(44,122,125,0.1)] p-10 border border-white relative z-10"
-        >
-          <div className="flex flex-col items-center mb-10">
-            <motion.div 
-              initial={{ y: -20 }}
-              animate={{ y: 0 }}
-              className="mb-6 relative"
-            >
-              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full scale-150 animate-pulse" />
-              <img
-                src={sysSettings.logoUrl}
-                alt="Logo"
-                className="w-24 h-24 object-contain rounded-3xl relative z-10 shadow-lg border-4 border-white"
-              />
-            </motion.div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight text-center">
-              نظام إدارة خبراء الرسم
-            </h1>
-            <div className="h-1 w-12 bg-primary rounded-full mt-4 mb-2" />
-            <p className="text-slate-500 font-bold text-sm text-center leading-relaxed">
-              البوابة الرسمية الموحدة <br />
-              لمتابعة سجلات الميدان والمالية
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <Button
-              onClick={handleLogin}
-              className="w-full h-16 bg-primary hover:bg-[#1a4d4e] text-white rounded-2xl text-lg font-black flex items-center justify-center gap-3 transition-all hover:shadow-[0_10px_30px_rgba(44,122,125,0.3)] active:scale-95 group"
-            >
-              <span className="bg-white/20 p-2 rounded-xl group-hover:rotate-12 transition-transform">
-                <UsersRound className="w-6 h-6" />
-              </span>
-              تسجيل الدخول للموظفين
-            </Button>
-            
-            <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest px-4">
-              الدخول متاح فقط للموظفين المعتمدين لدى الشركة
-            </p>
-          </div>
-
-          <div className="mt-12 flex flex-col items-center gap-4 border-t border-slate-100 pt-8">
-            <div className="flex items-center gap-2 text-slate-300">
-               <ShieldCheck className="w-4 h-4" />
-               <span className="text-[10px] font-black uppercase tracking-widest">Secure Enterprise System</span>
+        {/* Brand Side (visible on large screens) */}
+        <div className="hidden lg:flex lg:w-1/2 bg-slate-950 p-12 flex-col justify-between relative overflow-hidden border-l border-slate-900">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(20,184,166,0.1),rgba(255,255,255,0))]" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:32px_32px] opacity-20" />
+          
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 p-2">
+              <img src={sysSettings.logoUrl} alt="Logo" className="w-full h-full object-contain rounded-lg bg-white p-0.5" />
             </div>
-            <p className="text-[11px] text-slate-400 text-center font-bold">
-              جميع الحقوق محفوظة لشركة خبراء الرسم <br />
-              المملكة العربية السعودية © 2026
+            <span className="text-white font-black text-xs tracking-wide">مؤسسة خبراء الرسم للمقاولات</span>
+          </div>
+
+          <div className="space-y-6 relative z-10 my-auto">
+            <Badge className="bg-teal-500/10 text-teal-400 border border-teal-500/20 px-3 py-1.5 text-[10px] font-bold w-fit rounded-full">
+              بوابة الوصول الموحدة للموظفين والمناديب
+            </Badge>
+            <h2 className="text-3xl xl:text-4xl font-black text-white leading-snug">
+              نظام الأتمتة المالي المتقدم <br />
+              وإدارة المبيعات الذكية والمشاريع.
+            </h2>
+            <p className="text-slate-400 text-xs max-w-md font-bold leading-relaxed">
+              منصة سحابية متكاملة لربط إدارة العمليات في الميدان بالفواتير والمبيعات التشاركية وإرسال الإشعارات والاعتمادات للإدارة بشكل فوري.
             </p>
           </div>
-        </motion.div>
 
-        {/* Decorative badge for PWA/App feeling */}
-        <div className="absolute top-10 flex flex-col items-center gap-1 opacity-20">
-           <Zap className="w-6 h-6 text-primary animate-bounce" />
-           <span className="text-[8px] font-black text-primary uppercase tracking-[0.3em]">V.2.0 Production</span>
+          <div className="flex justify-between items-center text-slate-500 text-[10px] font-bold relative z-10">
+            <span>المملكة العربية السعودية © 2026</span>
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-teal-500" />
+              <span>نظام مشفر ومؤمن بالكامل</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Login Form Side */}
+        <div className="flex-1 flex flex-col justify-center items-center p-6 lg:p-12 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="w-full max-w-md bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-slate-900 p-8 md:p-12 shadow-2xl relative"
+          >
+            {/* Logo on mobile view */}
+            <div className="flex flex-col items-center lg:items-start mb-8 text-center lg:text-right">
+              <div className="mb-6 relative lg:hidden">
+                <div className="absolute inset-0 bg-teal-500/20 blur-xl rounded-full scale-125 animate-pulse" />
+                <img
+                  src={sysSettings.logoUrl}
+                  alt="Logo"
+                  className="w-20 h-20 object-contain rounded-2xl relative z-10 shadow-lg border border-slate-800 bg-white p-1"
+                />
+              </div>
+              
+              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                تسجيل الدخول للمنصة
+              </h1>
+              <p className="text-slate-400 font-bold text-xs mt-2 leading-relaxed">
+                سجل الدخول باستخدام حساب Google الخاص بالشركة للبدء.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <Button
+                onClick={handleLogin}
+                className="w-full h-15 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-650 hover:to-emerald-700 text-white rounded-2xl text-sm font-black flex items-center justify-center gap-3 transition-all hover:shadow-[0_10px_30px_rgba(20,184,166,0.15)] active:scale-98 group border-none shadow-lg"
+              >
+                <div className="bg-white/10 p-2 rounded-xl group-hover:rotate-12 transition-transform">
+                  <UsersRound className="w-5 h-5" />
+                </div>
+                دخول من خلال حساب Google
+              </Button>
+              
+              <div className="bg-slate-950/50 p-4.5 rounded-2xl border border-slate-900">
+                <p className="text-[10px] text-center text-slate-400 font-bold leading-relaxed">
+                  ⚠️ الدخول مقيد للبريد الإلكتروني المعتمد من الموارد البشرية. إذا لم يكن لديك حساب، يرجى تقديم طلب التسجيل للمدير.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-10 pt-6 border-t border-slate-900 flex flex-col items-center gap-3 text-slate-500 text-[10px] font-bold">
+              <div className="flex items-center gap-2">
+                 <ShieldCheck className="w-4 h-4 text-teal-600" />
+                 <span>Authorized Employees Only</span>
+              </div>
+              <p className="text-center lg:hidden">
+                المملكة العربية السعودية © 2026
+              </p>
+            </div>
+          </motion.div>
         </div>
       </div>
     );
@@ -749,7 +805,7 @@ function AppContent() {
               <Menu className="w-6 h-6" />
             </Button>
             <div
-              onClick={() => setActiveTab("profile")}
+              onClick={() => setActiveTab(profile?.role === "sales_rep" ? "sales_rep_dashboard" : "dashboard")}
               className="flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
             >
               <img
@@ -836,7 +892,11 @@ function AppContent() {
               className={`px-6 py-8 border-b border-white/10 mb-2 transition-all duration-300 ${isSidebarCollapsed ? "items-center px-4" : ""}`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
+                <div 
+                  onClick={() => setActiveTab(profile?.role === "sales_rep" ? "sales_rep_dashboard" : "dashboard")}
+                  className="flex items-center gap-3 min-w-0 cursor-pointer active:scale-95 transition-all"
+                  title="الذهاب للوحة الرئيسية"
+                >
                   <img
                     src={sysSettings.logoUrl}
                     alt="خبراء الرسم"
@@ -879,30 +939,17 @@ function AppContent() {
 
                 return (
                   <div key={group.id} className="mb-4">
-                    {showFull && (
-                      <button
-                        onClick={() => toggleGroup(group.id)}
-                        className="w-full flex items-center justify-between px-6 mb-3 mt-4 group/title"
-                      >
-                        <span className="text-xs font-black text-white/90 tracking-wide group-hover/title:text-white transition-colors">
-                          {group.title}
-                        </span>
-                        <ChevronDown
-                          className={`w-4 h-4 text-white/40 transition-transform ${expandedGroups.includes(group.id) ? "" : "rotate-90"}`}
-                        />
-                      </button>
+                    {showFull && group.title && (
+                      <div className="px-6 mb-2 mt-5 text-[10px] font-extrabold text-white/35 tracking-widest select-none flex items-center gap-2">
+                        <span>{group.title}</span>
+                        <div className="flex-1 h-[1px] bg-white/5" />
+                      </div>
                     )}
 
                     <motion.div
                       animate={{
-                        height:
-                          expandedGroups.includes(group.id) || !showFull
-                            ? "auto"
-                            : 0,
-                        opacity:
-                          expandedGroups.includes(group.id) || !showFull
-                            ? 1
-                            : 0,
+                        height: "auto",
+                        opacity: 1,
                       }}
                       className="overflow-hidden space-y-1"
                     >

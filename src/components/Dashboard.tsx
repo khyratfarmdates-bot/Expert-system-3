@@ -432,7 +432,7 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
       </div>
 
       {/* Primary Analytics Grid - 8 Cards (4+4) */}
-      <div className="grid grid-cols-4 md:grid-cols-4 gap-2 md:gap-4 h-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4 h-auto">
         <StatCard 
           title="عمال" 
           value={stats.activeWorkers} 
@@ -607,17 +607,21 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
              </CardHeader>
              <CardContent className="p-2 md:p-8 pt-2 md:pt-4 space-y-1.5 md:space-y-3">
                 {transactions.length > 0 ? transactions.slice(0, 4).map((tx: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-2.5 md:p-4 rounded-xl md:rounded-[1.25rem] bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer" onClick={() => goToTab('financials')}>
-                    <div className="flex items-center gap-2 md:gap-3">
-                      <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl flex items-center justify-center ${tx.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                  <div key={i} className="flex items-center justify-between p-2.5 md:p-4 rounded-xl md:rounded-[1.25rem] bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer w-full overflow-hidden gap-3" onClick={() => goToTab('financials')}>
+                    <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                      <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
                         {tx.type === 'income' ? <Plus className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] md:text-[11px] font-black text-slate-800 truncate block w-20 md:w-auto">{tx.description}</p>
-                        <p className="text-[7px] md:text-[9px] font-bold text-slate-400">{new Date(tx.date).toLocaleDateString('ar-SA')}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] md:text-[11px] font-black text-slate-800 truncate block" title={tx.description}>{tx.description}</p>
+                        <p className="text-[7px] md:text-[9px] font-bold text-slate-400">
+                          {tx.dateOriginal instanceof Date && !isNaN(tx.dateOriginal.getTime()) 
+                            ? tx.dateOriginal.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }) 
+                            : tx.date}
+                        </p>
                       </div>
                     </div>
-                    <span className={`text-[9px] md:text-[11px] font-black ${tx.type === 'income' ? 'text-emerald-600' : 'text-red-500'}`}>
+                    <span className={`text-[9px] md:text-[11px] font-black shrink-0 ${tx.type === 'income' ? 'text-emerald-600' : 'text-red-500'}`}>
                       {tx.type === 'income' ? '+' : '-'}{(tx.amount || 0).toLocaleString()}
                     </span>
                   </div>

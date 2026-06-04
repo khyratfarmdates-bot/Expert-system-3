@@ -880,7 +880,7 @@ export default function Financials() {
                 <p className="text-[10px] md:text-xs text-muted-foreground font-medium">مقارنة بين إجمالي السيولة الواردة والصادرة</p>
               </div>
             </div>
-            <div className="h-[250px] md:h-[300px] w-full">
+            <div className="h-[250px] md:h-[300px] w-full" style={{ minHeight: 250 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -908,7 +908,7 @@ export default function Financials() {
                 <p className="text-[10px] md:text-xs text-muted-foreground font-medium">تطور الأرباح الصافية خلال الفترة الماضية</p>
               </div>
             </div>
-            <div className="h-[250px] md:h-[300px] w-full">
+            <div className="h-[250px] md:h-[300px] w-full" style={{ minHeight: 250 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />

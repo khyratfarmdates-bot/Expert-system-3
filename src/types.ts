@@ -141,6 +141,7 @@ export interface Transaction {
   referenceId?: string;
   paymentMethod?: 'cash' | 'transfer';
   bankAccountId?: string;
+  salesRepId?: string;
 }
 
 export interface Attendance {
@@ -172,4 +173,14 @@ export interface Quotation {
   items: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: any;
+  docNumber?: string;
+  pdfUrl?: string;
+  aliphiaId?: string;
+  docType?: 'quotation' | 'invoice';
+  itemsDetail?: Array<{
+    name: string;
+    qty: number;
+    price: number;
+    desc?: string;
+  }>;
 }

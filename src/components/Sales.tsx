@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ShareDialog } from '@/components/ShareDialog';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,9 @@ export default function Sales() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareDoc, setShareDoc] = useState<any>(null);
+  const [shareType, setShareType] = useState<'invoice'|'quote'>('invoice');
   const [localSearchTerm, setLocalSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
@@ -1508,7 +1512,7 @@ export default function Sales() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleShareWhatsApp('invoice', inv)}
+                                  onClick={() => { setShareDoc(inv); setShareType('invoice'); setShareOpen(true); }}
                                   className="h-8 rounded-lg text-xs font-bold gap-1 px-2 text-emerald-600 border-emerald-100 hover:bg-emerald-50/50"
                                 >
                                   <Share2 className="w-3 h-3" /> واتساب
@@ -1602,7 +1606,7 @@ export default function Sales() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleShareWhatsApp('quote', quote)}
+                                  onClick={() => { setShareDoc(quote); setShareType('quote'); setShareOpen(true); }}
                                   className="h-8 rounded-lg text-xs font-bold gap-1 px-2 text-emerald-600 border-emerald-100 hover:bg-emerald-50/50"
                                 >
                                   <Share2 className="w-3 h-3" /> واتساب
@@ -1905,6 +1909,7 @@ export default function Sales() {
           </DialogContent>
         </Dialog>
       )}
+      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} doc={shareDoc} type={shareType} />
     </Tabs>
   );
 }
