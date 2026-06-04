@@ -138,7 +138,6 @@ export const createAliphiaDocument = async (type: 'invoice' | 'quotation', docDa
     const createBody: any = {
       client_id: String(docData.client_id || ''),
       [dateKey]: docDate,
-      date: docDate,
     };
 
     if (isInvoice) {
@@ -147,7 +146,7 @@ export const createAliphiaDocument = async (type: 'invoice' | 'quotation', docDa
       createBody.invoice_group_id = String(groupId);
       createBody.user_id = String(userId);
     } else {
-      createBody.quote_group_id = String(groupId);
+      createBody.invoice_group_id = String(groupId);
       createBody.user_id = String(userId);
     }
 
@@ -216,7 +215,7 @@ export const createAliphiaDocument = async (type: 'invoice' | 'quotation', docDa
       updateBody.invoice_group_id = String(groupId);
       updateBody.user_id = String(userId);
     } else {
-      updateBody.quote_group_id = String(groupId);
+      updateBody.invoice_group_id = String(groupId);
       updateBody.user_id = String(userId);
     }
 
