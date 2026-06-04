@@ -25,7 +25,8 @@ service cloud.firestore {
     function isAdmin() { 
       return isSignedIn() && (
         request.auth.token.email.lower() == 'amanrental2020@gmail.com' ||
-        request.auth.token.email.lower() == 'khyratfarmdates@gmail.com'
+        request.auth.token.email.lower() == 'khyratfarmdates@gmail.com' ||
+        request.auth.token.email.lower() == 'expertadvsa@gmail.com'
       ); 
     }
     
