@@ -2,7 +2,11 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Project, Transaction } from "../types";
 
 const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = import.meta.env?.VITE_GEMINI_API_KEY || 
+                 (typeof localStorage !== 'undefined' ? localStorage.getItem('VITE_GEMINI_API_KEY') : '') || 
+                 (typeof window !== 'undefined' ? (window as any).VITE_GEMINI_API_KEY : '') ||
+                 (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : '') || 
+                 '';
   if (!apiKey || apiKey === 'undefined' || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
     console.warn("Gemini API key is not configured or is using a placeholder.");
     return null;
@@ -46,7 +50,7 @@ export const quickAnalyzeInvoice = async (dataUrl: string): Promise<QuickScanRes
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-2.0-flash",
       contents: [
         {
           parts: [
@@ -111,7 +115,7 @@ export const analyzeInvoice = async (dataUrl: string): Promise<InvoiceData> => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-2.0-flash",
       contents: [
         {
           parts: [
@@ -212,7 +216,7 @@ export const analyzeProjectSpending = async (projectData: Partial<Project>, tran
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-2.0-flash",
       contents: [{ parts: [{ text: prompt }] }],
     });
 

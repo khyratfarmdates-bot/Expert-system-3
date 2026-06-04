@@ -162,6 +162,7 @@ function AppContent() {
   );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["overview"]);
+  const [expandedSubMenus, setExpandedSubMenus] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
@@ -235,9 +236,17 @@ function AppContent() {
       items: [
         { id: "financials", label: "المالية", icon: Wallet, roles: ["manager"] },
         { id: "approvals", label: "الاعتمادات", icon: ShieldCheck, roles: ["manager"] },
-        { id: "sales", label: "المبيعات", icon: TrendingUp, roles: ["manager"] },
-        { id: "sales_reps", label: "إدارة المناديب", icon: Users, roles: ["manager"] },
-        { id: "sales_rep_dashboard", label: "لوحة المبيعات الذكية", icon: LayoutDashboard, roles: ["manager", "sales_rep"] },
+        {
+          id: "sales_group",
+          label: "المبيعات",
+          icon: TrendingUp,
+          roles: ["manager", "sales_rep"],
+          subItems: [
+            { id: "sales", label: "سجل المبيعات والإيرادات", roles: ["manager"] },
+            { id: "sales_rep_dashboard", label: "لوحة المبيعات الذكية", roles: ["manager", "sales_rep"] },
+            { id: "sales_reps", label: "إدارة المناديب", roles: ["manager"] },
+          ]
+        },
         { id: "expenses", label: "المصروفات", icon: Receipt, roles: ["manager"] },
         { id: "banking", label: "البنوك", icon: Landmark, roles: ["manager"] },
       ],
@@ -294,7 +303,15 @@ function AppContent() {
 
   const isTabAllowed = (tabId: string) => {
     if (["profile", "notifications", "camera"].includes(tabId)) return true;
-    const allItems = menuGroups.flatMap((g) => g.items);
+    const allItems: any[] = [];
+    menuGroups.forEach((g) => {
+      g.items.forEach((item) => {
+        allItems.push(item);
+        if (item.subItems) {
+          allItems.push(...item.subItems);
+        }
+      });
+    });
     const item = allItems.find((i) => i.id === tabId);
     if (!item) return true;
     return item.roles.includes(profile?.role || "employee");
@@ -307,6 +324,24 @@ function AppContent() {
         : [...prev, groupId],
     );
   };
+
+  const toggleSubMenu = (menuId: string) => {
+    setExpandedSubMenus((prev) =>
+      prev.includes(menuId) ? prev.filter((id) => id !== menuId) : [...prev, menuId]
+    );
+  };
+
+  useEffect(() => {
+    menuGroups.forEach((group) => {
+      group.items.forEach((item) => {
+        if (item.subItems && item.subItems.some((s: any) => s.id === activeTab)) {
+          setExpandedSubMenus((prev) =>
+            prev.includes(item.id) ? prev : [...prev, item.id]
+          );
+        }
+      });
+    });
+  }, [activeTab]);
 
   useEffect(() => {
     if (profile) {
@@ -344,12 +379,15 @@ function AppContent() {
   }, [user, profile]);
 
   useEffect(() => {
-    // Reactive System Settings for Branding
     const unsubSys = onSnapshot(
       doc(db, "system", "settings"),
       (snap) => {
         if (snap.exists()) {
           const data = snap.data();
+          if (data.geminiApiKey) {
+            localStorage.setItem("VITE_GEMINI_API_KEY", data.geminiApiKey);
+            (window as any).VITE_GEMINI_API_KEY = data.geminiApiKey;
+          }
           const baseSettings = {
             companyName: data.companyName || "خبراء الرسم",
             companySub: data.companySub || "لإدارة المشاريع والمقارات",
@@ -868,51 +906,132 @@ function AppContent() {
                       }}
                       className="overflow-hidden space-y-1"
                     >
-                      {visibleItems.map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            setActiveTab(item.id);
-                            if (window.innerWidth < 1024)
-                              setIsSidebarOpen(false);
-                          }}
-                          className={`w-full flex items-center gap-3 transition-all group relative ${
-                            !showFull
-                              ? "justify-center px-0 py-4"
-                              : "px-6 py-2"
-                          } ${
-                            activeTab === item.id
-                              ? "bg-white/10 text-white"
-                              : "text-white/50 hover:bg-white/10 hover:text-white/90"
-                          }`}
-                        >
-                          {activeTab === item.id && showFull && (
-                            <motion.div
-                              layoutId="activeTabIndicator"
-                              className="absolute right-0 top-0 bottom-0 w-1 bg-sidebar-primary"
+                      {visibleItems.map((item) => {
+                        const hasSubItems = item.subItems && item.subItems.length > 0;
+                        const allowedSubItems = hasSubItems
+                          ? item.subItems.filter((s: any) => s.roles.includes(profile?.role || "employee"))
+                          : [];
+                          
+                        if (hasSubItems && allowedSubItems.length === 0) return null;
+                        
+                        const isExpanded = expandedSubMenus.includes(item.id);
+                        const isSubActive = hasSubItems && allowedSubItems.some((s: any) => activeTab === s.id);
+                        
+                        if (hasSubItems) {
+                          return (
+                            <div key={item.id} className="space-y-0.5">
+                              <button
+                                onClick={() => {
+                                  if (showFull) {
+                                    toggleSubMenu(item.id);
+                                  } else {
+                                    if (allowedSubItems.length > 0) {
+                                      setActiveTab(allowedSubItems[0].id);
+                                    }
+                                  }
+                                }}
+                                className={`w-full flex items-center justify-between transition-all group relative ${
+                                  !showFull ? "justify-center px-0 py-4" : "px-6 py-2"
+                                } ${
+                                  isSubActive
+                                    ? "bg-white/5 text-white"
+                                    : "text-white/50 hover:bg-white/10 hover:text-white/90"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <item.icon
+                                    className={`shrink-0 transition-colors ${
+                                      !showFull ? "w-6 h-6" : "w-4 h-4"
+                                    } ${isSubActive ? "text-sidebar-primary" : "opacity-70 group-hover:opacity-100"}`}
+                                  />
+                                  {showFull && (
+                                    <span className="text-xs font-bold truncate">
+                                      {item.label}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {showFull && (
+                                  <ChevronDown 
+                                    className={`w-3.5 h-3.5 opacity-55 transition-transform ${isExpanded ? "" : "rotate-90"}`} 
+                                  />
+                                )}
+                              </button>
+                              
+                              {showFull && isExpanded && (
+                                <div className="space-y-0.5 pr-4 border-r border-white/5 mr-6 mt-0.5">
+                                  {allowedSubItems.map((sub: any) => (
+                                    <button
+                                      key={sub.id}
+                                      onClick={() => {
+                                        setActiveTab(sub.id);
+                                        if (window.innerWidth < 1024)
+                                          setIsSidebarOpen(false);
+                                      }}
+                                      className={`w-full flex items-center gap-3 transition-all px-4 py-1.5 rounded-lg text-right relative text-[11px] font-bold ${
+                                        activeTab === sub.id
+                                          ? "bg-white/10 text-white"
+                                          : "text-white/40 hover:bg-white/5 hover:text-white/70"
+                                      }`}
+                                    >
+                                      {activeTab === sub.id && (
+                                        <div className="absolute right-0 top-1 bottom-1 w-0.5 bg-sidebar-primary" />
+                                      )}
+                                      <span>{sub.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setActiveTab(item.id);
+                              if (window.innerWidth < 1024)
+                                setIsSidebarOpen(false);
+                            }}
+                            className={`w-full flex items-center gap-3 transition-all group relative ${
+                              !showFull
+                                ? "justify-center px-0 py-4"
+                                : "px-6 py-2"
+                            } ${
+                              activeTab === item.id
+                                ? "bg-white/10 text-white"
+                                : "text-white/50 hover:bg-white/10 hover:text-white/90"
+                            }`}
+                          >
+                            {activeTab === item.id && showFull && (
+                              <motion.div
+                                layoutId="activeTabIndicator"
+                                className="absolute right-0 top-0 bottom-0 w-1 bg-sidebar-primary"
+                              />
+                            )}
+                            <item.icon
+                              className={`shrink-0 transition-colors ${
+                                !showFull ? "w-6 h-6" : "w-4 h-4"
+                              } ${activeTab === item.id ? "text-sidebar-primary" : "opacity-70 group-hover:opacity-100"}`}
                             />
-                          )}
-                          <item.icon
-                            className={`shrink-0 transition-colors ${
-                              !showFull ? "w-6 h-6" : "w-4 h-4"
-                            } ${activeTab === item.id ? "text-sidebar-primary" : "opacity-70 group-hover:opacity-100"}`}
-                          />
-                          {showFull && (
-                            <span className="text-xs font-bold truncate">
-                              {item.label}
-                            </span>
-                          )}
-                          {item.id === "notifications" && unreadCount > 0 && (
-                            <span
-                              className={`absolute bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full ring-2 ring-sidebar ${
-                                !showFull ? "top-2 right-2" : "left-4"
-                              }`}
-                            >
-                              {unreadCount}
-                            </span>
-                          )}
-                        </button>
-                      ))}
+                            {showFull && (
+                              <span className="text-xs font-bold truncate">
+                                {item.label}
+                              </span>
+                            )}
+                            {item.id === "notifications" && unreadCount > 0 && (
+                              <span
+                                className={`absolute bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full ring-2 ring-sidebar ${
+                                  !showFull ? "top-2 right-2" : "left-4"
+                                }`}
+                              >
+                                {unreadCount}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </motion.div>
 
                     {!showFull && (

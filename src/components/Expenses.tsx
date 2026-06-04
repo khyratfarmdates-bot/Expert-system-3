@@ -397,42 +397,42 @@ export default function Expenses() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="rounded-3xl border-none shadow-sm bg-white p-6 relative overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="rounded-xl border-none shadow-sm bg-white p-4 h-24 relative overflow-hidden group">
            <div className="relative z-10">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">إجمالي المصروفات المعتمدة</h4>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-black text-slate-800">{stats.total.toLocaleString()}</span>
-              <span className="text-xs font-bold text-slate-400">( ر.س )</span>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">إجمالي المصروفات المعتمدة</h4>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black text-slate-800">{stats.total.toLocaleString()}</span>
+              <span className="text-[10px] font-bold text-slate-400">ر.س</span>
             </div>
            </div>
-           <ArrowDownCircle className="absolute -bottom-4 -right-4 w-24 h-24 text-red-50/50 group-hover:scale-110 transition-transform duration-500" />
+           <ArrowDownCircle className="absolute -bottom-2 -right-2 w-16 h-16 text-red-50/50 group-hover:scale-110 transition-transform duration-500" />
         </Card>
         
-        <Card className="rounded-3xl border-none shadow-sm bg-white p-6 relative overflow-hidden group">
+        <Card className="rounded-xl border-none shadow-sm bg-white p-4 h-24 relative overflow-hidden group">
            <div className="relative z-10">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">في انتظار الاعتماد</h4>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-black text-amber-600">{stats.pending.toLocaleString()}</span>
-              <span className="text-xs font-bold text-slate-400">( ر.س )</span>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">في انتظار الاعتماد</h4>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black text-amber-600">{stats.pending.toLocaleString()}</span>
+              <span className="text-[10px] font-bold text-slate-400">ر.س</span>
             </div>
            </div>
-           <Clock className="absolute -bottom-4 -right-4 w-24 h-24 text-amber-50/50 group-hover:scale-110 transition-transform duration-500" />
+           <Clock className="absolute -bottom-2 -right-2 w-16 h-16 text-amber-50/50 group-hover:scale-110 transition-transform duration-500" />
         </Card>
 
-        <Card className="rounded-3xl border-none shadow-sm bg-white p-6 relative overflow-hidden group">
+        <Card className="rounded-xl border-none shadow-sm bg-white p-4 h-24 relative overflow-hidden group">
            <div className="relative z-10">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">عدد العمليات المسجلة</h4>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-black text-slate-800">{stats.count}</span>
-              <span className="text-xs font-bold text-slate-400">عملية</span>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">عدد العمليات المسجلة</h4>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black text-slate-800">{stats.count}</span>
+              <span className="text-[10px] font-bold text-slate-400">عملية</span>
             </div>
            </div>
-           <Receipt className="absolute -bottom-4 -right-4 w-24 h-24 text-blue-50/50 group-hover:scale-110 transition-transform duration-500" />
+           <Receipt className="absolute -bottom-2 -right-2 w-16 h-16 text-blue-50/50 group-hover:scale-110 transition-transform duration-500" />
         </Card>
       </div>
 
-      <Card className="rounded-3xl border-none shadow-sm bg-white overflow-hidden">
+      <Card className="rounded-xl border-none shadow-sm bg-white overflow-hidden">
         <div className="p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

@@ -392,54 +392,54 @@ export default function AssetsManagement() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="rounded-3xl border-none shadow-sm p-6 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Package className="w-6 h-6" />
+        <Card className="rounded-xl border-none shadow-sm p-4 h-24 bg-white flex items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Package className="w-5 h-5" />
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase">إجمالي الأصول</p>
-              <h3 className="text-2xl font-black text-slate-800">{assets.length}</h3>
+              <h3 className="text-xl font-black text-slate-800">{assets.length}</h3>
             </div>
           </div>
         </Card>
-        <Card className="rounded-3xl border-none shadow-sm p-6 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6" />
+        <Card className="rounded-xl border-none shadow-sm p-4 h-24 bg-white flex items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase">متاح حالياً</p>
-              <h3 className="text-2xl font-black text-slate-800">{assets.filter(a => a.status === 'available').length}</h3>
+              <h3 className="text-xl font-black text-slate-800">{assets.filter(a => a.status === 'available').length}</h3>
             </div>
           </div>
         </Card>
-        <Card className="rounded-3xl border-none shadow-sm p-6 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <User className="w-6 h-6" />
+        <Card className="rounded-xl border-none shadow-sm p-4 h-24 bg-white flex items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <User className="w-5 h-5" />
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase">تحت العهدة</p>
-              <h3 className="text-2xl font-black text-slate-800">{assets.filter(a => a.status === 'assigned').length}</h3>
+              <h3 className="text-xl font-black text-slate-800">{assets.filter(a => a.status === 'assigned').length}</h3>
             </div>
           </div>
         </Card>
-        <Card className="rounded-3xl border-none shadow-sm p-6 bg-white">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
-              <AlertCircle className="w-6 h-6" />
+        <Card className="rounded-xl border-none shadow-sm p-4 h-24 bg-white flex items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5" />
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase">تحتاج صيانة</p>
-              <h3 className="text-2xl font-black text-slate-800">{assets.filter(a => a.status === 'under-maintenance' || a.condition === 'يحتاج صيانة').length}</h3>
+              <h3 className="text-xl font-black text-slate-800">{assets.filter(a => a.status === 'under-maintenance' || a.condition === 'يحتاج صيانة').length}</h3>
             </div>
           </div>
         </Card>
       </div>
 
       {/* Main Grid */}
-      <div className="bg-white rounded-[3rem] border-none shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border-none shadow-sm overflow-hidden">
         <div className="p-8 border-b flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex flex-wrap items-center gap-3">
             <Button 
@@ -502,9 +502,9 @@ export default function AssetsManagement() {
                       exit={{ opacity: 0, scale: 0.9 }}
                       className="group"
                     >
-                      <Card className="rounded-[2.5rem] border-none shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden bg-slate-50 relative group-hover:-translate-y-1">
-                        <div className="absolute top-4 left-4">
-                           <Badge className={`rounded-xl px-3 py-1 font-black ${
+                      <Card className="rounded-xl border-none shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden bg-slate-50 relative group-hover:-translate-y-0.5">
+                        <div className="absolute top-3 left-3">
+                           <Badge className={`rounded-lg px-2.5 py-0.5 text-[9px] font-black ${
                              asset.status === 'available' ? 'bg-emerald-100 text-emerald-700' :
                              asset.status === 'assigned' ? 'bg-blue-100 text-blue-700' :
                              'bg-rose-100 text-rose-700'
@@ -514,18 +514,18 @@ export default function AssetsManagement() {
                            </Badge>
                         </div>
                         
-                        <div className="p-8">
-                           <div className="flex items-center gap-4 mb-6">
-                              <div className="w-16 h-16 rounded-3xl bg-white shadow-sm flex items-center justify-center text-primary border border-slate-100">
-                                 <CategoryIcon className="w-8 h-8" />
+                        <div className="p-4">
+                           <div className="flex items-center gap-3 mb-3">
+                              <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-primary border border-slate-100 shrink-0">
+                                 <CategoryIcon className="w-5 h-5" />
                               </div>
                               <div>
-                                 <h4 className="text-lg font-black text-slate-800 leading-tight">{asset.name}</h4>
-                                 <p className="text-xs font-black text-primary mt-1">{asset.serialNumber}</p>
+                                 <h4 className="text-sm font-black text-slate-800 leading-tight">{asset.name}</h4>
+                                 <p className="text-[10px] font-black text-primary mt-0.5">{asset.serialNumber}</p>
                               </div>
                            </div>
 
-                           <div className="space-y-3 mb-8">
+                           <div className="space-y-2 mb-4">
                               <div className="flex items-center justify-between text-xs">
                                  <span className="text-slate-400 font-bold">الحالة:</span>
                                  <span className="text-slate-700 font-black">{asset.condition}</span>
@@ -551,22 +551,22 @@ export default function AssetsManagement() {
                            </div>
 
                            {asset.status === 'assigned' ? (
-                             <div className="bg-emerald-50/50 p-4 rounded-3xl border border-emerald-100 mb-6 flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-emerald-600 shadow-sm">
-                                   <User className="w-5 h-5" />
+                             <div className="bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-100 mb-3 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+                                   <User className="w-4 h-4" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                   <p className="text-[10px] font-black text-emerald-600 uppercase">في عهدة</p>
-                                   <p className="text-sm font-black text-slate-800 truncate">{asset.assignedTo?.name}</p>
+                                   <p className="text-[9px] font-black text-emerald-600 uppercase">في عهدة</p>
+                                   <p className="text-xs font-black text-slate-800 truncate">{asset.assignedTo?.name}</p>
                                 </div>
-                                <Button size="icon" variant="ghost" onClick={() => handleReturnAsset(asset.id)} className="rounded-full hover:bg-emerald-100 text-emerald-600">
-                                   <QrCode className="w-4 h-4" />
+                                <Button size="icon" variant="ghost" onClick={() => handleReturnAsset(asset.id)} className="rounded-full w-7 h-7 hover:bg-emerald-100 text-emerald-600">
+                                   <QrCode className="w-3.5 h-3.5" />
                                 </Button>
                              </div>
                            ) : (
-                             <div className="flex gap-2 mb-6">
+                             <div className="flex gap-2 mb-3">
                                 <Select onValueChange={(val) => handleAssignAsset(asset.id, String(val))}>
-                                   <SelectTrigger className="rounded-2xl bg-white border-slate-200">
+                                   <SelectTrigger className="rounded-xl bg-white border-slate-200 h-9 text-xs">
                                       <SelectValue placeholder="تسليم العهدة لموظف..." />
                                    </SelectTrigger>
                                    <SelectContent>

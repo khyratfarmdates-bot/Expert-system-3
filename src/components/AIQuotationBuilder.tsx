@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { GoogleGenAI } from "@google/genai";
 import { db } from '../lib/firebase';
@@ -48,6 +49,7 @@ export default function AIQuotationBuilder({ type = 'quotation' }: Props) {
   const [photoURL,    setPhotoURL]    = useState('');
   const [isScanning,  setIsScanning]  = useState(false);
   const [isSending,   setIsSending]   = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // نتيجة الإرسال
   const [result, setResult] = useState<{
@@ -89,7 +91,7 @@ export default function AIQuotationBuilder({ type = 'quotation' }: Props) {
     try {
       const ai = new GoogleGenAI({ apiKey });
       const res = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: { parts: [
           { inlineData: { mimeType: 'image/jpeg', data: photoURL.split(',')[1] } },
           { text: `Extract line items from this document. Return ONLY a JSON array like:
@@ -119,10 +121,14 @@ Rules: qty and price must be numbers. If price unknown set to 0.` }
   };
 
   // ── Send to Aliphia ────────────────────────────────────
-  const handleSend = async () => {
+  const handleSendTrigger = () => {
     if (!client) { toast.error('اختر العميل أولاً'); return; }
     if (items.every(i => !i.name)) { toast.error('أضف بنداً واحداً على الأقل'); return; }
+    setShowConfirm(true);
+  };
 
+  const handleSend = async () => {
+    setShowConfirm(false);
     setIsSending(true);
     const tid = toast.loading(`جاري إنشاء ${label} في ألف ياء...`);
     try {
@@ -415,7 +421,7 @@ Rules: qty and price must be numbers. If price unknown set to 0.` }
 
       {/* ── زر الإرسال ── */}
       <Button
-        onClick={handleSend}
+        onClick={handleSendTrigger}
         disabled={isSending || !client || items.every(i => !i.name) || total === 0}
         className="w-full h-14 rounded-2xl font-black text-base gap-3 shadow-lg shadow-emerald-500/20 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white transition-all active:scale-[0.99]"
       >
@@ -427,6 +433,48 @@ Rules: qty and price must be numbers. If price unknown set to 0.` }
           <><Receipt className="w-5 h-5" /> إصدار الفاتورة وإرسالها لألف ياء</>
         )}
       </Button>
+
+      {/* CONFIRMATION DIALOG */}
+      {showConfirm && (
+        <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+          <DialogContent className="sm:max-w-md rounded-3xl p-6 text-right border border-slate-100 dark:border-slate-800 shadow-2xl" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                {isQuote ? <Send className="w-5 h-5 text-indigo-600" /> : <Receipt className="w-5 h-5 text-emerald-600" />}
+                تأكيد إنشاء {label} في ألف ياء
+              </DialogTitle>
+              <DialogDescription className="font-bold text-slate-500 dark:text-slate-400">
+                يرجى التأكد من رغبتك في إرسال وإنشاء هذا المستند في حساب المؤسسة المحاسبي.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="bg-slate-50 dark:bg-slate-950/20 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800 text-xs font-bold text-slate-650 dark:text-slate-400 space-y-2 mt-3">
+              <p><span className="text-slate-450 dark:text-slate-500">نوع المستند:</span> {label}</p>
+              <p><span className="text-slate-450 dark:text-slate-500">العميل المستهدف:</span> {client?.name}</p>
+              <p><span className="text-slate-450 dark:text-slate-500">المبلغ الإجمالي (شامل الضريبة):</span> {total.toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ر.س</p>
+              <p><span className="text-slate-450 dark:text-slate-500">عدد البنود:</span> {items.filter(i => i.name).length}</p>
+            </div>
+
+            <div className="flex gap-2.5 pt-4">
+              <Button
+                onClick={handleSend}
+                className={`flex-1 h-12 text-white font-black rounded-xl text-xs gap-1.5 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                  isQuote ? 'bg-indigo-600 hover:bg-indigo-750 shadow-indigo-600/10' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/10'
+                }`}
+              >
+                تأكيد وإرسال
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12 rounded-xl font-bold text-xs border-slate-200 dark:border-slate-850 dark:hover:bg-slate-800"
+                onClick={() => setShowConfirm(false)}
+              >
+                إلغاء
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

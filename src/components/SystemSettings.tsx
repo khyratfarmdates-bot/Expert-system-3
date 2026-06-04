@@ -27,7 +27,8 @@ import {
   Palette,
   Home,
   Mail,
-  Send
+  Send,
+  Sparkles
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { 
@@ -114,6 +115,7 @@ export default function SystemSettings() {
     primaryColor: '#2c7a7d',
     enableSmartSupplierMatching: true,
     calendarType: 'gregorian',
+    geminiApiKey: '',
 
     enableAutoCategorization: true,
     housingLocations: [],
@@ -900,6 +902,20 @@ export default function SystemSettings() {
               enabled={settings.enableAutoCategorization}
               onToggle={() => setSettings({...settings, enableAutoCategorization: !settings.enableAutoCategorization})}
             />
+
+            <div className="space-y-2 pt-4 border-t border-dashed">
+              <Label className="font-bold text-sm text-slate-700 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" /> مفتاح Gemini API الذكي
+              </Label>
+              <p className="text-[10px] text-slate-500 font-bold">المفتاح المستخدم في المنصة لقراءة الوثائق بالذكاء الاصطناعي والتسعير الذكي</p>
+              <Input
+                type="password"
+                placeholder="أدخل مفتاح Gemini API الخاص بك..."
+                value={settings.geminiApiKey || ''}
+                onChange={e => setSettings({...settings, geminiApiKey: e.target.value})}
+                className="h-11 rounded-xl text-right font-mono"
+              />
+            </div>
 
             <div className="pt-4 border-t border-dashed space-y-4">
               <h4 className="text-sm font-black text-slate-800 flex items-center gap-2">

@@ -114,7 +114,11 @@ export const fetchAliphiaClients = async () => {
   }
 };
 
-export const createAliphiaDocument = async (type: 'invoice' | 'quotation', docData: any) => {
+export const createAliphiaDocument = async (
+  type: 'invoice' | 'quotation',
+  docData: any,
+  onCreated?: (id: string) => Promise<void>
+) => {
   const creds = await getAliphiaCredentials();
   if (!creds) {
     console.warn(`⚠️ مفاتيح Aliphia غير متوفرة.`);
@@ -134,53 +138,69 @@ export const createAliphiaDocument = async (type: 'invoice' | 'quotation', docDa
     const taxRateId     = creds.taxRateId     || '';
     const docDate       = docData.date || new Date().toISOString().split('T')[0];
 
-    // الخطوة 1: إنشاء مستند فارغ
-    const createBody: any = {
-      client_id: String(docData.client_id || ''),
-      [dateKey]: docDate,
-    };
-
-    if (isInvoice) {
-      createBody.invoice_date_supply = docDate;
-      createBody.invoice_date_due = docData.date_due || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      createBody.invoice_group_id = String(groupId);
-      createBody.user_id = String(userId);
-    } else {
-      createBody.invoice_group_id = String(groupId);
-      createBody.user_id = String(userId);
-    }
-
-    const createPayload = {
-      [docKey]: createBody
-    };
-
-    console.log(`📤 [Aliphia] ${type} POST → ${endpoint} | Payload:`, JSON.stringify(createPayload));
-
-    const createResponse = await fetch(`${ALIPHIA_API_URL}${endpoint}`, {
-      method: 'POST',
-      headers: await getHeaders('application/json'),
-      body: JSON.stringify(createPayload)
-    });
-
-    const createResponseText = await createResponse.text();
-    console.log(`📥 [Aliphia] POST ${createResponse.status}:`, createResponseText.substring(0, 400));
-
-    let createResponseData: any = {};
-    try { createResponseData = JSON.parse(createResponseText); } catch(e) {}
-
-    if (!createResponse.ok) {
-      const errMsg = createResponseData?.error || createResponseData?.message || `HTTP ${createResponse.status}`;
-      throw new Error(`فشل إنشاء المستند: ${errMsg}`);
-    }
-
-    const docId = createResponseData?.response?.[docKey]?.[`${docKey}_id`] || 
-                  createResponseData?.[`${docKey}_id`];
+    let docId = docData.existing_id;
 
     if (!docId) {
-      throw new Error(`لم يتم استرجاع معرف المستند من ألف ياء`);
-    }
+      // الخطوة 1: إنشاء مستند فارغ
+      const createBody: any = {
+        client_id: String(docData.client_id || ''),
+        [dateKey]: docDate,
+      };
 
-    console.log(`✅ [Aliphia] ${type} created successfully with ID: ${docId}`);
+      if (isInvoice) {
+        createBody.invoice_date_supply = docDate;
+        createBody.invoice_date_due = docData.date_due || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        createBody.invoice_group_id = String(groupId);
+        createBody.user_id = String(userId);
+      } else {
+        createBody.invoice_group_id = String(groupId);
+        createBody.user_id = String(userId);
+      }
+
+      const createPayload = {
+        [docKey]: createBody
+      };
+
+      console.log(`📤 [Aliphia] ${type} POST → ${endpoint} | Payload:`, JSON.stringify(createPayload));
+
+      const createResponse = await fetch(`${ALIPHIA_API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: await getHeaders('application/json'),
+        body: JSON.stringify(createPayload)
+      });
+
+      const createResponseText = await createResponse.text();
+      console.log(`📥 [Aliphia] POST ${createResponse.status}:`, createResponseText.substring(0, 400));
+
+      let createResponseData: any = {};
+      try { createResponseData = JSON.parse(createResponseText); } catch(e) {}
+
+      if (!createResponse.ok) {
+        const errMsg = createResponseData?.error || createResponseData?.message || `HTTP ${createResponse.status}`;
+        throw new Error(`فشل إنشاء المستند: ${errMsg}`);
+      }
+
+      docId = createResponseData?.response?.[docKey]?.[`${docKey}_id`] || 
+              createResponseData?.[`${docKey}_id`];
+
+      if (!docId) {
+        throw new Error(`لم يتم استرجاع معرف المستند من ألف ياء`);
+      }
+
+      console.log(`✅ [Aliphia] ${type} created successfully with ID: ${docId}`);
+
+      // استدعاء رد اتصال التحديث الفوري لحفظ الـ ID في قاعدة البيانات قبل المتابعة
+      if (onCreated) {
+        try {
+          await onCreated(String(docId));
+          console.log(`✅ [Aliphia] local record updated with ID: ${docId}`);
+        } catch (dbErr) {
+          console.error(`⚠️ [Aliphia] onCreated callback failed:`, dbErr);
+        }
+      }
+    } else {
+      console.log(`ℹ️ [Aliphia] Using existing document ID: ${docId}, skipping POST creation.`);
+    }
 
     // الخطوة 2: تحديث المستند بالبنود
     const itemsList = Array.isArray(docData.items) ? docData.items : [];
@@ -309,7 +329,7 @@ export const createAliphiaClient = async (clientData: { name: string; phone?: st
 
     const response = await fetch(`${ALIPHIA_API_URL}/client`, {
       method: 'POST',
-      headers: await getHeaders(),
+      headers: await getHeaders('application/x-www-form-urlencoded'),
       body: formData.toString()
     });
 
@@ -343,7 +363,7 @@ export const checkAliphiaConnection = async () => {
   }
 
   try {
-    const headers = await getHeaders();
+    const headers = await getHeaders('');
     const response = await fetch(`${ALIPHIA_API_URL}/clients/active`, {
       method: 'GET',
       headers,
@@ -382,10 +402,20 @@ export const fetchAliphiaInvoices = async () => {
   if (!creds) return [];
 
   try {
-    const response = await fetch(`${ALIPHIA_API_URL}/invoice`, {
+    const response = await fetch(`${ALIPHIA_API_URL}/invoices`, {
       method: 'GET',
-      headers: await getHeaders(),
+      headers: await getHeaders(''),
     });
+    
+    if (response.status === 404) {
+      try {
+        const errData = await response.clone().json();
+        if (errData.error === 'InvoiceNotFound' || errData.error === 'InvoiceNotFound') {
+          return [];
+        }
+      } catch (e) {}
+    }
+    
     if (!response.ok) throw new Error('فشل جلب الفواتير من ألف ياء');
     const data = await response.json();
     
@@ -409,10 +439,20 @@ export const fetchAliphiaQuotations = async () => {
   if (!creds) return [];
 
   try {
-    const response = await fetch(`${ALIPHIA_API_URL}/quote`, {
+    const response = await fetch(`${ALIPHIA_API_URL}/quotes`, {
       method: 'GET',
-      headers: await getHeaders(),
+      headers: await getHeaders(''),
     });
+    
+    if (response.status === 404) {
+      try {
+        const errData = await response.clone().json();
+        if (errData.error === 'QuoteNotFound' || errData.error === 'QuoteNotFound') {
+          return [];
+        }
+      } catch (e) {}
+    }
+    
     if (!response.ok) throw new Error('فشل جلب عروض الأسعار من ألف ياء');
     const data = await response.json();
     
