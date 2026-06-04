@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(user);
             } else {
               // 3. Fallback for Admin
-              if (userEmail === 'amanrental2020@gmail.com' || userEmail === 'khyratfarmdates@gmail.com') {
+              if (userEmail === 'amanrental2020@gmail.com' || userEmail === 'khyratfarmdates@gmail.com' || userEmail === 'expertadvsa@gmail.com') {
                 const adminProfile: UserProfile = {
                   uid: user.uid,
                   name: user.displayName || 'المدير العام',
