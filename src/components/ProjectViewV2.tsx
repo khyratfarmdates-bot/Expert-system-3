@@ -302,7 +302,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
     } catch (err) {
       toast.dismiss(toastId);
       console.error(err);
-      toast.error("فشل رفع المرفقات");
+      toast.error("فشل رفع المرفقات: تأكد من تهيئة وتفعيل الـ Storage وتعديل القواعد لتسمح بالرفع في لوحة Firebase Console.");
     } finally {
       setIsUploading(false);
     }
@@ -404,11 +404,13 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
   };
 
   const financialStats = useMemo(() => {
-    if (!project) return { paid: 0, balance: 0 };
+    if (!project) return { paid: 0, balance: 0, expenses: 0, netProfit: 0 };
     const paidIncomes = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
     const paid = (project.depositAmount || 0) + (project.payments?.filter(p => p.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0) || 0) + paidIncomes;
     const balance = (project.budget || 0) - paid;
-    return { paid, balance };
+    const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'purchase').reduce((acc, curr) => acc + curr.amount, 0);
+    const netProfit = (project.budget || 0) - expenses;
+    return { paid, balance, expenses, netProfit };
   }, [project, transactions]);
 
   const achievementStats = useMemo(() => {
@@ -680,7 +682,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-6 py-4 rounded-2xl font-black text-xs whitespace-nowrap transition-all duration-300 ${
                      activeTab === tab.id 
-                     ? 'bg-slate-900 text-white shadow-xl scale-105' 
+                     ? 'bg-gradient-to-r from-primary to-accent text-white shadow-md shadow-primary/20 scale-105' 
                      : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
                   }`}
                >
@@ -981,10 +983,17 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                         </Dialog>
                      </div>
                      <div className="flex flex-col gap-3">
+                        {projectWorkers.length === 0 && (
+                           <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-[3rem] bg-slate-50/50">
+                              <Users className="w-12 h-12 mx-auto text-slate-300 mb-4" />
+                              <p className="font-black text-slate-400">لا يوجد أعضاء في الفريق الفني حالياً</p>
+                              <p className="text-xs font-bold text-slate-300 mt-1">اضغط على زر "إدارة أعضاء الفريق" لإسناد فنيين للمشروع</p>
+                           </div>
+                        )}
                         {projectWorkers.map(worker => (
                            <Card key={worker.id} className="p-6 rounded-[2rem] border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
                               <div className="flex items-center gap-4">
-                                 <div className="h-14 w-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-xl">
+                                 <div className="h-14 w-14 bg-gradient-to-br from-primary to-accent text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md shadow-primary/10">
                                     {worker.name.charAt(0)}
                                  </div>
                                  <div>
@@ -1013,11 +1022,12 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                      exit={{ opacity: 0, y: -10 }}
                      className="flex flex-col gap-8"
                   >
-                     <Card className="rounded-[3rem] bg-slate-900 text-white p-10 overflow-hidden relative shadow-2xl">
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-primary/20 blur-3xl rounded-full" />
+                     <Card className="rounded-[3rem] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white p-10 overflow-hidden relative shadow-2xl border border-slate-800">
+                        <div className="absolute -top-12 -right-12 w-64 h-64 bg-primary/30 blur-[100px] rounded-full" />
+                        <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-accent/20 blur-[100px] rounded-full" />
                         <div className="relative z-10 space-y-8">
                            <div>
-                              <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] mb-2 uppercase">ميزانية المشروع المعتمدة</p>
+                              <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] mb-2">ميزانية المشروع المعتمدة</p>
                               <div className="flex items-baseline gap-2">
                                  <span className="text-5xl font-black tracking-tighter">{project.budget?.toLocaleString()}</span>
                                  <span className="text-sm font-bold text-slate-500">SAR</span>
@@ -1031,13 +1041,13 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                               <div>
                                  <p className="text-slate-500 font-black text-[10px] uppercase mb-1">تكاليف المواد والإنتاج</p>
                                  <p className="text-3xl font-black text-amber-400">
-                                    {transactions.filter(t => t.type === 'expense' || t.type === 'purchase').reduce((acc, curr) => acc + curr.amount, 0).toLocaleString()}
+                                    {financialStats.expenses.toLocaleString()}
                                  </p>
                               </div>
                               <div>
                                  <p className="text-slate-500 font-black text-[10px] uppercase mb-1">صافي الربح المتوقع</p>
-                                 <p className="text-3xl font-black text-primary">
-                                    {(financialStats.paid - transactions.filter(t => t.type === 'expense' || t.type === 'purchase').reduce((acc, curr) => acc + curr.amount, 0)).toLocaleString()}
+                                 <p className="text-3xl font-black text-accent">
+                                    {financialStats.netProfit.toLocaleString()}
                                  </p>
                               </div>
                            </div>
@@ -1359,16 +1369,16 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                      className="flex flex-col gap-6"
                   >
                      <Card className="rounded-[2.5rem] overflow-hidden border-slate-100 h-[600px] flex flex-col shadow-2xl shadow-slate-200">
-                        <div className="p-6 bg-slate-900 text-white flex items-center gap-4">
+                        <div className="p-6 bg-gradient-to-r from-primary to-accent text-white flex items-center gap-4 shadow-md">
                            <MessageCircle className="w-6 h-6" />
-                           <h3 className="font-black">سجل تواصل الفريق</h3>
+                           <h3 className="font-black">سجل تواصل الفريق الفني</h3>
                         </div>
                         <div className="flex-1 p-8 overflow-y-auto space-y-6 bg-slate-50/30">
                            {updates.map(update => (
                               <div key={update.id} className={`flex flex-col gap-1.5 ${update.authorId === profile?.uid ? 'items-end' : 'items-start'}`}>
                                  <p className="text-[9px] font-black text-slate-400 px-3 uppercase tracking-widest">{update.authorName}</p>
                                  <div className={`p-5 rounded-[2rem] text-sm font-bold max-w-[85%] leading-relaxed ${
-                                    update.authorId === profile?.uid ? 'bg-slate-900 text-white rounded-tr-none shadow-xl shadow-slate-200' : 'bg-white text-slate-900 border border-slate-100 rounded-tl-none shadow-sm'
+                                    update.authorId === profile?.uid ? 'bg-gradient-to-br from-primary to-accent text-white rounded-tr-none shadow-md shadow-primary/10' : 'bg-white text-slate-900 border border-slate-100 rounded-tl-none shadow-sm'
                                  }`}>
                                     {update.content}
                                  </div>
@@ -1393,7 +1403,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                               <Button 
                                  type="submit"
                                  size="icon" 
-                                 className="absolute left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-2xl bg-slate-900 group"
+                                 className="absolute left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-accent hover:from-primary hover:to-primary text-white group shadow-md"
                                  disabled={isSendingChat || !chatInput.trim()}
                               >
                                  {isSendingChat ? (
@@ -1429,12 +1439,12 @@ interface StatusCardProps {
 
 const StatusCard = React.memo(({ label, value, unit, icon, color, progress }: StatusCardProps) => {
    const colorMap: Record<string, string> = {
-      primary: 'bg-primary text-white',
-      emerald: 'bg-emerald-500 text-white',
+      primary: 'bg-gradient-to-br from-primary to-accent text-white shadow-md shadow-primary/15',
+      emerald: 'bg-gradient-to-br from-emerald-500 to-teal-400 text-white shadow-md shadow-emerald-500/15',
    };
 
    return (
-      <Card className="rounded-3xl min-h-[110px] border-slate-100 p-4 flex flex-col justify-between group overflow-hidden relative shadow-sm hover:shadow-md transition-all duration-300 bg-white">
+      <Card className="rounded-3xl min-h-[110px] border-slate-100 p-4 flex flex-col justify-between group overflow-hidden relative shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-primary/20 transition-all duration-300 bg-white">
          <div className="relative z-10 flex flex-col gap-3">
             <div className={`h-8 w-8 rounded-xl flex items-center justify-center ${colorMap[color]} shadow-sm transition-transform group-hover:rotate-6`}>
                {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
