@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { 
   ArrowLeft, 
   MapPin, 
+  HelpCircle, 
   Phone, 
   Plus, 
   DollarSign, 
@@ -83,6 +84,39 @@ const projectTypeLabels: Record<string, string> = {
   wrapping_branding: "تغليف ودمج هوية المركبات",
   maintenance: "صيانة وقائية وتصحيحية للوحات",
 };
+
+const HelpTooltip = ({ content }: { content: string }) => {
+  const [isVisible, setIsVisible] = React.useState(false);
+
+  return (
+    <div className="relative inline-flex items-center mx-1 select-none z-30">
+      <button
+        type="button"
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+        onClick={() => setIsVisible(!isVisible)}
+        className="text-slate-400 hover:text-primary transition-colors cursor-help outline-none p-0.5"
+      >
+        <HelpCircle className="w-3.5 h-3.5" />
+      </button>
+      <AnimatePresence>
+        {isVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 5, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 5, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute bottom-full mb-2 right-1/2 translate-x-1/2 w-56 p-3 bg-slate-900 text-white rounded-2xl text-[10px] font-bold leading-relaxed shadow-xl border border-slate-800 text-right z-50 pointer-events-none"
+          >
+            <div className="absolute top-full right-1/2 translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45 -mt-1 border-r border-b border-slate-800" />
+            {content}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 
 export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props) {
   const { profile } = useAuth();
@@ -711,9 +745,9 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                            onKeyDown={(e) => e.key === 'Enter' && setActiveTab('financials')}
                            className="w-full text-right transition-transform active:scale-95 cursor-pointer outline-none"
                         >
-                           <StatusCard label="الميزانية" value={project.budget?.toLocaleString()} unit="ر.س" icon={<DollarSign />} color="primary" />
+                           <StatusCard label="الميزانية" value={project.budget?.toLocaleString()} unit="ر.س" icon={<DollarSign />} color="primary" helpText="إجمالي القيمة المالية المتفق عليها في عقد المشروع لتصنيع وتركيب اللوحات." />
                         </div>
-                        <StatusCard label="الإنجاز" value={achievementStats} unit="%" icon={<TrendingUp />} color="emerald" progress={achievementStats} />
+                        <StatusCard label="الإنجاز" value={achievementStats} unit="%" icon={<TrendingUp />} color="emerald" progress={achievementStats} helpText="النسبة المئوية لإنجاز المشروع، ويتم احتسابها تلقائياً بناءً على أوزان المراحل المكتملة." />
                         <div 
                            role="button"
                            tabIndex={0}
@@ -721,7 +755,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                            onKeyDown={(e) => e.key === 'Enter' && setActiveTab('milestones')}
                            className="w-full text-right transition-transform active:scale-95 cursor-pointer outline-none"
                         >
-                           <StatusCard label="المراحل" value={project.milestones?.filter(m => m.status === 'completed').length || 0} unit={`/ ${project.milestones?.length || 0}`} icon={<Layers />} color="primary" />
+                           <StatusCard label="المراحل" value={project.milestones?.filter(m => m.status === 'completed').length || 0} unit={`/ ${project.milestones?.length || 0}`} icon={<Layers />} color="primary" helpText="عدد المراحل التشغيلية المنجزة من ورشة الإنتاج والتركيب مقارنة بالعدد الكلي للمراحل." />
                         </div>
                      </div>
 
@@ -742,14 +776,14 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                            </Button>
                         </div>
                         <div className="bg-white border border-slate-100 shadow-sm rounded-[2.5rem] p-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-                           <DetailLine label="العميل" value={project.clientName} icon={<User />} />
-                           <DetailLine label="المشرف المسؤول" value={siteSupervisor} icon={<ShieldCheck />} />
-                           <DetailLine label="رقم العقد / المرجع" value={project.contractNumber} icon={<FileText />} />
-                           <DetailLine label="نوع عمل الدعاية والإعلان" value={projectTypeLabels[project.projectType || ''] || project.projectType || '---'} icon={<Layers />} />
-                           <DetailLine label="المقاسات الفنية والقياسات" value={project.totalArea} icon={<Info />} />
-                           <DetailLine label="تاريخ البدء" value={project.startDate ? new Date(project.startDate).toLocaleDateString('ar-SA') : project.createdAt ? new Date(project.createdAt).toLocaleDateString('ar-SA') : '---'} icon={<CalendarDays />} />
-                           <DetailLine label="تاريخ التسليم المتوقع" value={project.endDate ? new Date(project.endDate).toLocaleDateString('ar-SA') : '---'} icon={<Clock />} />
-                           <DetailLine label="موقع اللوحة / المعاينة" value={project.locationLink ? 'معاينة الموقع الجغرافي' : 'غير متوفر'} icon={<MapPin />} isLink={!!project.locationLink} href={project.locationLink} />
+                           <DetailLine label="العميل" value={project.clientName} icon={<User />} helpText="اسم العميل أو الجهة المالكة للمشروع الموقعة للعقد." />
+                           <DetailLine label="المشرف المسؤول" value={siteSupervisor} icon={<ShieldCheck />} helpText="المشرف المسؤول عن التنسيق الفني ومتابعة فريق العمل في ورشة الإنتاج وموقع التركيب." />
+                           <DetailLine label="رقم العقد / المرجع" value={project.contractNumber} icon={<FileText />} helpText="الرقم المرجعي الموثق للعقد في دفاتر وسجلات المؤسسة لتسهيل مراجعة الحسابات الفورية." />
+                           <DetailLine label="نوع عمل الدعاية والإعلان" value={projectTypeLabels[project.projectType || ''] || project.projectType || '---'} icon={<Layers />} helpText="التصنيف الفني لنوع عمل الدعاية والإعلان المطلوب (مثال: حروف بارزة مضيئة، شاشات LED، أسوار دعائية)." />
+                           <DetailLine label="المقاسات الفنية والقياسات" value={project.totalArea} icon={<Info />} helpText="الأبعاد والقياسات والمقاسات الفنية للوحة الإعلانية (العرض × الارتفاع) لتوجيه أعمال الحدادة والقص." />
+                           <DetailLine label="تاريخ البدء" value={project.startDate ? new Date(project.startDate).toLocaleDateString('ar-SA') : project.createdAt ? new Date(project.createdAt).toLocaleDateString('ar-SA') : '---'} icon={<CalendarDays />} helpText="تاريخ بدء العمل الفعلي على المشروع وتجهيز خامات اللوحة بالورشة." />
+                           <DetailLine label="تاريخ التسليم المتوقع" value={project.endDate ? new Date(project.endDate).toLocaleDateString('ar-SA') : '---'} icon={<Clock />} helpText="تاريخ التسليم والتركيب النهائي المتوقع والمتفق عليه مع العميل." />
+                           <DetailLine label="موقع اللوحة / المعاينة" value={project.locationLink ? 'معاينة الموقع الجغرافي' : 'غير متوفر'} icon={<MapPin />} isLink={!!project.locationLink} href={project.locationLink} helpText="الموقع الجغرافي الدقيق على خرائط جوجل لمعاينة مكان تركيب اللوحة." />
                         </div>
                      </div>
 
@@ -1438,7 +1472,7 @@ interface StatusCardProps {
   progress?: number;
 }
 
-const StatusCard = React.memo(({ label, value, unit, icon, color, progress }: StatusCardProps) => {
+const StatusCard = React.memo(({ label, value, unit, icon, color, progress, helpText }: StatusCardProps & { helpText?: string }) => {
    const colorMap: Record<string, string> = {
       primary: 'bg-gradient-to-br from-primary to-accent text-white shadow-md shadow-primary/15',
       emerald: 'bg-gradient-to-br from-emerald-500 to-teal-400 text-white shadow-md shadow-emerald-500/15',
@@ -1451,7 +1485,10 @@ const StatusCard = React.memo(({ label, value, unit, icon, color, progress }: St
                {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
             </div>
             <div>
-               <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5 whitespace-nowrap">{label}</p>
+               <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5 whitespace-nowrap flex items-center justify-start gap-1">
+                  {label}
+                  {helpText && <HelpTooltip content={helpText} />}
+               </p>
                <div className="flex items-baseline gap-1 flex-wrap">
                   <span className="text-lg font-black text-slate-900 tracking-tighter leading-none">{value}</span>
                   <span className="text-[8px] font-bold text-slate-400 uppercase">{unit}</span>
@@ -1477,14 +1514,17 @@ const StatusCard = React.memo(({ label, value, unit, icon, color, progress }: St
    );
 });
 
-const DetailLine = React.memo(({ label, value, icon, isLink, href }: { label: string, value: string | undefined, icon: React.ReactNode, isLink?: boolean, href?: string }) => {
+const DetailLine = React.memo(({ label, value, icon, isLink, href, helpText }: { label: string, value: string | undefined, icon: React.ReactNode, isLink?: boolean, href?: string, helpText?: string }) => {
    return (
       <div className="flex items-center justify-between py-4 border-b border-slate-50 last:border-0 group">
          <div className="flex items-center gap-4">
             <div className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
                {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
             </div>
-            <span className="text-slate-400 font-black text-sm">{label}</span>
+            <span className="text-slate-400 font-black text-sm flex items-center gap-1">
+               {label}
+               {helpText && <HelpTooltip content={helpText} />}
+            </span>
          </div>
          {isLink && href ? (
             <a href={href} target="_blank" rel="noopener noreferrer" className="font-black text-primary hover:underline text-sm tracking-tight flex items-center gap-1">

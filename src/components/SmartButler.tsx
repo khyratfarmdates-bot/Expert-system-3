@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../lib/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bot, X, Send, Loader2, MessageSquare, Sparkles, FileText, AlertTriangle, Headset, Phone, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { db } from '../lib/firebase';
 import { toast } from 'sonner';
 
 export default function SmartButler() {
+  const { profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<any[]>([
     { role: 'bot', text: 'مرحباً بك في نظام خبراء الرسم! أنا مساعدك الذكي المتكامل. كيف يمكنني خدمتك اليوم؟' }
@@ -129,31 +131,44 @@ export default function SmartButler() {
          let responseText = 'عذراً، لم أفهم طلبك بوضوح. هل يمكنك توضيح سؤالك؟ (مثال: طلب إجازة، الرصيد، المشاريع الحالية...)';
          
          const textLower = userMsg.toLowerCase();
+         const role = profile?.role || 'employee';
          
          if (userMsg === 'أريد قراءة دليل استخدام النظام والتعرف على مميزاته وخصائصه.') {
-            responseText = 'حسناً! سيتم الآن عرض دليل استخدام النظام الشامل.';
+            responseText = 'أهلاً بك يا مدير! جاري تشغيل الدليل التفاعلي الشامل وشرح كافة تفاصيل الواجهة الآن.';
             window.dispatchEvent(new CustomEvent('showOnboarding'));
+         } else if (textLower.includes('المالية') || textLower.includes('رواتب') || textLower.includes('محاسبة') || textLower.includes('مستحق') || textLower.includes('ميزانية') || textLower.includes('ربح') || textLower.includes('أرباح')) {
+            if (role === 'manager') {
+               responseText = 'بصفتك مديراً للنظام، يمكنك إدارة ومتابعة الحسابات بالكامل من قسم "المالية والمصروفات" في القائمة الجانبية. هناك ترى حركة الخزنة، قيود اليومية، والرواتب والمصروفات الإجمالية لمؤسستنا بالتفصيل.';
+            } else if (role === 'supervisor') {
+               responseText = 'بصفتك مشرفاً فنيّاً، يقتصر وصولك المالي على مراجعة ميزانيات المشاريع التي تشرف عليها ومصروفات المواد الخاصة بها فقط. المعلومات المالية العامة للشركة سرية ومخفية لحماية الخصوصية.';
+            } else {
+               responseText = 'أهلاً بك زميلي العزيز. بصفتك فنيّاً/عضواً في الفريق الفني، فإن البيانات المالية الإجمالية للمؤسسة والرواتب العامة سرية ومخفية تماماً لحماية الخصوصية. لمراجعة مستحقاتك الشخصية أو راتبك، يرجى فتح ملفك الشخصي أو مراجعة المحاسب مباشرة.';
+            }
          } else if (textLower.includes('تقديم') || textLower.includes('طلب') || textLower.includes('اجازة') || textLower.includes('إجازة') || textLower.includes('سلفة') || textLower.includes('شراء')) {
-            responseText = 'تقديم الطلبات يتم بسهولة عبر قسم "الطلبات والموافقات" من القائمة الجانبية، ثم الضغط على "إنشاء طلب جديد". سيتم توجيه طلبك للإدارة مباشرة.';
+            responseText = 'لتقديم الطلبات الإدارية (مثل الإجازات السنوية، العهد المالية، أو طلبات الشراء العاجلة للخامات)، تفضل بزيارة قسم "الطلبات والموافقات" من القائمة الجانبية، ثم اضغط على "إنشاء طلب جديد" ليتم مراجعته واعتماده فوراً من الإدارة.';
          } else if (textLower.includes('شكوى') || textLower.includes('مشكلة') || textLower.includes('اعتراض') || textLower.includes('خصم')) {
             responseText = 'للاعتراضات والشكاوى، يمكنك استخدام قسم "موجز الإدارة العليا" إذا كانت لديك صلاحية، أو فتح ملفك والنقر على زر "التواصل والإشعارات" لمراسلة الإدارة.';
          } else if (textLower.includes('محادثة') || textLower.includes('الإدارة') || textLower.includes('الادارة') || textLower.includes('رسالة') || textLower.includes('تواصل')) {
             responseText = 'لإرسال رسالة رسمية، توجّه إلى "التواصل والإشعارات" في القائمة الرئيسية للنظام. يمكنك إرسال تنبيه فوري للإدارة هناك.';
-         } else if (textLower.includes('مشروع') || textLower.includes('مشاريع')) {
-            if (projectsCtx.length > 0) {
-              const projectNames = projectsCtx.map(p => p.name).join('، ');
-              responseText = `بناءً على صلاحياتك، لدينا المشاريع التالية: ${projectNames}. للمزيد، افتح "تتبع المشاريع".`;
+         } else if (textLower.includes('مشروع') || textLower.includes('مشاريع') || textLower.includes('لوحة') || textLower.includes('لوحات')) {
+            if (role === 'manager' || role === 'sales_rep') {
+               if (projectsCtx.length > 0) {
+                  const names = projectsCtx.map(p => p.name).join('، ');
+                  responseText = `أهلاً يا مدير، لدينا حالياً المشاريع النشطة التالية في النظام: ${names}. يمكنك متابعة التقدم التفصيلي والنسب المئوية لكل مشروع بالانتقال إلى قسم "تتبع المشاريع".`;
+               } else {
+                  responseText = 'أهلاً بك، لا توجد مشاريع مسجلة حالياً في النظام. يمكنك إضافة مشروع جديد من شاشة المشاريع.';
+               }
             } else {
-              responseText = 'لا يوجد مشاريع يمكنك رؤيتها حالياً، راجع قسم المشاريع للمزيد من التفاصيل.';
+               responseText = 'أهلاً بك يا بطل الميدان، المشاريع المخصصة لك تظهر في شاشة المهام الخاصة بك. يمكنك الدخول لمشروعك ومتابعة مراحل تصنيع اللوحة وتجهيز الهيكل، ورفع صور التوثيق للتركيبات مباشرة عبر تبويب "التوثيق".';
             }
          } else if (textLower.includes('موظف') || textLower.includes('الموظفين') || textLower.includes('فريق') || textLower.includes('الحضور')) {
             responseText = `يحتوي النظام على ${empCount} موظفين في نطاق رؤيتك. لإدارة ساعات العمل، اذهب إلى "إدارة الموظفين" أو "الحضور الذكي".`;
          } else if (textLower.includes('مرحبا') || textLower.includes('السلام عليك') || textLower.includes('اهلا')) {
-            responseText = `أهلاً ومرحباً بك! أنا نظام التوجيه المعرفي لمنصة خبراء الرسم. ماذا تحتاج اليوم؟`;
+            responseText = `أهلاً ومرحباً بك! أنا نظام التوجيه المعرفي لمنصة خبراء الرسم. كيف يمكنني خدمتك اليوم؟`;
          } else if (textLower.includes('من انت') || textLower.includes('مساعد') || textLower.includes('بوت')) {
-            responseText = 'أنا خبير الأنظمة وتمت برمجتي لتسهيل تنقلك داخل المنصة ومساعدتك في العثور على الأقسام المناسبة لطلباتك.';
-         } else if (textLower.includes('المالية') || textLower.includes('رواتب') || textLower.includes('محاسبة') || textLower.includes('مستحق')) {
-            responseText = 'لقسم المالية والرواتب، يجب امتلاك صلاحيات مدير أو مشرف، ويمكنك إيجادها في قسم "المالية والمصروفات". والمستحقات الشخصية في ملفك المهني.';
+            responseText = 'أنا خبير الأنظمة الفني للمؤسسة، تمت برمجتي لتوجيهك حول المهام والمشاريع والمبيعات والمالية وتقديم الدعم بلهجة بشرية واضحة للجميع.';
+         } else if (textLower.includes('حضور') || textLower.includes('انصراف') || textLower.includes('تسجيل') || textLower.includes('ساعات')) {
+            responseText = 'لتسجيل حضورك اليومي عند دخول ورشة الإنتاج أو موقع التركيب، يرجى فتح قسم "الحضور الذكي" من القائمة الجانبية وتفعيل ميز الموقع الجغرافي لتسجيل حضورك والانصراف بالبصمة الرقمية.';
          } else if (textLower.includes('واتساب') || textLower.includes('واتس') || textLower.includes('مراسلة') || textLower.includes('ارسال') || textLower.includes('إرسال') || textLower.includes('رقم') || textLower.includes('هاتف') || textLower.includes('جوال') || userMsg === 'أريد مراسلة أحد الموظفين أو إرسال ملفات له عبر الواتساب.') {
             responseText = 'حسناً! إليك واجهة مراسلة الموظفين وتوليد الرسائل الجاهزة عبر الواتساب. يمكنك البحث واختيار نوع الإشعار لإرساله بضغطة زر واحدة:';
             setMessages(prev => [...prev, { role: 'bot', text: responseText, type: 'whatsapp_helper' }]);
