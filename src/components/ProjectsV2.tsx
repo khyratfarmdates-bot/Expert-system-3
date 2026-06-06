@@ -276,7 +276,7 @@ export default function ProjectsV2() {
                 </Button>
               }
             />
-            <DialogContent className="max-w-4xl rounded-[2.5rem] p-8 border-none shadow-2xl overflow-y-auto max-h-[90vh]" dir="rtl">
+            <DialogContent className="max-w-4xl sm:max-w-4xl rounded-[2.5rem] p-8 border-none shadow-2xl overflow-y-auto max-h-[90vh]" dir="rtl">
               <DialogHeader>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
                   <div className="flex items-center gap-4">
