@@ -755,7 +755,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                      exit={{ opacity: 0, y: -10 }}
                      className="flex flex-col gap-8"
                   >
-                     <div className="grid grid-cols-3 gap-3">
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div 
                            role="button"
                            tabIndex={0}
@@ -793,15 +793,19 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                               تحميل تقرير PDF
                            </Button>
                         </div>
-                        <div className="bg-white border border-slate-100 shadow-sm rounded-[2.5rem] p-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-                           <DetailLine label="العميل" value={project.clientName} icon={<User />} helpText="اسم العميل أو الجهة المالكة للمشروع الموقعة للعقد." />
-                           <DetailLine label="المشرف المسؤول" value={siteSupervisor} icon={<ShieldCheck />} helpText="المشرف المسؤول عن التنسيق الفني ومتابعة فريق العمل في ورشة الإنتاج وموقع التركيب." />
-                           <DetailLine label="رقم العقد / المرجع" value={project.contractNumber} icon={<FileText />} helpText="الرقم المرجعي الموثق للعقد في دفاتر وسجلات المؤسسة لتسهيل مراجعة الحسابات الفورية." />
-                           <DetailLine label="نوع عمل الدعاية والإعلان" value={projectTypeLabels[project.projectType || ''] || project.projectType || '---'} icon={<Layers />} helpText="التصنيف الفني لنوع عمل الدعاية والإعلان المطلوب (مثال: حروف بارزة مضيئة، شاشات LED، أسوار دعائية)." />
-                           <DetailLine label="المقاسات الفنية والقياسات" value={project.totalArea} icon={<Info />} helpText="الأبعاد والقياسات والمقاسات الفنية للوحة الإعلانية (العرض × الارتفاع) لتوجيه أعمال الحدادة والقص." />
-                           <DetailLine label="تاريخ البدء" value={project.startDate ? new Date(project.startDate).toLocaleDateString('ar-SA') : project.createdAt ? new Date(project.createdAt).toLocaleDateString('ar-SA') : '---'} icon={<CalendarDays />} helpText="تاريخ بدء العمل الفعلي على المشروع وتجهيز خامات اللوحة بالورشة." />
-                           <DetailLine label="تاريخ التسليم المتوقع" value={project.endDate ? new Date(project.endDate).toLocaleDateString('ar-SA') : '---'} icon={<Clock />} helpText="تاريخ التسليم والتركيب النهائي المتوقع والمتفق عليه مع العميل." />
-                           <DetailLine label="موقع اللوحة / المعاينة" value={project.locationLink ? 'معاينة الموقع الجغرافي' : 'غير متوفر'} icon={<MapPin />} isLink={!!project.locationLink} href={project.locationLink} helpText="الموقع الجغرافي الدقيق على خرائط جوجل لمعاينة مكان تركيب اللوحة." />
+                        <div className="bg-white border border-slate-100 shadow-sm rounded-[2.5rem] p-8 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+                           <div className="flex flex-col">
+                              <DetailLine label="العميل" value={project.clientName} icon={<User />} helpText="اسم العميل أو الجهة المالكة للمشروع الموقعة للعقد." />
+                              <DetailLine label="رقم العقد / المرجع" value={project.contractNumber} icon={<FileText />} helpText="الرقم المرجعي الموثق للعقد في دفاتر وسجلات المؤسسة لتسهيل مراجعة الحسابات الفورية." />
+                              <DetailLine label="المقاسات الفنية والقياسات" value={project.totalArea} icon={<Info />} helpText="الأبعاد والقياسات والمقاسات الفنية للوحة الإعلانية (العرض × الارتفاع) لتوجيه أعمال الحدادة والقص." />
+                              <DetailLine label="تاريخ البدء" value={project.startDate ? new Date(project.startDate).toLocaleDateString('ar-SA') : project.createdAt ? new Date(project.createdAt).toLocaleDateString('ar-SA') : '---'} icon={<CalendarDays />} helpText="تاريخ بدء العمل الفعلي على المشروع وتجهيز خامات اللوحة بالورشة." />
+                           </div>
+                           <div className="flex flex-col">
+                              <DetailLine label="المشرف المسؤول" value={siteSupervisor} icon={<ShieldCheck />} helpText="المشرف المسؤول عن التنسيق الفني ومتابعة فريق العمل في ورشة الإنتاج وموقع التركيب." />
+                              <DetailLine label="نوع عمل الدعاية والإعلان" value={projectTypeLabels[project.projectType || ''] || project.projectType || '---'} icon={<Layers />} helpText="التصنيف الفني لنوع عمل الدعاية والإعلان المطلوب (مثال: حروف بارزة مضيئة، شاشات LED، أسوار دعائية)." />
+                              <DetailLine label="تاريخ التسليم المتوقع" value={project.endDate ? new Date(project.endDate).toLocaleDateString('ar-SA') : '---'} icon={<Clock />} helpText="تاريخ التسليم والتركيب النهائي المتوقع والمتفق عليه مع العميل." />
+                              <DetailLine label="موقع اللوحة / المعاينة" value={project.locationLink ? 'معاينة الموقع الجغرافي' : 'غير متوفر'} icon={<MapPin />} isLink={!!project.locationLink} href={project.locationLink} helpText="الموقع الجغرافي الدقيق على خرائط جوجل لمعاينة مكان تركيب اللوحة." />
+                           </div>
                         </div>
                      </div>
 
@@ -812,7 +816,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                         </h3>
                         <div className="flex flex-col gap-4">
                            {project.milestones?.map((m, i) => (
-                              <MilestoneBox key={i} title={m.title} date={m.date} status={m.status} index={i} />
+                              <MilestoneBox key={i} title={m.title} date={m.date} status={m.status} index={i} isLast={i === (project.milestones?.length || 0) - 1} />
                            ))}
                         </div>
                      </div>
@@ -1558,18 +1562,18 @@ const DetailLine = React.memo(({ label, value, icon, isLink, href, helpText }: {
             </span>
          </div>
          {isLink && href ? (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="font-black text-primary hover:underline text-sm tracking-tight flex items-center gap-1">
+            <a href={href} target="_blank" rel="noopener noreferrer" className="font-black text-primary hover:underline text-sm tracking-tight flex items-center gap-1 text-left">
                {value || '---'}
                <ExternalLink className="w-3.5 h-3.5" />
             </a>
          ) : (
-            <span className="font-black text-slate-900 text-sm tracking-tight text-right truncate max-w-[200px]" title={value}>{value || '---'}</span>
+            <span className="font-black text-slate-900 text-sm tracking-tight text-left truncate max-w-[180px] sm:max-w-[240px]" title={value}>{value || '---'}</span>
          )}
       </div>
    );
 });
 
-const MilestoneBox = React.memo(({ title, date, status, index }: { title: string; date?: string; status: ProjectMilestone['status']; index: number }) => {
+const MilestoneBox = React.memo(({ title, date, status, index, isLast }: { title: string; date?: string; status: ProjectMilestone['status']; index: number; isLast?: boolean }) => {
    const statusStyles: Record<string, string> = {
       completed: 'bg-emerald-500 text-white border-emerald-500',
       'in-progress': 'bg-primary text-white border-primary',
@@ -1584,7 +1588,7 @@ const MilestoneBox = React.memo(({ title, date, status, index }: { title: string
             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-sm border-2 transition-all duration-500 ${statusStyles[status] || statusStyles.pending}`}>
                {index + 1}
             </div>
-            <div className="w-1 flex-1 bg-slate-100 my-2 rounded-full" />
+            {!isLast && <div className="w-1 flex-1 bg-slate-100 my-2 rounded-full" />}
          </div>
          <div className="flex-1 pb-8">
             <div className="p-6 rounded-[2rem] bg-white border border-slate-100 group-hover:bg-slate-50 group-hover:shadow-xl group-hover:border-primary/20 transition-all duration-700">
