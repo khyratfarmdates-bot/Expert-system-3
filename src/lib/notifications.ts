@@ -17,7 +17,7 @@ export interface AppNotification {
   message: string;
   type: NotificationType;
   category?: 'financial' | 'employee' | 'purchase' | 'project' | 'inventory' | 'system';
-  targetRole: 'manager' | 'supervisor' | 'all' | 'worker';
+  targetRole: 'manager' | 'supervisor' | 'all' | 'worker' | 'sales_rep';
   targetUserId?: string;
   workerId?: string;
   projectId?: string;

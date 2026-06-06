@@ -33,15 +33,22 @@ export default function GlobalNotificationListener() {
   const [criticalNotif, setCriticalNotif] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const playNotificationSound = (priority: string = 'high') => {
-    try {
-      const audio = new Audio('/notification.mp3');
-      audio.volume = 0.65; // Balanced, premium volume
-      audio.play().catch(err => console.log('Audio autoplay blocked by browser:', err));
-    } catch (e) {
-      console.log("Audio play error:", e);
-    }
-  };
+  // Throttled sound player to prevent duplicate overlap sounds
+  const playNotificationSound = (() => {
+    let lastPlayTime = 0;
+    return (priority: string = 'high') => {
+      const now = Date.now();
+      if (now - lastPlayTime < 500) return;
+      lastPlayTime = now;
+      try {
+        const audio = new Audio('/notification.mp3');
+        audio.volume = 0.65; // Balanced, premium volume
+        audio.play().catch(err => console.log('Audio autoplay blocked by browser:', err));
+      } catch (e) {
+        console.log("Audio play error:", e);
+      }
+    };
+  })();
 
 
   useEffect(() => {

@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { toast } from 'sonner';
 
 // Programmatically clear all cache storage on startup to force-update all assets and sound effects
 if (typeof window !== 'undefined') {
@@ -27,6 +28,54 @@ if (typeof window !== 'undefined') {
     }).catch((err) => console.log('Service worker unregister error:', err));
   }
 }
+
+// Programmatically intercept all sonner toast calls to play the premium notification sound
+const originalSuccess = toast.success;
+const originalError = toast.error;
+const originalWarning = toast.warning;
+const originalInfo = toast.info;
+const originalCustom = toast.custom;
+
+const playPremiumToastSound = (() => {
+  let lastPlayTime = 0;
+  return () => {
+    const now = Date.now();
+    if (now - lastPlayTime < 500) return;
+    lastPlayTime = now;
+    try {
+      const audio = new Audio('/notification.mp3');
+      audio.volume = 0.55; // Balanced for toast notifications
+      audio.play().catch(e => console.log('Audio autoplay blocked by browser:', e));
+    } catch (err) {
+      console.log('Audio play error:', err);
+    }
+  };
+})();
+
+toast.success = (message: any, data?: any) => {
+  playPremiumToastSound();
+  return originalSuccess(message, data);
+};
+
+toast.error = (message: any, data?: any) => {
+  playPremiumToastSound();
+  return originalError(message, data);
+};
+
+toast.warning = (message: any, data?: any) => {
+  playPremiumToastSound();
+  return originalWarning(message, data);
+};
+
+toast.info = (message: any, data?: any) => {
+  playPremiumToastSound();
+  return originalInfo(message, data);
+};
+
+toast.custom = (jsx: any, data?: any) => {
+  playPremiumToastSound();
+  return originalCustom(jsx, data);
+};
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

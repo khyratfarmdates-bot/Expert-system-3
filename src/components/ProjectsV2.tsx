@@ -23,20 +23,27 @@ import {
   ChevronLeft,
   User,
   AlertCircle,
-  Loader2
+  Loader2,
+  Paperclip,
+  UploadCloud,
+  Trash2
 } from 'lucide-react';
-import { parseProjectFromText } from '../lib/gemini';
+import { parseProjectFromText, analyzeProjectDocument } from '../lib/gemini';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { fetchAliphiaClients } from '../lib/aliphia';
 import { 
   collection, 
   query, 
   onSnapshot, 
   orderBy,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  doc,
+  setDoc
 } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { db, auth, storage } from '../lib/firebase';
 import { toast } from 'sonner';
-import { Project } from '../types';
+import { Project, UserProfile } from '../types';
 import ProjectViewV2 from './ProjectViewV2';
 import { motion, AnimatePresence } from 'motion/react';
 import { calculateProjectProgress } from '../lib/projectUtils';
@@ -64,6 +71,13 @@ export default function ProjectsV2() {
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [highlightedFields, setHighlightedFields] = useState<Record<string, boolean>>({});
 
+  const [usersList, setUsersList] = useState<UserProfile[]>([]);
+  const [aliphiaClientsList, setAliphiaClientsList] = useState<{ id: string; name: string; phone: string; email: string; }[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<{ id: string; file: File; progress: number; status: 'pending' | 'uploading' | 'success' | 'error'; url?: string; }[]>([]);
+  const [isSavingProject, setIsSavingProject] = useState(false);
+  const [analyzingFileId, setAnalyzingFileId] = useState<string | null>(null);
+
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
@@ -82,12 +96,40 @@ export default function ProjectsV2() {
     projectStatus: 'planning'
   });
 
+  // Fetch Firestore users and Aliphia clients
+  useEffect(() => {
+    // Firestore users
+    const qUsers = query(collection(db, 'users'), orderBy('name', 'asc'));
+    const unsubUsers = onSnapshot(qUsers, (snap) => {
+      setUsersList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile)));
+    }, (err) => {
+      console.error("Failed to load users", err);
+    });
+
+    // Aliphia clients
+    setIsLoadingClients(true);
+    fetchAliphiaClients().then(clients => {
+      setAliphiaClientsList(clients);
+    }).catch(err => {
+      console.error("Failed to load Aliphia clients", err);
+    }).finally(() => {
+      setIsLoadingClients(false);
+    });
+
+    return () => {
+      unsubUsers();
+    };
+  }, []);
+
   // إعادة تهيئة النموذج عند إغلاق النافذة
   useEffect(() => {
     if (!isAddOpen) {
       setActiveStep(1);
       setAiInputText('');
       setHighlightedFields({});
+      setSelectedFiles([]);
+      setIsSavingProject(false);
+      setAnalyzingFileId(null);
     }
   }, [isAddOpen]);
 
@@ -149,36 +191,170 @@ export default function ProjectsV2() {
     }
   };
 
+  // Phone validation: Saudi mobile format 05xxxxxxxx, 9665xxxxxxxx, +9665xxxxxxxx
+  const validatePhone = (phone: string) => {
+    if (!phone) return true;
+    return /^(05|9665|\+9665)\d{8}$/.test(phone.trim());
+  };
+
+  // Location validation: Google Maps link
+  const validateLocationLink = (link: string) => {
+    if (!link) return true;
+    return /^(https?:\/\/)?(www\.)?(google\.\w+\/maps|maps\.google\.\w+|maps\.app\.goo\.gl)/.test(link.trim());
+  };
+
+  const handleAnalyzeFile = async (fileId: string) => {
+    const item = selectedFiles.find(f => f.id === fileId);
+    if (!item) return;
+
+    setAnalyzingFileId(fileId);
+    const toastId = toast.loading(`جاري تحليل الملف "${item.file.name}" بالذكاء الاصطناعي...`);
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(item.file);
+      reader.onload = async () => {
+        try {
+          const dataUrl = reader.result as string;
+          const result = await analyzeProjectDocument(dataUrl, item.file.type);
+          if (result) {
+            setNewProject(prev => ({
+              ...prev,
+              title: result.title || prev.title,
+              description: result.description || prev.description,
+              budget: result.budget || prev.budget,
+              clientName: result.clientName || prev.clientName,
+              clientPhone: result.clientPhone || prev.clientPhone,
+              clientEmail: result.clientEmail || prev.clientEmail,
+              startDate: result.startDate || prev.startDate,
+              endDate: result.endDate || prev.endDate,
+              projectType: result.projectType || prev.projectType,
+              totalArea: result.totalArea || prev.totalArea,
+              contractNumber: result.contractNumber || prev.contractNumber,
+            }));
+
+            // تحديد الحقول التي تم تعبئتها للإضاءة البصرية
+            const highlights: Record<string, boolean> = {};
+            Object.keys(result).forEach((key) => {
+              if ((result as any)[key] !== undefined && (result as any)[key] !== null && (result as any)[key] !== '') {
+                highlights[key] = true;
+              }
+            });
+            setHighlightedFields(highlights);
+
+            toast.dismiss(toastId);
+            toast.success("✨ تم تحليل مستند المشروع بنجاح وتعبئة الحقول بالقيم المستخرجة!");
+
+            // إيقاف الإضاءة بعد 4 ثوانٍ
+            setTimeout(() => {
+              setHighlightedFields({});
+            }, 4000);
+          } else {
+            toast.dismiss(toastId);
+            toast.error("تعذر استخراج البيانات من هذا المستند. يرجى توضيح محتوى الملف أو تعبئته يدوياً.");
+          }
+        } catch (innerErr: any) {
+          toast.dismiss(toastId);
+          toast.error(innerErr.message || "فشل تحليل المستند بالذكاء الاصطناعي.");
+        } finally {
+          setAnalyzingFileId(null);
+        }
+      };
+      reader.onerror = () => {
+        toast.dismiss(toastId);
+        toast.error("فشل قراءة الملف محلياً.");
+        setAnalyzingFileId(null);
+      };
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      console.error(err);
+      toast.error(err.message || "حدث خطأ أثناء قراءة أو تحليل الملف.");
+      setAnalyzingFileId(null);
+    }
+  };
+
   const handleCreateProject = async () => {
     if (!newProject.title) {
       toast.error("يرجى إدخال عنوان المشروع");
       return;
     }
 
-    // تجهيز مراحل افتراضية للمشروع لتمكين الإدارة المباشرة للتقدم
+    if (newProject.clientPhone && !validatePhone(newProject.clientPhone)) {
+      toast.error("يرجى تصحيح رقم هاتف العميل ليطابق التنسيق السعودي (05xxxxxxxx)");
+      return;
+    }
+
+    if (newProject.locationLink && !validateLocationLink(newProject.locationLink)) {
+      toast.error("يرجى تصحيح رابط موقع المشروع (يجب أن يكون رابطاً صالحاً لخرائط جوجل)");
+      return;
+    }
+
+    setIsSavingProject(true);
+    const toastId = toast.loading("جاري رفع المرفقات وحفظ بيانات المشروع في النظام...");
+
+    // تجهيز مراحل عمل افتراضية للمشروع تناسب أعمال الدعاية والإعلان
     const defaultMilestones = [
-      { title: 'التجهيز وتوريد المواد', weight: 20, status: 'pending', date: newProject.startDate || '' },
-      { title: 'أعمال التأسيس والتحضير', weight: 30, status: 'pending', date: '' },
-      { title: 'أعمال التكسية واللياسة', weight: 20, status: 'pending', date: '' },
-      { title: 'الدهانات الأساسية', weight: 20, status: 'pending', date: '' },
-      { title: 'التشطيب والتسليم النهائي', weight: 10, status: 'pending', date: newProject.endDate || '' }
+      { title: 'التصميم وإعداد المخططات الفنية', weight: 15, status: 'pending' as const, date: newProject.startDate || '' },
+      { title: 'تجهيز وتوريد المواد وتصنيع الهياكل', weight: 30, status: 'pending' as const, date: '' },
+      { title: 'أعمال الطباعة أو الكلادينج أو تركيب الشاشات', weight: 25, status: 'pending' as const, date: '' },
+      { title: 'التوصيلات الكهربائية والإضاءة والتجربة الفنية', weight: 15, status: 'pending' as const, date: '' },
+      { title: 'التركيب النهائي والتسليم للعميل', weight: 15, status: 'pending' as const, date: newProject.endDate || '' }
     ];
 
     try {
-      await addDoc(collection(db, 'projects'), {
+      // 1. توليد معرّف فريد للمشروع أولاً لتخزين مرفقاته في مجلد خاص به
+      const projectRef = doc(collection(db, 'projects'));
+      const projectId = projectRef.id;
+
+      const photoUrls: string[] = [];
+      const fileAttachments: { name: string; url: string; uploadedAt: string }[] = [];
+
+      // 2. رفع الملفات إلى Firebase Storage
+      for (const item of selectedFiles) {
+        try {
+          const storageRef = ref(storage, `projects/${projectId}/attachments/${item.file.name}`);
+          const uploadResult = await uploadBytes(storageRef, item.file);
+          const downloadUrl = await getDownloadURL(uploadResult.ref);
+
+          if (item.file.type.startsWith('image/')) {
+            photoUrls.push(downloadUrl);
+          } else {
+            fileAttachments.push({
+              name: item.file.name,
+              url: downloadUrl,
+              uploadedAt: new Date().toISOString()
+            });
+          }
+        } catch (uploadErr) {
+          console.error("Failed to upload file:", item.file.name, uploadErr);
+          toast.dismiss(toastId);
+          toast.error(`فشل رفع الملف: ${item.file.name}`);
+          setIsSavingProject(false);
+          return;
+        }
+      }
+
+      // 3. حفظ مستند المشروع بقاعدة البيانات
+      await setDoc(projectRef, {
         ...newProject,
+        id: projectId,
         name: newProject.title, // حقل الاسم لضمان التوافقية البرمجية مع كافة واجهات النظام
         status: 'active',
         createdAt: new Date().toISOString(),
         timestamp: serverTimestamp(),
         workerIds: [],
         milestones: defaultMilestones,
-        photoUrls: [],
+        photoUrls,
+        fileAttachments,
         payments: [],
         progress: 0
       });
-      toast.success("تم إنشاء المشروع بنجاح مع تهيئة مراحل العمل الافتراضية");
+
+      toast.dismiss(toastId);
+      toast.success("تم إنشاء المشروع بنجاح مع رفع المرفقات وتهيئة مراحل العمل الافتراضية");
       setIsAddOpen(false);
+
+      // إعادة تهيئة الحقول
       setNewProject({ 
         title: '', 
         description: '', 
@@ -196,8 +372,12 @@ export default function ProjectsV2() {
         totalArea: '',
         projectStatus: 'planning'
       });
+      setSelectedFiles([]);
     } catch (error) {
+      toast.dismiss(toastId);
       handleFirestoreError(error, OperationType.WRITE, 'projects', auth);
+    } finally {
+      setIsSavingProject(false);
     }
   };
 
@@ -291,7 +471,7 @@ export default function ProjectsV2() {
                   
                   {/* مؤشر الخطوات */}
                   <div className="flex items-center gap-2 self-center md:self-auto">
-                    {[1, 2, 3].map((step) => (
+                    {[1, 2, 3, 4].map((step) => (
                       <React.Fragment key={step}>
                         <div 
                           onClick={() => {
@@ -308,7 +488,7 @@ export default function ProjectsV2() {
                         >
                           {activeStep > step ? <CheckCircle2 className="w-4 h-4" /> : step}
                         </div>
-                        {step < 3 && (
+                        {step < 4 && (
                           <div className={`h-1 w-8 rounded-full transition-all ${
                             activeStep > step ? 'bg-emerald-500' : 'bg-slate-100'
                           }`} />
@@ -370,7 +550,7 @@ export default function ProjectsV2() {
                       className="space-y-6"
                     >
                       <div className="flex items-center gap-2 border-r-4 border-primary pr-3 mb-2">
-                        <span className="text-xs font-black text-slate-900 uppercase">الخطوة 1: المعلومات الأساسية للهوية</span>
+                        <span className="text-xs font-black text-slate-900 uppercase">الخطوة 1: المعلومات الأساسية والنوعية</span>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -379,7 +559,7 @@ export default function ProjectsV2() {
                           <Input 
                             value={newProject.title}
                             onChange={e => setNewProject({...newProject, title: e.target.value})}
-                            placeholder="مثال: قصر الأميرة - حي الملقا" 
+                            placeholder="مثال: لوحة واجهة محل - فرع السليمانية" 
                             className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner ${
                               highlightedFields.title ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
                             }`}
@@ -398,52 +578,32 @@ export default function ProjectsV2() {
                         </div>
                       </div>
 
-                      {/* بطاقات اختيار نوع المشروع بصرياً */}
-                      <div className="space-y-2">
-                        <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">نوع المشروع *</Label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          {[
-                            { value: 'hoardings', label: 'أسوار دعائية', desc: 'تجهيز مواقع الأسوار والمشاريع الخارجية' },
-                            { value: 'signage_printing', label: 'لوحات وطباعة', desc: 'لوحات محلات، يوني بول، بنر وفليكس' },
-                            { value: 'cladding_letters', label: 'كلادينج وحروف بارزة', desc: 'حروف مضيئة، زنكور، اكريليك واستيل' },
-                            { value: 'digital_screens', label: 'شاشات ومجسمات', desc: 'شاشات LED، تجهيز معارض ومؤتمرات' }
-                          ].map((type) => (
-                            <div
-                              key={type.value}
-                              onClick={() => setNewProject({...newProject, projectType: type.value})}
-                              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-right flex flex-col justify-between h-24 ${
-                                newProject.projectType === type.value
-                                  ? 'border-primary bg-primary/5 text-primary shadow-sm'
-                                  : highlightedFields.projectType && newProject.projectType === type.value
-                                    ? 'border-emerald-500 bg-emerald-50/30 text-emerald-700'
-                                    : 'border-slate-100 bg-slate-50 hover:bg-slate-100/70 text-slate-700'
-                              }`}
-                            >
-                              <span className="font-black text-xs">{type.label}</span>
-                              <span className="text-[9px] font-bold text-slate-400">{type.desc}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-2">
-                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">المكتب الهندسي</Label>
-                          <Input 
-                            value={newProject.engOffice}
-                            onChange={e => setNewProject({...newProject, engOffice: e.target.value})}
-                            placeholder="اسم المكتب الاستشاري" 
-                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner ${
-                              highlightedFields.engOffice ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">نوع عمل مقاولة الدعاية والإعلان *</Label>
+                          <select
+                            value={newProject.projectType}
+                            onChange={e => setNewProject({...newProject, projectType: e.target.value})}
+                            className={`w-full h-12 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner pr-4 pl-8 focus:border-primary/20 focus:bg-white focus:ring-0 ${
+                              highlightedFields.projectType ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : ''
                             }`}
-                          />
+                          >
+                            <option value="hoardings">أسوار دعائية (تجهيز المواقع والمشاريع الخارجية)</option>
+                            <option value="signage_printing">لوحات وطباعة (واجهات محلات، يوني بول، بنر وفليكس)</option>
+                            <option value="cladding_letters">كلادينج وحروف بارزة (حروف مضيئة، زنكور، اكريليك واستيل)</option>
+                            <option value="digital_screens">شاشات ومجسمات (شاشات LED وتجهيز معارض ومؤتمرات)</option>
+                            <option value="exhibition_booths">تجهيز معارض ومؤتمرات (بناء أجنحة وبوثات معارض)</option>
+                            <option value="megastructures">مجسمات ضخمة (مجسمات جمالية وهندسية ضخمة)</option>
+                            <option value="wrapping_branding">تغليف مركبات (تغليف وتغيير هوية أساطيل السيارات)</option>
+                            <option value="maintenance">صيانة لوحات وشاشات (صيانة وقائية وتصحيحية للوحات والشاشات)</option>
+                          </select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">المساحة الإجمالية (م²)</Label>
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">المساحة الإجمالية أو المقاسات الفنية</Label>
                           <Input 
                             value={newProject.totalArea}
                             onChange={e => setNewProject({...newProject, totalArea: e.target.value})}
-                            placeholder="مثال: 500" 
+                            placeholder="مثال: لوحة 4x3 م أو مساحة 120م٢" 
                             className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner ${
                               highlightedFields.totalArea ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
                             }`}
@@ -488,16 +648,22 @@ export default function ProjectsV2() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">المشرف المسؤول</Label>
-                          <Input 
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">المشرف المسؤول (اختر من موظفي النظام) *</Label>
+                          <select
                             value={newProject.supervisor}
                             onChange={e => setNewProject({...newProject, supervisor: e.target.value})}
-                            placeholder="اسم المهندس المشرف ميدانياً" 
-                            className={`h-14 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner ${
-                              highlightedFields.supervisor ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            className={`w-full h-14 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner pr-4 pl-8 focus:border-primary/20 focus:bg-white focus:ring-0 ${
+                              highlightedFields.supervisor ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : ''
                             }`}
-                          />
-                          <p className="text-[10px] font-bold text-slate-400 pr-1">المهندس أو المندوب الذي سيتولى المراقبة الميدانية.</p>
+                          >
+                            <option value="">-- اختر المشرف المسؤول --</option>
+                            {usersList.map(u => (
+                              <option key={u.uid} value={u.name}>
+                                {u.name} ({u.role === 'manager' ? 'مدير' : u.role === 'supervisor' ? 'مشرف' : u.role === 'sales_rep' ? 'مندوب' : 'موظف'})
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-[10px] font-bold text-slate-400 pr-1">المهندس أو المندوب الذي سيتولى المراقبة الميدانية للتصنيع والتركيب.</p>
                         </div>
                       </div>
                     </motion.div>
@@ -516,6 +682,41 @@ export default function ProjectsV2() {
                         <span className="text-xs font-black text-slate-900 uppercase">الخطوة 3: سجل العميل والجدولة الزمنية</span>
                       </div>
 
+                      {/* اختيار العميل من نظام ألف ياء */}
+                      <div className="space-y-2">
+                        <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">اختر عميل من النظام (ألف ياء ERP)</Label>
+                        {isLoadingClients ? (
+                          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 h-12 pr-4 bg-slate-50 rounded-xl">
+                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                            جاري تحميل العملاء من نظام ألف ياء...
+                          </div>
+                        ) : (
+                          <select
+                            onChange={e => {
+                              const selectedId = e.target.value;
+                              const client = aliphiaClientsList.find(c => c.id === selectedId);
+                              if (client) {
+                                setNewProject(prev => ({
+                                  ...prev,
+                                  clientName: client.name,
+                                  clientPhone: client.phone || prev.clientPhone,
+                                  clientEmail: client.email || prev.clientEmail
+                                }));
+                                toast.success(`تم اختيار العميل وتعبئة البيانات تلقائياً: ${client.name}`);
+                              }
+                            }}
+                            className="w-full h-12 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner pr-4 pl-8 focus:border-primary/20 focus:bg-white focus:ring-0"
+                          >
+                            <option value="">-- اختر عميل من النظام أو اكتب البيانات يدوياً بالأسفل --</option>
+                            {aliphiaClientsList.map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} {c.phone ? `(${c.phone})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                         <div className="space-y-2">
                           <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">اسم العميل</Label>
@@ -529,7 +730,7 @@ export default function ProjectsV2() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">رقم الجوال</Label>
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">رقم الجوال *</Label>
                           <Input 
                             value={newProject.clientPhone}
                             onChange={e => setNewProject({...newProject, clientPhone: e.target.value})}
@@ -538,6 +739,11 @@ export default function ProjectsV2() {
                               highlightedFields.clientPhone ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
                             }`}
                           />
+                          {!validatePhone(newProject.clientPhone) && (
+                            <span className="text-[10px] text-rose-500 font-bold flex items-center gap-1 mt-1 pr-1 animate-pulse">
+                              <AlertCircle className="w-3 h-3" /> رقم الجوال غير صحيح (يجب أن يبدأ بـ 05 ويحتوي على 10 أرقام)
+                            </span>
+                          )}
                         </div>
                         <div className="space-y-2">
                           <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">البريد الإلكتروني</Label>
@@ -588,6 +794,11 @@ export default function ProjectsV2() {
                             highlightedFields.locationLink ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
                           }`}
                         />
+                        {!validateLocationLink(newProject.locationLink) && (
+                          <span className="text-[10px] text-rose-500 font-bold flex items-center gap-1 mt-1 pr-1 animate-pulse">
+                            <AlertCircle className="w-3 h-3" /> رابط الخريطة غير صحيح (يجب أن يكون رابط خرائط جوجل)
+                          </span>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -596,12 +807,118 @@ export default function ProjectsV2() {
                           value={newProject.description}
                           onChange={e => setNewProject({...newProject, description: e.target.value})}
                           rows={3}
-                          placeholder="أدخل تفاصيل الهيكل الإنشائي، التشطيبات، والملاحظات الهندسية الهامة..."
+                          placeholder="أدخل المواصفات الفنية للوحات، نوع الحديد، الاكريليك، تفاصيل الطباعة والتغليف..."
                           className={`w-full rounded-2xl bg-slate-50 border-transparent shadow-inner font-bold p-4 text-sm focus:ring-0 transition-all ${
                             highlightedFields.description ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:bg-white focus:border-primary/20'
                           }`}
                         />
                       </div>
+                    </motion.div>
+                  )}
+
+                  {activeStep === 4 && (
+                    <motion.div
+                      key="step4"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      <div className="flex items-center gap-2 border-r-4 border-purple-500 pr-3 mb-2">
+                        <span className="text-xs font-black text-slate-900 uppercase">الخطوة 4: المرفقات والتحليل الذكي (عقود، مخططات، لوحات)</span>
+                      </div>
+
+                      {/* Upload Box */}
+                      <div className="border-2 border-dashed border-slate-200 rounded-[2rem] p-8 text-center bg-slate-50/50 relative hover:bg-slate-50 transition-all group">
+                        <input 
+                          type="file" 
+                          multiple 
+                          onChange={e => {
+                            if (e.target.files) {
+                              const filesArray = Array.from(e.target.files).map(file => ({
+                                id: Math.random().toString(36).substring(7),
+                                file,
+                                progress: 0,
+                                status: 'pending' as const
+                              }));
+                              setSelectedFiles(prev => [...prev, ...filesArray]);
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                        />
+                        <div className="flex flex-col items-center gap-3 relative z-0">
+                          <div className="h-16 w-16 bg-white rounded-3xl border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors shadow-sm">
+                            <UploadCloud className="w-8 h-8" />
+                          </div>
+                          <div>
+                            <p className="font-black text-slate-700 text-sm">اسحب المرفقات هنا أو انقر للاختيار</p>
+                            <p className="text-[10px] text-slate-400 font-bold mt-1">يمكنك رفع صور فنية للموقع أو ملفات عقود وعروض أسعار بصيغة PDF</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Files list */}
+                      {selectedFiles.length > 0 && (
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المستندات والمرفقات المختارة ({selectedFiles.length})</p>
+                          <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1">
+                            {selectedFiles.map((item) => {
+                              const isImage = item.file.type.startsWith('image/');
+                              const isPdf = item.file.type === 'application/pdf';
+                              const canAnalyze = isImage || isPdf;
+
+                              return (
+                                <div key={item.id} className="p-3 bg-white border border-slate-100 rounded-xl flex items-center justify-between shadow-sm">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <div className="h-10 w-10 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 shrink-0">
+                                      <Paperclip className="w-5 h-5" />
+                                    </div>
+                                    <div className="min-w-0 text-right">
+                                      <p className="text-xs font-bold text-slate-800 truncate max-w-[200px] sm:max-w-[300px]">{item.file.name}</p>
+                                      <p className="text-[9px] text-slate-400 font-bold">{(item.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    {canAnalyze && (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        disabled={analyzingFileId !== null}
+                                        onClick={() => handleAnalyzeFile(item.id)}
+                                        className="h-8 px-3 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-[10px] border-none shadow-none flex items-center gap-1.5"
+                                      >
+                                        {analyzingFileId === item.id ? (
+                                          <>
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                            جاري التحليل...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
+                                            تحليل بالذكاء الاصطناعي 🧠
+                                          </>
+                                        )}
+                                      </Button>
+                                    )}
+
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => setSelectedFiles(prev => prev.filter(f => f.id !== item.id))}
+                                      className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -614,6 +931,7 @@ export default function ProjectsV2() {
                     <Button
                       type="button"
                       variant="outline"
+                      disabled={isSavingProject}
                       onClick={() => setActiveStep(prev => prev - 1)}
                       className="h-12 px-6 rounded-xl border-slate-200 bg-white font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2"
                     >
@@ -626,14 +944,32 @@ export default function ProjectsV2() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {activeStep < 3 ? (
+                  {activeStep < 4 ? (
                     <Button
                       type="button"
                       onClick={() => {
                         // التحقق من الحقول المطلوبة قبل الانتقال للخطوات التالية
-                        if (activeStep === 1 && !newProject.title) {
-                          toast.error("يرجى إدخال عنوان المشروع قبل الانتقال");
-                          return;
+                        if (activeStep === 1) {
+                          if (!newProject.title) {
+                            toast.error("يرجى إدخال عنوان المشروع قبل الانتقال");
+                            return;
+                          }
+                        }
+                        if (activeStep === 2) {
+                          if (!newProject.supervisor) {
+                            toast.error("يرجى اختيار المشرف المسؤول قبل الانتقال");
+                            return;
+                          }
+                        }
+                        if (activeStep === 3) {
+                          if (newProject.clientPhone && !validatePhone(newProject.clientPhone)) {
+                            toast.error("يرجى تصحيح رقم هاتف العميل ليطابق التنسيق السعودي (05xxxxxxxx)");
+                            return;
+                          }
+                          if (newProject.locationLink && !validateLocationLink(newProject.locationLink)) {
+                            toast.error("يرجى تصحيح رابط موقع المشروع (يجب أن يكون رابطاً صالحاً لخرائط جوجل)");
+                            return;
+                          }
                         }
                         setActiveStep(prev => prev + 1);
                       }}
@@ -646,10 +982,20 @@ export default function ProjectsV2() {
                     <Button 
                       type="button"
                       onClick={handleCreateProject}
+                      disabled={isSavingProject}
                       className="h-14 px-8 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-black text-base shadow-xl shadow-slate-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
                     >
-                      <CheckCircle2 className="w-5 h-5" />
-                      اعتماد وتأسيس المشروع
+                      {isSavingProject ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          جاري تأسيس المشروع...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-5 h-5" />
+                          اعتماد وتأسيس المشروع
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>

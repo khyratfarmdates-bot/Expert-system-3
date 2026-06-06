@@ -84,6 +84,7 @@ export interface Project {
   progress?: number;
   clientEmail?: string;
   timestamp?: any;
+  fileAttachments?: { name: string; url: string; uploadedAt?: string }[];
 }
 
 export interface ProjectNote {
@@ -185,4 +186,6 @@ export interface Quotation {
     price: number;
     desc?: string;
   }>;
+  clientId?: string;
+  notes?: string;
 }

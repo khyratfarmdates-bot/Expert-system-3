@@ -34,7 +34,7 @@ interface DashboardStats {
   activeProjects: number;
 }
 interface AlertItem {
-  id: string; text: string; type: 'amber' | 'red' | 'rose'; icon: React.ElementType; tab: string;
+  id: string; text: string; type: 'amber' | 'red' | 'blue'; icon: React.ElementType; tab: string;
 }
 interface BriefingItem {
   id: string; text: string; done: boolean; icon: React.ElementType;
@@ -200,7 +200,7 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
         const today = new Date().toISOString().split('T')[0];
         const att = await getDocs(query(collection(db, 'attendance'), where('dateString', '==', today)));
         if (att.size < stats.employeesCount * 0.5 && stats.employeesCount > 0) {
-          al.push({ id: 'att', text: 'نسبة الحضور منخفضة اليوم', type: 'rose', icon: Users, tab: 'attendance_manager' });
+          al.push({ id: 'att', text: 'نسبة الحضور منخفضة اليوم', type: 'blue', icon: Users, tab: 'attendance_manager' });
           br.push({ id: 'b3', text: 'مراجعة سجل الحضور والانصراف', done: false, icon: Clock });
         }
         if (stats.income > 5000)
@@ -325,20 +325,22 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
                   exit={{ opacity: 0, scale: 0.95 }}
                   className={`flex items-center gap-3 p-3 rounded-xl border ${
                     alert.type === 'amber' ? 'bg-amber-50 border-amber-200 text-amber-900' :
-                    alert.type === 'red'   ? 'bg-red-50 border-red-200 text-red-900' :
-                                             'bg-rose-50 border-rose-200 text-rose-900'
+                    alert.type === 'red'   ? 'bg-red-600 border-none text-white shadow-md shadow-red-650/10' :
+                                             'bg-blue-50 border-blue-200 text-blue-900'
                   }`}
                 >
                   <div className={`p-1.5 rounded-lg text-white shrink-0 ${
                     alert.type === 'amber' ? 'bg-amber-500' :
-                    alert.type === 'red'   ? 'bg-red-500' : 'bg-rose-500'
+                    alert.type === 'red'   ? 'bg-white/20' : 'bg-blue-500'
                   }`}><alert.icon className="w-3.5 h-3.5" /></div>
                   <p className="flex-1 text-xs font-bold cursor-pointer truncate"
                     onClick={() => goToTab(alert.tab)}>{alert.text}</p>
                   <button
                     onClick={() => setAlerts(p => p.filter(a => a.id !== alert.id))}
-                    className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center hover:bg-black/10 transition">
-                    <X className="w-3.5 h-3.5 opacity-50" />
+                    className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center hover:bg-black/10 transition ${
+                      alert.type === 'red' ? 'text-white/80 hover:text-white' : 'text-slate-500'
+                    }`}>
+                    <X className="w-3.5 h-3.5 opacity-70" />
                   </button>
                 </motion.div>
               ))}

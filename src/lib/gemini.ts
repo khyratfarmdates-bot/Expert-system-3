@@ -239,7 +239,7 @@ export interface ExtractedProjectData {
   locationLink?: string;
   startDate?: string;
   endDate?: string;
-  projectType?: 'hoardings' | 'signage_printing' | 'cladding_letters' | 'digital_screens';
+  projectType?: 'hoardings' | 'signage_printing' | 'cladding_letters' | 'digital_screens' | 'exhibition_booths' | 'megastructures' | 'wrapping_branding' | 'maintenance';
   supervisor?: string;
   contractNumber?: string;
   engOffice?: string;
@@ -310,6 +310,94 @@ export const parseProjectFromText = async (text: string): Promise<ExtractedProje
     return null;
   } catch (error) {
     console.error("AI parsing failed:", error);
+    throw error;
+  }
+};
+
+export const analyzeProjectDocument = async (dataUrl: string, mimeType: string): Promise<ExtractedProjectData> => {
+  const ai = getGeminiClient();
+  if (!ai) throw new Error("مفتاح API غير متوفر أو غير صالح. يرجى إعداد مفتاح الذكاء الاصطناعي في الإعدادات.");
+  
+  let base64Data = dataUrl;
+  if (dataUrl.includes(';base64,')) {
+    base64Data = dataUrl.split(';base64,')[1];
+  } else if (dataUrl.startsWith('data:')) {
+    base64Data = dataUrl.split(',')[1];
+  }
+
+  try {
+    const prompt = `
+      أنت خبير في تحليل مستندات المشاريع والعقود وعروض الأسعار الفنية لشركة مقاولات دعاية وإعلان.
+      قم بتحليل الملف المرفق واستخرج كافة الحقول المتاحة لتأسيس ملف مشروع جديد.
+      
+      البيانات المطلوبة:
+      1. title: عنوان المشروع (مثال: لوحة وجهة محل - فرع السليمانية).
+      2. description: وصف تفصيلي لنطاق العمل الفني والمواصفات المذكورة.
+      3. budget: القيمة الإجمالية للمشروع كـ رقم فقط (مثال: 45000).
+      4. clientName: اسم العميل أو اسم الشركة.
+      5. clientPhone: رقم الهاتف/الجوال للعميل (بصيغة 05xxxxxxxx إن أمكن).
+      6. clientEmail: البريد الإلكتروني للعميل.
+      7. startDate / endDate: التواريخ المذكورة للبدء أو الانتهاء (بصيغة YYYY-MM-DD).
+      8. contractNumber: رقم العقد أو المرجع.
+      9. totalArea: المساحة الإجمالية أو المقاسات بالكامل (مثال: "لوحة 4x3 م").
+      10. projectType: حدد أحد الأنواع التالية فقط:
+          - 'hoardings' (أسوار دعائية)
+          - 'signage_printing' (لوحات وطباعة)
+          - 'cladding_letters' (كلادينج وحروف بارزة)
+          - 'digital_screens' (شاشات ومجسمات)
+          - 'exhibition_booths' (تجهيز معارض ومؤتمرات)
+          - 'megastructures' (مجسمات ضخمة)
+          - 'wrapping_branding' (تغليف مركبات)
+          - 'maintenance' (صيانة لوحات وشاشات)
+
+      أرجع النتيجة بصيغة JSON فقط مطابقة للمخطط بدون أي شرح خارجي.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType: mimeType || "application/pdf",
+              },
+            },
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            budget: { type: Type.NUMBER },
+            clientName: { type: Type.STRING },
+            clientPhone: { type: Type.STRING },
+            clientEmail: { type: Type.STRING },
+            startDate: { type: Type.STRING },
+            endDate: { type: Type.STRING },
+            contractNumber: { type: Type.STRING },
+            totalArea: { type: Type.STRING },
+            projectType: { 
+              type: Type.STRING,
+              enum: ['hoardings', 'signage_printing', 'cladding_letters', 'digital_screens', 'exhibition_booths', 'megastructures', 'wrapping_branding', 'maintenance']
+            }
+          }
+        }
+      }
+    });
+
+    if (response.text) {
+      return JSON.parse(response.text) as ExtractedProjectData;
+    }
+    throw new Error("لم يتم إرجاع أي بيانات من التحليل");
+  } catch (error) {
+    console.error("AI document analysis failed:", error);
     throw error;
   }
 };

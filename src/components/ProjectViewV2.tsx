@@ -27,7 +27,8 @@ import {
   Layers,
   CheckCircle2,
   AlertCircle,
-  Trash2
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 import { 
   doc, 
@@ -68,10 +69,22 @@ interface ProjectViewV2Props {
   onBack: () => void;
 }
 
+const projectTypeLabels: Record<string, string> = {
+  hoardings: "أسوار دعائية (تجهيز المواقع)",
+  signage_printing: "لوحات وطباعة (واجهات بنر وفليكس)",
+  cladding_letters: "كلادينج وحروف بارزة مضيئة",
+  digital_screens: "شاشات ومجسمات LED",
+  exhibition_booths: "تجهيز معارض ومؤتمرات (أجنحة)",
+  megastructures: "مجسمات جمالية وهندسية ضخمة",
+  wrapping_branding: "تغليف ودمج هوية المركبات",
+  maintenance: "صيانة وقائية وتصحيحية للوحات",
+};
+
 export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props) {
   const { profile } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [workers, setWorkers] = useState<Worker[]>([]);
+  const [usersList, setUsersList] = useState<Worker[]>([]);
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -110,6 +123,16 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
       (err) => handleFirestoreError(err, OperationType.GET, 'employees', auth)
     );
 
+    const unsubUsers = onSnapshot(
+      query(collection(db, 'users'), orderBy('name', 'asc')),
+      (snapshot) => {
+        setUsersList(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Worker)));
+      },
+      (err) => {
+        console.error("Failed to load users in ProjectView", err);
+      }
+    );
+
     const unsubUpdates = onSnapshot(
       query(collection(db, 'projectUpdates'), where('projectId', '==', projectId), orderBy('createdAt', 'desc')),
       (snapshot) => {
@@ -129,6 +152,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
     return () => {
       unsubProject();
       unsubWorkers();
+      unsubUsers();
       unsubUpdates();
       unsubTransactions();
     };
@@ -145,9 +169,12 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
   }, [project, workers]);
 
   const siteSupervisor = useMemo(() => {
+    if (project?.supervisor && project.supervisor.trim() !== '') {
+      return project.supervisor;
+    }
     const supervisor = projectWorkers.find(w => w.role?.toLowerCase().includes('supervisor') || w.role?.toLowerCase().includes('manager'));
     return supervisor ? supervisor.name : 'قيد التعيين';
-  }, [projectWorkers]);
+  }, [project, projectWorkers]);
 
   const handleUpdateProject = async () => {
     try {
@@ -282,7 +309,6 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-4 flex flex-col gap-6" dir="rtl">
       
-      {/* 🚀 Header: Compacted for better visibility */}
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between w-full">
            <Button 
@@ -314,20 +340,73 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                        إدارة
                     </button>
                  } />
-                 <DialogContent className="max-w-md rounded-[2.5rem] p-8 border-none" dir="rtl">
+                 <DialogContent className="max-w-lg rounded-[2.5rem] p-8 border-none" dir="rtl">
                     <DialogHeader>
                        <DialogTitle className="text-right font-black">تعديل بيانات المشروع</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-5 mt-4">
-                       <div className="space-y-2">
-                          <Label className="text-xs font-black text-slate-400">عنوان المشروع</Label>
-                          <Input value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} className="rounded-xl border-slate-100 font-bold" />
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                             <Label className="text-xs font-black text-slate-400">عنوان المشروع *</Label>
+                             <Input value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} className="rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-2">
+                             <Label className="text-xs font-black text-slate-400">رقم العقد / المرجع</Label>
+                             <Input value={editForm.contractNumber || ''} onChange={e => setEditForm({...editForm, contractNumber: e.target.value})} className="rounded-xl border-slate-100 font-bold" />
+                          </div>
                        </div>
-                       <div className="grid grid-cols-2 gap-4">
+
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                             <Label className="text-xs font-black text-slate-400">نوع المشروع / اللوحة *</Label>
+                             <select
+                                value={editForm.projectType || 'hoardings'}
+                                onChange={e => setEditForm({...editForm, projectType: e.target.value})}
+                                className="w-full h-10 rounded-xl bg-slate-50 border border-slate-100 font-bold text-xs pr-4 focus:ring-0 focus:border-primary outline-none"
+                             >
+                                <option value="hoardings">أسوار دعائية (تجهيز المواقع والمشاريع الخارجية)</option>
+                                <option value="signage_printing">لوحات وطباعة (واجهات محلات، يوني بول، بنر وفليكس)</option>
+                                <option value="cladding_letters">كلادينج وحروف بارزة (حروف مضيئة، زنكور، اكريليك واستيل)</option>
+                                <option value="digital_screens">شاشات ومجسمات (شاشات LED وتجهيز معارض ومؤتمرات)</option>
+                                <option value="exhibition_booths">تجهيز معارض ومؤتمرات (بناء أجنحة وبوثات معارض)</option>
+                                <option value="megastructures">مجسمات ضخمة (مجسمات جمالية وهندسية ضخمة)</option>
+                                <option value="wrapping_branding">تغليف مركبات (تغليف وتغيير هوية أساطيل السيارات)</option>
+                                <option value="maintenance">صيانة لوحات وشاشات (صيانة وقائية وتصحيحية للوحات والشاشات)</option>
+                             </select>
+                          </div>
+                          <div className="space-y-2">
+                             <Label className="text-xs font-black text-slate-400">المشرف المسؤول *</Label>
+                             <select
+                                value={editForm.supervisor || ''}
+                                onChange={e => setEditForm({...editForm, supervisor: e.target.value})}
+                                className="w-full h-10 rounded-xl bg-slate-50 border border-slate-100 font-bold text-xs pr-4 focus:ring-0 focus:border-primary outline-none"
+                             >
+                                <option value="">-- اختر المشرف المسؤول --</option>
+                                {usersList.map(u => (
+                                   <option key={u.id || u.uid} value={u.name}>
+                                      {u.name} ({u.role === 'manager' ? 'مدير' : u.role === 'supervisor' ? 'مشرف' : u.role === 'sales_rep' ? 'مندوب' : 'موظف'})
+                                   </option>
+                                ))}
+                             </select>
+                          </div>
+                       </div>
+
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                             <Label className="text-xs font-black text-slate-400">المقاسات الفنية والقياسات</Label>
+                             <Input value={editForm.totalArea || ''} onChange={e => setEditForm({...editForm, totalArea: e.target.value})} className="rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-2">
+                             <Label className="text-xs font-black text-slate-400">تاريخ التسليم المتوقع</Label>
+                             <Input type="date" value={editForm.endDate || ''} onChange={e => setEditForm({...editForm, endDate: e.target.value})} className="rounded-xl border-slate-100 font-bold" />
+                          </div>
+                       </div>
+
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                              <Label className="text-xs font-black text-slate-400">الحالة</Label>
                              <Select value={editForm.status} onValueChange={v => setEditForm({...editForm, status: v as any})}>
-                                <SelectTrigger className="rounded-xl">
+                                <SelectTrigger className="rounded-xl h-10">
                                    <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -342,13 +421,14 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                              <Input type="number" value={editForm.budget} onChange={e => setEditForm({...editForm, budget: Number(e.target.value)})} className="rounded-xl border-slate-100 font-bold" />
                           </div>
                        </div>
+
                        <div className="space-y-2">
-                          <Label className="text-xs font-black text-slate-400">رابط الموقع</Label>
-                           <Input value={editForm.locationLink} onChange={e => setEditForm({...editForm, locationLink: e.target.value})} className="rounded-xl border-slate-100 font-bold" />
-                        </div>
-                        <Button onClick={handleUpdateProject} className="w-full h-12 rounded-2xl bg-slate-900 font-black mt-4">حفظ التغييرات</Button>
-                     </div>
-                  </DialogContent>
+                          <Label className="text-xs font-black text-slate-400">رابط الموقع الجغرافي (Google Maps)</Label>
+                          <Input value={editForm.locationLink} onChange={e => setEditForm({...editForm, locationLink: e.target.value})} className="rounded-xl border-slate-100 font-bold" />
+                       </div>
+                       <Button onClick={handleUpdateProject} className="w-full h-12 rounded-2xl bg-slate-900 font-black mt-4">حفظ التغييرات</Button>
+                    </div>
+                 </DialogContent>
                </Dialog>
             </div>
             <p className="text-slate-500 font-bold text-[11px] leading-relaxed max-w-xl">
@@ -357,7 +437,6 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
         </div>
       </section>
 
-      {/* 📞 Urgent Actions: Compacted */}
       <section className="grid grid-cols-2 gap-2">
             <Button 
                size="sm"
@@ -378,7 +457,6 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
             </Button>
       </section>
 
-      {/* 📑 Dynamic Tab Switcher: Full Width Vertical Column */}
       <section className="flex flex-col gap-8">
          <div className="flex items-center gap-2 p-1.5 bg-white border border-slate-100 shadow-sm rounded-3xl overflow-x-auto no-scrollbar">
             {tabs.map(tab => (
@@ -397,7 +475,6 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
             ))}
          </div>
 
-         {/* 📦 Tab Content Viewer */}
          <div className="flex flex-col gap-8 min-h-[400px]">
             <AnimatePresence mode="wait">
                {activeTab === 'overview' && (
@@ -434,7 +511,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                         <div className="flex items-center justify-between">
                            <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
                               <Info className="w-5 h-5 text-primary" />
-                              المعلومات الأساسية
+                              المواصفات الفنية وبيانات العقد
                            </h3>
                            <Button 
                               variant="outline" 
@@ -446,10 +523,15 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                               تحميل تقرير PDF
                            </Button>
                         </div>
-                        <div className="bg-white border border-slate-100 shadow-sm rounded-[2.5rem] p-8 space-y-4">
+                        <div className="bg-white border border-slate-100 shadow-sm rounded-[2.5rem] p-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                            <DetailLine label="العميل" value={project.clientName} icon={<User />} />
-                           <DetailLine label="تاريخ البدء" value={project.createdAt ? new Date(project.createdAt).toLocaleDateString('ar-SA') : '---'} icon={<CalendarDays />} />
-                           <DetailLine label="مشرف الموقع" value={siteSupervisor} icon={<ShieldCheck />} />
+                           <DetailLine label="المشرف المسؤول" value={siteSupervisor} icon={<ShieldCheck />} />
+                           <DetailLine label="رقم العقد / المرجع" value={project.contractNumber} icon={<FileText />} />
+                           <DetailLine label="نوع عمل الدعاية والإعلان" value={projectTypeLabels[project.projectType || ''] || project.projectType || '---'} icon={<Layers />} />
+                           <DetailLine label="المقاسات الفنية والقياسات" value={project.totalArea} icon={<Info />} />
+                           <DetailLine label="تاريخ البدء" value={project.startDate ? new Date(project.startDate).toLocaleDateString('ar-SA') : project.createdAt ? new Date(project.createdAt).toLocaleDateString('ar-SA') : '---'} icon={<CalendarDays />} />
+                           <DetailLine label="تاريخ التسليم المتوقع" value={project.endDate ? new Date(project.endDate).toLocaleDateString('ar-SA') : '---'} icon={<Clock />} />
+                           <DetailLine label="موقع اللوحة / المعاينة" value={project.locationLink ? 'معاينة الموقع الجغرافي' : 'غير متوفر'} icon={<MapPin />} isLink={!!project.locationLink} href={project.locationLink} />
                         </div>
                      </div>
 
@@ -511,7 +593,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                                        <Input 
                                           value={newStage.title} 
                                           onChange={e => setNewStage({...newStage, title: e.target.value})} 
-                                          placeholder="مثال: أعمال الحفر والقواعد"
+                                          placeholder="مثال: تصنيع الهيكل الحديدي وتجهيز الاكريليك"
                                           className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                                        />
                                     </div>
@@ -520,7 +602,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                                        <textarea 
                                           value={(newStage as any).description || ''} 
                                           onChange={e => setNewStage({...newStage, description: e.target.value} as any)} 
-                                          placeholder="تفاصيل فنية عن هذه المرحلة..."
+                                          placeholder="تفاصيل الإنتاج الفني أو التركيب لهذه المرحلة..."
                                           className="w-full rounded-xl bg-slate-50 border-none font-bold p-4 text-sm focus:ring-0 min-h-[100px]"
                                        />
                                     </div>
@@ -551,7 +633,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                               <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-[3rem] bg-slate-50/50">
                                  <Layers className="w-12 h-12 mx-auto text-slate-300 mb-4" />
                                  <p className="font-black text-slate-400">لم يتم تعريف أي مراحل لهذا المشروع بعد</p>
-                                 <p className="text-xs font-bold text-slate-300 mt-1">ابدأ بإضافة المراحل لبناء هيكل المشروع الميداني</p>
+                                 <p className="text-xs font-bold text-slate-300 mt-1">ابدأ بإضافة المراحل لبناء هيكل الإنتاج والتركيب</p>
                               </div>
                            )}
                            
@@ -636,7 +718,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                      exit={{ opacity: 0, y: -10 }}
                      className="flex flex-col gap-6"
                   >
-                     <h3 className="text-xl font-black text-slate-900 border-r-4 border-primary pr-3">الكادر الميداني</h3>
+                     <h3 className="text-xl font-black text-slate-900 border-r-4 border-primary pr-3">الفريق الفني للإنتاج والتركيب</h3>
                      <div className="flex flex-col gap-3">
                         {projectWorkers.map(worker => (
                            <Card key={worker.id} className="p-6 rounded-[2rem] border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
@@ -646,7 +728,11 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                                  </div>
                                  <div>
                                     <p className="font-black text-slate-900">{worker.name}</p>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{worker.role === 'worker' ? 'فني مختص' : 'مشرف ميداني'}</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                       {worker.role === 'worker' ? 'فني مختص' : 
+                                        worker.role === 'supervisor' ? 'مشرف فني' : 
+                                        worker.role === 'manager' ? 'مدير المشروع' : 'عضو الفريق'}
+                                    </p>
                                  </div>
                               </div>
                               <Button variant="ghost" size="icon" className="rounded-xl h-12 w-12 text-emerald-500 bg-emerald-50">
@@ -682,7 +768,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                                  <p className="text-3xl font-black text-emerald-400">{financialStats.paid.toLocaleString()}</p>
                               </div>
                               <div>
-                                 <p className="text-slate-500 font-black text-[10px] uppercase mb-1">المصروف (ميداني)</p>
+                                 <p className="text-slate-500 font-black text-[10px] uppercase mb-1">تكاليف المواد والإنتاج</p>
                                  <p className="text-3xl font-black text-amber-400">
                                     {transactions.filter(t => t.type === 'expense' || t.type === 'purchase').reduce((acc, curr) => acc + curr.amount, 0).toLocaleString()}
                                  </p>
@@ -768,42 +854,79 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                )}
 
                {activeTab === 'monitoring' && (
-                  <motion.div 
-                     key="monitoring"
-                     initial={{ opacity: 0, y: 10 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     exit={{ opacity: 0, y: -10 }}
-                     className="flex flex-col gap-6"
-                  >
-                     <div className="flex items-center justify-between mb-4">
-                        <div className="border-r-4 border-primary pr-3 text-right">
-                           <h3 className="text-xl font-black text-slate-900 leading-none">الأرشيف المرئي</h3>
-                           <p className="text-slate-500 font-bold text-[10px] mt-1">توثيق كامل لمراحل الإنشـاء</p>
-                        </div>
-                        <Button size="sm" className="h-9 rounded-xl bg-primary text-white font-black text-[10px] gap-2 shadow-md">
-                           <Plus className="w-3.5 h-3.5" />
-                           إضافة توثيق
-                        </Button>
-                     </div>
-                     
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {project.photoUrls?.map((url, i) => (
-                           <div key={i} className="group overflow-hidden rounded-[3rem] border-8 border-white shadow-2xl relative aspect-video cursor-zoom-in">
-                              <img src={url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="توثيق" referrerPolicy="no-referrer" />
-                              <div className="absolute bottom-6 right-6">
-                                 <Badge className="bg-white/90 text-slate-900 border-none px-4 py-2 rounded-xl font-black text-[10px] shadow-2xl">صورة ميدانية #{i+1}</Badge>
-                              </div>
-                           </div>
-                        ))}
-                        {(!project.photoUrls || project.photoUrls.length === 0) && (
-                           <div className="py-32 flex flex-col items-center justify-center text-center opacity-30 gap-6">
-                              <Camera className="w-16 h-16" />
-                              <p className="font-black text-xl">لا توجد وسائط لهذا المشروع حالياً</p>
-                           </div>
-                        )}
-                     </div>
-                  </motion.div>
-               )}
+                   <motion.div 
+                      key="monitoring"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex flex-col gap-6"
+                   >
+                      <div className="flex items-center justify-between mb-4">
+                         <div className="border-r-4 border-primary pr-3 text-right">
+                            <h3 className="text-xl font-black text-slate-900 leading-none">التوثيق والمرفقات</h3>
+                            <p className="text-slate-500 font-bold text-[10px] mt-1">مراحل التصنيع والتركيب والملفات الفنية للمشروع</p>
+                         </div>
+                         <Button size="sm" className="h-9 rounded-xl bg-primary text-white font-black text-[10px] gap-2 shadow-md">
+                            <Plus className="w-3.5 h-3.5" />
+                            إضافة توثيق
+                         </Button>
+                      </div>
+                      
+                      <div className="space-y-3">
+                         <h4 className="text-xs font-black text-slate-400">الأرشيف المرئي (صور مراحل العمل)</h4>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {project.photoUrls?.map((url, i) => (
+                               <div key={i} className="group overflow-hidden rounded-[3rem] border-8 border-white shadow-2xl relative aspect-video cursor-zoom-in">
+                                  <img src={url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="توثيق" referrerPolicy="no-referrer" />
+                                  <div className="absolute bottom-6 right-6">
+                                     <Badge className="bg-white/90 text-slate-900 border-none px-4 py-2 rounded-xl font-black text-[10px] shadow-2xl">صورة ميدانية #{i+1}</Badge>
+                                  </div>
+                               </div>
+                            ))}
+                            {(!project.photoUrls || project.photoUrls.length === 0) && (
+                               <div className="py-20 flex flex-col items-center justify-center text-center opacity-30 gap-4 border-2 border-dashed border-slate-200 rounded-[2.5rem] bg-slate-50/50">
+                                  <Camera className="w-10 h-10" />
+                                  <p className="font-bold text-sm">لا توجد وسائط مرئية لهذا المشروع حالياً</p>
+                               </div>
+                            )}
+                         </div>
+                      </div>
+
+                      <div className="space-y-3 mt-6">
+                         <h4 className="text-xs font-black text-slate-400">الملفات الفنية والرسومات والمرفقات وعقود العمل</h4>
+                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {project.fileAttachments?.map((file, i) => (
+                               <Card key={i} className="p-4 rounded-3xl border border-slate-100 bg-white hover:shadow-md transition-all flex items-center justify-between gap-3 shadow-sm">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                     <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center shrink-0">
+                                        <FileText className="w-5 h-5 text-primary" />
+                                     </div>
+                                     <div className="min-w-0">
+                                        <p className="text-xs font-bold text-slate-800 truncate" title={file.name}>{file.name}</p>
+                                        {file.uploadedAt && <p className="text-[9px] text-slate-400 font-semibold mt-0.5">{file.uploadedAt}</p>}
+                                     </div>
+                                  </div>
+                                  <Button 
+                                     variant="ghost" 
+                                     size="icon" 
+                                     onClick={() => window.open(file.url, '_blank')}
+                                     className="w-8 h-8 rounded-lg text-primary hover:bg-slate-100"
+                                     title="تحميل الملف"
+                                  >
+                                     <ExternalLink className="w-4 h-4" />
+                                  </Button>
+                               </Card>
+                            ))}
+                            {(!project.fileAttachments || project.fileAttachments.length === 0) && (
+                               <div className="py-16 col-span-full flex flex-col items-center justify-center text-center opacity-30 gap-4 border-2 border-dashed border-slate-200 rounded-[2.5rem] bg-slate-50/50">
+                                  <FileText className="w-10 h-10" />
+                                  <p className="font-bold text-sm">لا توجد مرفقات أو عقود فنية مرفوعة</p>
+                               </div>
+                            )}
+                         </div>
+                      </div>
+                   </motion.div>
+                )}
 
                {activeTab === 'chat' && (
                   <motion.div 
@@ -852,13 +975,11 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
       </section>
 
       <footer className="py-12 text-center opacity-10">
-         <p className="text-[10px] font-black uppercase tracking-[0.6em]">Aman Management System • Next Gen Construction</p>
+         <p className="text-[10px] font-black uppercase tracking-[0.6em]">Aman Management System • Next Gen Advertising & Signage</p>
       </footer>
     </div>
   );
 }
-
-// --- 🏗️ Clean Internal UI Components ---
 
 interface StatusCardProps {
   label: string;
@@ -908,7 +1029,7 @@ const StatusCard = React.memo(({ label, value, unit, icon, color, progress }: St
    );
 });
 
-const DetailLine = React.memo(({ label, value, icon }: { label: string, value: string | undefined, icon: React.ReactNode }) => {
+const DetailLine = React.memo(({ label, value, icon, isLink, href }: { label: string, value: string | undefined, icon: React.ReactNode, isLink?: boolean, href?: string }) => {
    return (
       <div className="flex items-center justify-between py-4 border-b border-slate-50 last:border-0 group">
          <div className="flex items-center gap-4">
@@ -917,7 +1038,14 @@ const DetailLine = React.memo(({ label, value, icon }: { label: string, value: s
             </div>
             <span className="text-slate-400 font-black text-sm">{label}</span>
          </div>
-         <span className="font-black text-slate-900 text-sm tracking-tight">{value || '---'}</span>
+         {isLink && href ? (
+            <a href={href} target="_blank" rel="noopener noreferrer" className="font-black text-primary hover:underline text-sm tracking-tight flex items-center gap-1">
+               {value || '---'}
+               <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+         ) : (
+            <span className="font-black text-slate-900 text-sm tracking-tight text-right truncate max-w-[200px]" title={value}>{value || '---'}</span>
+         )}
       </div>
    );
 });
