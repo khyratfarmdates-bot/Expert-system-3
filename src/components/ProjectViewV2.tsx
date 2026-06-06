@@ -28,7 +28,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import { 
   doc, 
@@ -39,9 +40,12 @@ import {
   orderBy,
   updateDoc,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  setDoc,
+  serverTimestamp
 } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { db, auth, storage } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { toast } from 'sonner';
 import { Project, UserProfile as Worker, ProjectUpdate, Transaction, ProjectMilestone } from '../types';
@@ -93,6 +97,216 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Project>>({});
+
+  // States for interactive dialogs
+  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
+  const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
+
+  // Financial Forms
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    paymentMethod: 'cash' as 'cash' | 'transfer',
+    description: ''
+  });
+  
+  const [expenseForm, setExpenseForm] = useState({
+    amount: '',
+    category: 'شراء خامات ومواد',
+    date: new Date().toISOString().split('T')[0],
+    paymentMethod: 'cash' as 'cash' | 'transfer',
+    description: ''
+  });
+
+  // Chat Input State
+  const [chatInput, setChatInput] = useState('');
+  const [isSendingChat, setIsSendingChat] = useState(false);
+
+  // Upload Doc State
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Functions for CRUD actions
+  const handleAddPayment = async () => {
+    if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
+      toast.error("يرجى إدخال مبلغ صحيح");
+      return;
+    }
+    try {
+      const amountVal = parseFloat(paymentForm.amount);
+      const txRef = doc(collection(db, 'transactions'));
+      await setDoc(txRef, {
+        id: txRef.id,
+        type: 'income',
+        category: 'دفعة عميل',
+        amount: amountVal,
+        description: paymentForm.description || 'دفعة عميل للمشروع',
+        paymentMethod: paymentForm.paymentMethod,
+        date: paymentForm.date,
+        projectId: projectId,
+        createdBy: auth.currentUser?.uid || 'system',
+        status: 'approved',
+        timestamp: serverTimestamp()
+      } as any);
+
+      toast.success("تم تسجيل الدفعة بنجاح");
+      setIsAddPaymentOpen(false);
+      setPaymentForm({
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'cash',
+        description: ''
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'transactions', auth);
+    }
+  };
+
+  const handleApproveInstallment = async (installment: any) => {
+    if (!project) return;
+    try {
+      const updatedPayments = (project.payments || []).map(p => {
+        if (p.id === installment.id) {
+          return {
+            ...p,
+            status: 'paid' as const,
+            paidAt: new Date().toISOString()
+          };
+        }
+        return p;
+      });
+
+      const txRef = doc(collection(db, 'transactions'));
+      await setDoc(txRef, {
+        id: txRef.id,
+        type: 'income',
+        category: 'دفعة عميل',
+        amount: installment.amount,
+        description: installment.description || `تحصيل الدفعة المستحقة`,
+        paymentMethod: 'transfer',
+        date: new Date().toISOString().split('T')[0],
+        projectId: projectId,
+        createdBy: auth.currentUser?.uid || 'system',
+        status: 'approved',
+        timestamp: serverTimestamp()
+      } as any);
+
+      await updateDoc(doc(db, 'projects', projectId), {
+        payments: updatedPayments
+      });
+
+      toast.success("تم تحصيل الدفعة بنجاح وتسجيل الحركة في الحسابات");
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `projects/${projectId}`, auth);
+    }
+  };
+
+  const handleAddExpense = async () => {
+    if (!expenseForm.amount || parseFloat(expenseForm.amount) <= 0) {
+      toast.error("يرجى إدخال مبلغ صحيح");
+      return;
+    }
+    try {
+      const amountVal = parseFloat(expenseForm.amount);
+      const txRef = doc(collection(db, 'transactions'));
+      await setDoc(txRef, {
+        id: txRef.id,
+        type: 'expense',
+        category: expenseForm.category,
+        amount: amountVal,
+        description: expenseForm.description || 'مصروف إنتاج وتصنيع',
+        paymentMethod: expenseForm.paymentMethod,
+        date: expenseForm.date,
+        projectId: projectId,
+        createdBy: auth.currentUser?.uid || 'system',
+        status: 'approved',
+        timestamp: serverTimestamp()
+      } as any);
+
+      toast.success("تم تسجيل المصروف بنجاح");
+      setIsAddExpenseOpen(false);
+      setExpenseForm({
+        amount: '',
+        category: 'شراء خامات ومواد',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'cash',
+        description: ''
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'transactions', auth);
+    }
+  };
+
+  const handleToggleWorker = async (workerId: string, isAssigned: boolean) => {
+    try {
+      await updateDoc(doc(db, 'projects', projectId), {
+        workerIds: isAssigned ? arrayRemove(workerId) : arrayUnion(workerId)
+      });
+      toast.success(isAssigned ? "تم إزالة الموظف من الفريق" : "تم إضافة الموظف للفريق");
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `projects/${projectId}`, auth);
+    }
+  };
+
+  const handleSendChat = async () => {
+    if (!chatInput.trim()) return;
+    setIsSendingChat(true);
+    try {
+      const updateRef = doc(collection(db, 'projectUpdates'));
+      await setDoc(updateRef, {
+        id: updateRef.id,
+        projectId: projectId,
+        content: chatInput.trim(),
+        createdAt: new Date().toISOString(),
+        authorId: auth.currentUser?.uid || 'system',
+        authorName: profile?.name || auth.currentUser?.email || 'موظف النظام'
+      });
+      setChatInput('');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'projectUpdates', auth);
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+
+  const handleUploadDocs = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setIsUploading(true);
+    const toastId = toast.loading("جاري رفع الملفات وتوثيقها في النظام...");
+    
+    try {
+      const filesArray = Array.from(e.target.files);
+      for (const file of filesArray) {
+        const storageRef = ref(storage, `projects/${projectId}/attachments/${file.name}`);
+        const uploadResult = await uploadBytes(storageRef, file);
+        const downloadUrl = await getDownloadURL(uploadResult.ref);
+
+        if (file.type.startsWith('image/')) {
+          await updateDoc(doc(db, 'projects', projectId), {
+            photoUrls: arrayUnion(downloadUrl)
+          });
+        } else {
+          await updateDoc(doc(db, 'projects', projectId), {
+            fileAttachments: arrayUnion({
+              name: file.name,
+              url: downloadUrl,
+              uploadedAt: new Date().toLocaleDateString('ar-SA') + ' ' + new Date().toLocaleTimeString('ar-SA')
+            })
+          });
+        }
+      }
+      toast.dismiss(toastId);
+      toast.success("تم رفع وتوثيق المرفقات بنجاح");
+      setIsUploadDocOpen(false);
+    } catch (err) {
+      toast.dismiss(toastId);
+      console.error(err);
+      toast.error("فشل رفع المرفقات");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const loadData = () => {
     setIsLoading(true);
@@ -191,10 +405,11 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
 
   const financialStats = useMemo(() => {
     if (!project) return { paid: 0, balance: 0 };
-    const paid = (project.depositAmount || 0) + (project.payments?.filter(p => p.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0) || 0);
+    const paidIncomes = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
+    const paid = (project.depositAmount || 0) + (project.payments?.filter(p => p.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0) || 0) + paidIncomes;
     const balance = (project.budget || 0) - paid;
     return { paid, balance };
-  }, [project]);
+  }, [project, transactions]);
 
   const achievementStats = useMemo(() => {
     if (!project) return 0;
@@ -718,7 +933,53 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                      exit={{ opacity: 0, y: -10 }}
                      className="flex flex-col gap-6"
                   >
-                     <h3 className="text-xl font-black text-slate-900 border-r-4 border-primary pr-3">الفريق الفني للإنتاج والتركيب</h3>
+                     <div className="flex items-center justify-between mb-4">
+                        <div className="border-r-4 border-primary pr-3 text-right">
+                           <h3 className="text-xl font-black text-slate-900 leading-none">الفريق الفني للإنتاج والتركيب</h3>
+                           <p className="text-slate-500 font-bold text-[10px] mt-1">إدارة الفنيين والمصنعين والمسؤولين عن التركيب للمشروع</p>
+                        </div>
+                        <Dialog open={isManageTeamOpen} onOpenChange={setIsManageTeamOpen}>
+                           <DialogTrigger render={
+                              <button className="group/button inline-flex shrink-0 items-center justify-center rounded-xl bg-primary text-white h-9 px-4 font-black text-[10px] gap-2 shadow-md hover:bg-slate-900 transition-all outline-none cursor-pointer">
+                                 <Plus className="w-3.5 h-3.5" />
+                                 إدارة أعضاء الفريق
+                              </button>
+                           } />
+                           <DialogContent className="max-w-md rounded-[2.5rem] p-8 border-none" dir="rtl">
+                              <DialogHeader>
+                                 <DialogTitle className="text-right font-black">إدارة أعضاء الفريق الفني</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 mt-4 max-h-[400px] overflow-y-auto pr-1">
+                                 {workers.map(worker => {
+                                    const isAssigned = project.workerIds?.includes(worker.id);
+                                    return (
+                                       <div key={worker.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                                          <div>
+                                             <p className="font-bold text-sm text-slate-900">{worker.name}</p>
+                                             <p className="text-[10px] text-slate-400 font-semibold">
+                                                {worker.role === 'worker' ? 'فني مختص' : 
+                                                 worker.role === 'supervisor' ? 'مشرف فني' : 
+                                                 worker.role === 'manager' ? 'مدير المشروع' : worker.role || 'عضو الفريق'}
+                                             </p>
+                                          </div>
+                                          <Button 
+                                             onClick={() => handleToggleWorker(worker.id, !!isAssigned)}
+                                             variant={isAssigned ? "destructive" : "default"}
+                                             size="sm"
+                                             className="rounded-xl font-black text-[10px] h-8"
+                                          >
+                                             {isAssigned ? "إزالة" : "إضافة"}
+                                          </Button>
+                                       </div>
+                                    );
+                                 })}
+                                 {workers.length === 0 && (
+                                    <p className="text-center text-xs font-bold text-slate-400 py-4">لا يوجد موظفين مسجلين في النظام</p>
+                                 )}
+                              </div>
+                           </DialogContent>
+                        </Dialog>
+                     </div>
                      <div className="flex flex-col gap-3">
                         {projectWorkers.map(worker => (
                            <Card key={worker.id} className="p-6 rounded-[2rem] border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
@@ -787,14 +1048,132 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                         <div className="flex items-center justify-between">
                            <h3 className="text-xl font-black text-slate-900 border-r-4 border-primary pr-3">سجل العمليات المالية</h3>
                            <div className="flex items-center gap-2">
-                              <Button size="sm" variant="outline" className="h-9 rounded-xl border-slate-200 text-slate-900 font-black text-[10px] gap-2 shadow-sm hover:bg-slate-50">
-                                 <Plus className="w-3.5 h-3.5" />
-                                 إضافة دفعة
-                              </Button>
-                              <Button size="sm" className="h-9 rounded-xl bg-primary text-white font-black text-[10px] gap-2 shadow-md">
-                                 <Plus className="w-3.5 h-3.5" />
-                                 إضافة عملية
-                              </Button>
+                              <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
+                                 <DialogTrigger render={
+                                    <button className="group/button inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white h-9 px-4 font-black text-[10px] gap-2 hover:bg-slate-50 transition-all outline-none cursor-pointer">
+                                       <Plus className="w-3.5 h-3.5" />
+                                       إضافة دفعة
+                                    </button>
+                                 } />
+                                 <DialogContent className="max-w-md rounded-[2.5rem] p-8 border-none" dir="rtl">
+                                    <DialogHeader>
+                                       <DialogTitle className="text-right font-black">تسجيل دفعة عميل مستلمة</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4 mt-4">
+                                       <div className="space-y-2">
+                                          <Label className="text-xs font-black text-slate-400">قيمة الدفعة (ر.س) *</Label>
+                                          <Input 
+                                             type="number" 
+                                             value={paymentForm.amount} 
+                                             onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} 
+                                             className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                                             placeholder="0.00"
+                                          />
+                                       </div>
+                                       <div className="space-y-2">
+                                          <Label className="text-xs font-black text-slate-400">تاريخ الاستلام *</Label>
+                                          <Input 
+                                             type="date" 
+                                             value={paymentForm.date} 
+                                             onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} 
+                                             className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                                          />
+                                       </div>
+                                       <div className="space-y-2">
+                                          <Label className="text-xs font-black text-slate-400">طريقة الدفع *</Label>
+                                          <select
+                                             value={paymentForm.paymentMethod}
+                                             onChange={e => setPaymentForm({...paymentForm, paymentMethod: e.target.value as any})}
+                                             className="w-full h-12 rounded-xl bg-slate-50 border-none font-bold text-xs pr-4 focus:ring-0 outline-none"
+                                          >
+                                             <option value="cash">نقدي</option>
+                                             <option value="transfer">تحويل بنكي</option>
+                                          </select>
+                                       </div>
+                                       <div className="space-y-2">
+                                          <Label className="text-xs font-black text-slate-400">التفاصيل / الوصف</Label>
+                                          <Input 
+                                             value={paymentForm.description} 
+                                             onChange={e => setPaymentForm({...paymentForm, description: e.target.value})} 
+                                             className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                                             placeholder="مثال: الدفعة الثانية بعد تجهيز الهيكل"
+                                          />
+                                       </div>
+                                       <Button onClick={handleAddPayment} className="w-full h-12 rounded-2xl bg-slate-900 font-black mt-4 shadow-lg shadow-slate-100">تسجيل الدفعة</Button>
+                                    </div>
+                                 </DialogContent>
+                              </Dialog>
+
+                              <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
+                                 <DialogTrigger render={
+                                    <button className="group/button inline-flex shrink-0 items-center justify-center rounded-xl bg-primary text-white h-9 px-4 font-black text-[10px] gap-2 shadow-md hover:bg-slate-900 transition-all outline-none cursor-pointer">
+                                       <Plus className="w-3.5 h-3.5" />
+                                       إضافة مصروف
+                                    </button>
+                                 } />
+                                 <DialogContent className="max-w-md rounded-[2.5rem] p-8 border-none" dir="rtl">
+                                    <DialogHeader>
+                                       <DialogTitle className="text-right font-black">تسجيل مصروف جديد (تكاليف مواد وإنتاج)</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4 mt-4">
+                                       <div className="space-y-2">
+                                          <Label className="text-xs font-black text-slate-400">قيمة المصروف (ر.س) *</Label>
+                                          <Input 
+                                             type="number" 
+                                             value={expenseForm.amount} 
+                                             onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} 
+                                             className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                                             placeholder="0.00"
+                                          />
+                                       </div>
+                                       <div className="space-y-2">
+                                          <Label className="text-xs font-black text-slate-400">التصنيف *</Label>
+                                          <select
+                                             value={expenseForm.category}
+                                             onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}
+                                             className="w-full h-12 rounded-xl bg-slate-50 border-none font-bold text-xs pr-4 focus:ring-0 outline-none"
+                                          >
+                                             <option value="شراء خامات ومواد">شراء خامات ومواد (حديد، أكريليك، فليكس)</option>
+                                             <option value="أجور فنيين وتركيب">أجور فنيين وتركيب</option>
+                                             <option value="تكاليف طباعة وقص">تكاليف طباعة وقص</option>
+                                             <option value="نقل ولوجستيات">نقل ولوجستيات</option>
+                                             <option value="صيانة ومعدات">صيانة ومعدات رافعة</option>
+                                             <option value="مصاريف تشغيلية أخرى">مصاريف تشغيلية أخرى</option>
+                                          </select>
+                                       </div>
+                                       <div className="space-y-2">
+                                          <Label className="text-xs font-black text-slate-400">تاريخ الصرف *</Label>
+                                          <Input 
+                                             type="date" 
+                                             value={expenseForm.date} 
+                                             onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} 
+                                             className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                                          />
+                                       </div>
+                                       <div className="space-y-2">
+                                          <Label className="text-xs font-black text-slate-400">طريقة الدفع *</Label>
+                                          <select
+                                             value={expenseForm.paymentMethod}
+                                             onChange={e => setExpenseForm({...expenseForm, paymentMethod: e.target.value as any})}
+                                             className="w-full h-12 rounded-xl bg-slate-50 border-none font-bold text-xs pr-4 focus:ring-0 outline-none"
+                                          >
+                                             <option value="cash">نقدي</option>
+                                             <option value="transfer">تحويل بنكي</option>
+                                          </select>
+                                       </div>
+                                       <div className="space-y-2">
+                                          <Label className="text-xs font-black text-slate-400">التفاصيل / الوصف</Label>
+                                          <Input 
+                                             value={expenseForm.description} 
+                                             onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} 
+                                             className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                                             placeholder="مثال: شراء ألواح أكريليك للواجهة"
+                                          />
+                                       </div>
+                                       <Button onClick={handleAddExpense} className="w-full h-12 rounded-2xl bg-slate-900 font-black mt-4 shadow-lg shadow-slate-100">تسجيل المصروف</Button>
+                                    </div>
+                                 </DialogContent>
+                              </Dialog>
                            </div>
                         </div>
                         
@@ -844,9 +1223,19 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                                     <p className="text-xs font-bold text-slate-400">{payment.amount.toLocaleString()} ر.س</p>
                                  </div>
                               </div>
-                              <Badge className={`rounded-lg px-4 py-2 font-black text-[10px] border-none ${payment.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
-                                 {payment.status === 'paid' ? 'تم التحصيل' : 'مستحق'}
-                              </Badge>
+                              {payment.status === 'paid' ? (
+                                 <Badge className="rounded-lg px-4 py-2 font-black text-[10px] border-none bg-emerald-50 text-emerald-600">
+                                    تم التحصيل
+                                 </Badge>
+                              ) : (
+                                 <Button 
+                                    size="sm"
+                                    onClick={() => handleApproveInstallment(payment)}
+                                    className="rounded-xl px-3 py-1.5 font-black text-[9px] bg-emerald-500 hover:bg-emerald-600 text-white h-8 transition-all"
+                                 >
+                                    تسجيل تحصيل الدفعة
+                                 </Button>
+                              )}
                            </div>
                         ))}
                      </div>
@@ -866,10 +1255,43 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                             <h3 className="text-xl font-black text-slate-900 leading-none">التوثيق والمرفقات</h3>
                             <p className="text-slate-500 font-bold text-[10px] mt-1">مراحل التصنيع والتركيب والملفات الفنية للمشروع</p>
                          </div>
-                         <Button size="sm" className="h-9 rounded-xl bg-primary text-white font-black text-[10px] gap-2 shadow-md">
-                            <Plus className="w-3.5 h-3.5" />
-                            إضافة توثيق
-                         </Button>
+                         <Dialog open={isUploadDocOpen} onOpenChange={setIsUploadDocOpen}>
+                             <DialogTrigger render={
+                                <button className="group/button inline-flex shrink-0 items-center justify-center rounded-xl bg-primary text-white h-9 px-4 font-black text-[10px] gap-2 shadow-md hover:bg-slate-900 transition-all outline-none cursor-pointer">
+                                   <Plus className="w-3.5 h-3.5" />
+                                   إضافة توثيق
+                                </button>
+                             } />
+                             <DialogContent className="max-w-md rounded-[2.5rem] p-8 border-none" dir="rtl">
+                                <DialogHeader>
+                                   <DialogTitle className="text-right font-black">إضافة توثيق ومرفقات</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-5 mt-4">
+                                   <div className="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center flex flex-col items-center justify-center gap-3 bg-slate-50">
+                                      <Camera className="w-10 h-10 text-slate-400" />
+                                      <p className="text-xs font-bold text-slate-500">اختر الصور الفنية أو الرسومات والملفات والمرفقات لرفعها إلى المشروع</p>
+                                      <input 
+                                         type="file" 
+                                         multiple 
+                                         onChange={handleUploadDocs} 
+                                         disabled={isUploading}
+                                         className="hidden" 
+                                         id="file-upload-input"
+                                      />
+                                      <Button 
+                                         asChild
+                                         disabled={isUploading}
+                                         className="h-10 rounded-xl bg-slate-900 font-black text-xs px-6 mt-2"
+                                      >
+                                         <label htmlFor="file-upload-input" className="cursor-pointer flex items-center gap-2">
+                                            {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                            {isUploading ? "جاري الرفع..." : "اختر الملفات"}
+                                         </label>
+                                      </Button>
+                                   </div>
+                                </div>
+                             </DialogContent>
+                          </Dialog>
                       </div>
                       
                       <div className="space-y-3">
@@ -960,12 +1382,27 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                            )}
                         </div>
                         <div className="p-6 bg-white border-t border-slate-50">
-                           <div className="relative">
-                              <Input placeholder="أرسل تحديثاً للمشروع..." className="h-16 pr-6 pl-14 rounded-3xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white transition-all shadow-inner" />
-                              <Button size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-2xl bg-slate-900 group">
-                                 <ChevronRight className="w-5 h-5 -rotate-180 group-hover:-translate-x-1 transition-transform" />
+                           <form onSubmit={(e) => { e.preventDefault(); handleSendChat(); }} className="relative">
+                              <Input 
+                                 value={chatInput}
+                                 onChange={(e) => setChatInput(e.target.value)}
+                                 placeholder="أرسل تحديثاً للمشروع..." 
+                                 className="h-16 pr-6 pl-14 rounded-3xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white transition-all shadow-inner" 
+                                 disabled={isSendingChat}
+                              />
+                              <Button 
+                                 type="submit"
+                                 size="icon" 
+                                 className="absolute left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-2xl bg-slate-900 group"
+                                 disabled={isSendingChat || !chatInput.trim()}
+                              >
+                                 {isSendingChat ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                 ) : (
+                                    <ChevronRight className="w-5 h-5 -rotate-180 group-hover:-translate-x-1 transition-transform" />
+                                 )}
                               </Button>
-                           </div>
+                           </form>
                         </div>
                      </Card>
                   </motion.div>
