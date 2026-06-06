@@ -74,7 +74,7 @@ export default function ProjectsV2() {
     locationLink: '',
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
-    projectType: 'residential',
+    projectType: 'hoardings',
     supervisor: '',
     contractNumber: '',
     engOffice: '',
@@ -189,7 +189,7 @@ export default function ProjectsV2() {
         locationLink: '',
         startDate: new Date().toISOString().split('T')[0],
         endDate: '',
-        projectType: 'residential',
+        projectType: 'hoardings',
         supervisor: '',
         contractNumber: '',
         engOffice: '',
@@ -403,10 +403,10 @@ export default function ProjectsV2() {
                         <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">نوع المشروع *</Label>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           {[
-                            { value: 'residential', label: 'سكني فاخر', desc: 'قصور، فلل، شقق' },
-                            { value: 'commercial', label: 'تجاري استثماري', desc: 'مكاتب، معارض، محلات' },
-                            { value: 'industrial', label: 'منشأة صناعية', desc: 'مستودعات، مصانع' },
-                            { value: 'renovation', label: 'تطوير وترميم', desc: 'إعادة تهيئة وتشطيب' }
+                            { value: 'hoardings', label: 'أسوار دعائية', desc: 'تجهيز مواقع الأسوار والمشاريع الخارجية' },
+                            { value: 'signage_printing', label: 'لوحات وطباعة', desc: 'لوحات محلات، يوني بول، بنر وفليكس' },
+                            { value: 'cladding_letters', label: 'كلادينج وحروف بارزة', desc: 'حروف مضيئة، زنكور، اكريليك واستيل' },
+                            { value: 'digital_screens', label: 'شاشات ومجسمات', desc: 'شاشات LED، تجهيز معارض ومؤتمرات' }
                           ].map((type) => (
                             <div
                               key={type.value}

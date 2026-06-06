@@ -239,7 +239,7 @@ export interface ExtractedProjectData {
   locationLink?: string;
   startDate?: string;
   endDate?: string;
-  projectType?: 'residential' | 'commercial' | 'industrial' | 'renovation';
+  projectType?: 'hoardings' | 'signage_printing' | 'cladding_letters' | 'digital_screens';
   supervisor?: string;
   contractNumber?: string;
   engOffice?: string;
@@ -260,11 +260,15 @@ export const parseProjectFromText = async (text: string): Promise<ExtractedProje
       "${text}"
       
       ملاحظات هامة للاستخراج:
-      1. title: عنوان المشروع (مثال: فيلا سكنية - حي الياسمين).
+      1. title: عنوان المشروع (مثال: أسوار دعائية - طريق الملك فهد).
       2. budget: القيمة المالية للعقد كـ رقم فقط (مثال: 500000).
       3. clientPhone: رقم الجوال (حاول توحيده بصيغة 05xxxxxxxx إن أمكن).
       4. startDate & endDate: التواريخ بصيغة YYYY-MM-DD (إذا ذكر مثلاً "تبدأ في يوليو" وكان هذا العام 2026، اجعله 2026-07-01).
-      5. projectType: يجب أن يكون أحد هذه الخيارات فقط: 'residential' (إذا كان فيلا، شقة، قصر، سكني)، 'commercial' (معارض، مكاتب، تجاري)، 'industrial' (مصنع، مستودع، هنجر)، 'renovation' (ترميم، تعديل، تشطيب لشيء قائم).
+      5. projectType: يجب أن يكون أحد هذه الخيارات فقط: 
+         - 'hoardings' (للأسوار الدعائية وتجهيز مواقع الإعلانات الخارجية).
+         - 'signage_printing' (للوحات الإعلانية المطبوعة، لوحات واجهات المحلات، يوني بول، ميجا، طباعة البنرات والفليكس).
+         - 'cladding_letters' (لأعمال واجهات الكلادينج، الحروف البارزة المضيئة، الاكريليك، الزنكور، والاستيل).
+         - 'digital_screens' (للشاشات الإلكترونية LED الداخلية والخارجية وتجهيز المعارض والمجسمات).
       6. description: نطاق العمل الفني (تفاصيل إضافية عن العمل أو البنود).
       
       أرجع فقط كائن JSON يطابق المواصفات.
@@ -289,7 +293,7 @@ export const parseProjectFromText = async (text: string): Promise<ExtractedProje
             endDate: { type: Type.STRING },
             projectType: { 
               type: Type.STRING,
-              enum: ['residential', 'commercial', 'industrial', 'renovation']
+              enum: ['hoardings', 'signage_printing', 'cladding_letters', 'digital_screens']
             },
             supervisor: { type: Type.STRING },
             contractNumber: { type: Type.STRING },
