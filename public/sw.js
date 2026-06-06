@@ -33,6 +33,19 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') {
     return;
   }
+
+  const url = new URL(event.request.url);
+  
+  // نمنع سيرفس وركر من كاش الصفحة الرئيسية أو أي صفحة HTML
+  // هذا يضمن أن المتصفح يطلب index.html دائماً من السيرفر مباشرة ليحصل على آخر تحديث
+  if (
+    url.pathname === '/' ||
+    url.pathname === '/index.html' ||
+    event.request.mode === 'navigate' ||
+    event.request.headers.get('accept').includes('text/html')
+  ) {
+    return; // دع المتصفح يذهب للشبكة مباشرة دون تدخل السيرفس وركر
+  }
   
   event.respondWith(
     fetch(event.request)

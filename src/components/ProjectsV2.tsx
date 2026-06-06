@@ -17,8 +17,15 @@ import {
   ArrowUpRight,
   MapPin,
   TrendingUp,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  User,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
+import { parseProjectFromText } from '../lib/gemini';
 import { 
   collection, 
   query, 
@@ -52,6 +59,11 @@ export default function ProjectsV2() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [activeStep, setActiveStep] = useState(1);
+  const [aiInputText, setAiInputText] = useState('');
+  const [isAiParsing, setIsAiParsing] = useState(false);
+  const [highlightedFields, setHighlightedFields] = useState<Record<string, boolean>>({});
+
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
@@ -70,25 +82,102 @@ export default function ProjectsV2() {
     projectStatus: 'planning'
   });
 
+  // إعادة تهيئة النموذج عند إغلاق النافذة
+  useEffect(() => {
+    if (!isAddOpen) {
+      setActiveStep(1);
+      setAiInputText('');
+      setHighlightedFields({});
+    }
+  }, [isAddOpen]);
+
+  const handleAiAutofill = async () => {
+    if (!aiInputText.trim()) {
+      toast.error("يرجى إدخال تفاصيل المشروع أولاً ليتم تحليلها");
+      return;
+    }
+    
+    setIsAiParsing(true);
+    const toastId = toast.loading("جاري تحليل النص بالذكاء الاصطناعي وتعبئة الحقول...");
+    
+    try {
+      const extracted = await parseProjectFromText(aiInputText);
+      if (extracted) {
+        setNewProject(prev => ({
+          ...prev,
+          title: extracted.title || prev.title,
+          description: extracted.description || prev.description,
+          budget: extracted.budget || prev.budget,
+          clientName: extracted.clientName || prev.clientName,
+          clientPhone: extracted.clientPhone || prev.clientPhone,
+          clientEmail: extracted.clientEmail || prev.clientEmail,
+          locationLink: extracted.locationLink || prev.locationLink,
+          startDate: extracted.startDate || prev.startDate,
+          endDate: extracted.endDate || prev.endDate,
+          projectType: extracted.projectType || prev.projectType,
+          supervisor: extracted.supervisor || prev.supervisor,
+          contractNumber: extracted.contractNumber || prev.contractNumber,
+          engOffice: extracted.engOffice || prev.engOffice,
+          totalArea: extracted.totalArea || prev.totalArea,
+        }));
+
+        // تحديد الحقول التي تم تعبئتها للإضاءة البصرية
+        const highlights: Record<string, boolean> = {};
+        Object.keys(extracted).forEach((key) => {
+          if ((extracted as any)[key] !== undefined && (extracted as any)[key] !== null && (extracted as any)[key] !== '') {
+            highlights[key] = true;
+          }
+        });
+        setHighlightedFields(highlights);
+        toast.dismiss(toastId);
+        toast.success("تم استخراج البيانات وتعبئة الحقول بنجاح! ✨");
+        
+        // إيقاف الإضاءة بعد 4 ثوانٍ
+        setTimeout(() => {
+          setHighlightedFields({});
+        }, 4000);
+      } else {
+        toast.dismiss(toastId);
+        toast.error("لم نتمكن من استخراج تفاصيل المشروع. يرجى توضيح النص أكثر.");
+      }
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      console.error(err);
+      toast.error(err.message || "فشلت عملية التعبئة التلقائية بالذكاء الاصطناعي");
+    } finally {
+      setIsAiParsing(false);
+    }
+  };
+
   const handleCreateProject = async () => {
     if (!newProject.title) {
       toast.error("يرجى إدخال عنوان المشروع");
       return;
     }
 
+    // تجهيز مراحل افتراضية للمشروع لتمكين الإدارة المباشرة للتقدم
+    const defaultMilestones = [
+      { title: 'التجهيز وتوريد المواد', weight: 20, status: 'pending', date: newProject.startDate || '' },
+      { title: 'أعمال التأسيس والتحضير', weight: 30, status: 'pending', date: '' },
+      { title: 'أعمال التكسية واللياسة', weight: 20, status: 'pending', date: '' },
+      { title: 'الدهانات الأساسية', weight: 20, status: 'pending', date: '' },
+      { title: 'التشطيب والتسليم النهائي', weight: 10, status: 'pending', date: newProject.endDate || '' }
+    ];
+
     try {
       await addDoc(collection(db, 'projects'), {
         ...newProject,
+        name: newProject.title, // حقل الاسم لضمان التوافقية البرمجية مع كافة واجهات النظام
         status: 'active',
         createdAt: new Date().toISOString(),
         timestamp: serverTimestamp(),
         workerIds: [],
-        milestones: [],
+        milestones: defaultMilestones,
         photoUrls: [],
         payments: [],
         progress: 0
       });
-      toast.success("تم إنشاء المشروع بنجاح");
+      toast.success("تم إنشاء المشروع بنجاح مع تهيئة مراحل العمل الافتراضية");
       setIsAddOpen(false);
       setNewProject({ 
         title: '', 
@@ -187,204 +276,383 @@ export default function ProjectsV2() {
                 </Button>
               }
             />
-            <DialogContent className="max-w-3xl rounded-[2.5rem] p-8 border-none shadow-2xl overflow-y-auto max-h-[90vh]" dir="rtl">
+            <DialogContent className="max-w-4xl rounded-[2.5rem] p-8 border-none shadow-2xl overflow-y-auto max-h-[90vh]" dir="rtl">
               <DialogHeader>
-                <div className="flex items-center gap-4 mb-2">
-                   <div className="h-12 w-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-                      <Briefcase className="w-6 h-6" />
-                   </div>
-                   <div className="text-right">
-                      <DialogTitle className="text-2xl font-black text-slate-900">تأسيس ملف مشروع متكامل</DialogTitle>
-                      <p className="text-slate-500 font-bold text-[10px] mt-0.5 uppercase tracking-widest">نموذج المواصفات الفنية والهندسية</p>
-                   </div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div className="flex items-center gap-4">
+                     <div className="h-12 w-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shrink-0">
+                        <Briefcase className="w-6 h-6" />
+                     </div>
+                     <div className="text-right">
+                        <DialogTitle className="text-2xl font-black text-slate-900">تأسيس ملف مشروع متكامل</DialogTitle>
+                        <p className="text-slate-500 font-bold text-[10px] mt-0.5 uppercase tracking-widest">نموذج المواصفات الفنية والهندسية</p>
+                     </div>
+                  </div>
+                  
+                  {/* مؤشر الخطوات */}
+                  <div className="flex items-center gap-2 self-center md:self-auto">
+                    {[1, 2, 3].map((step) => (
+                      <React.Fragment key={step}>
+                        <div 
+                          onClick={() => {
+                            // تمكين التنقل المباشر للخطوات السابقة فقط لسهولة التعديل
+                            if (step < activeStep) setActiveStep(step);
+                          }}
+                          className={`h-9 w-9 rounded-xl flex items-center justify-center text-sm font-black transition-all cursor-pointer ${
+                            activeStep === step 
+                              ? 'bg-slate-900 text-white shadow-lg shadow-slate-200 scale-110' 
+                              : activeStep > step 
+                                ? 'bg-emerald-500 text-white shadow-sm' 
+                                : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                          }`}
+                        >
+                          {activeStep > step ? <CheckCircle2 className="w-4 h-4" /> : step}
+                        </div>
+                        {step < 3 && (
+                          <div className={`h-1 w-8 rounded-full transition-all ${
+                            activeStep > step ? 'bg-emerald-500' : 'bg-slate-100'
+                          }`} />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
                 </div>
               </DialogHeader>
-              
-              <div className="space-y-8 mt-8 pb-4">
-                {/* القسم الأول: المعلومات الأساسية */}
-                <div className="space-y-4">
-                   <div className="flex items-center gap-2 border-r-4 border-primary pr-3">
-                      <span className="text-xs font-black text-slate-900 uppercase">المعلومات الأساسية للهوية</span>
-                   </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">عنوان المشروع</Label>
-                       <Input 
-                         value={newProject.title}
-                         onChange={e => setNewProject({...newProject, title: e.target.value})}
-                         placeholder="مثال: قصر الأميرة - حي الملقا" 
-                         className="h-12 rounded-xl bg-slate-50 border-transparent focus:border-primary/20 focus:bg-white transition-all font-bold text-sm shadow-inner"
-                       />
-                     </div>
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">رقم العقد / المرجع</Label>
-                       <Input 
-                         value={newProject.contractNumber}
-                         onChange={e => setNewProject({...newProject, contractNumber: e.target.value})}
-                         placeholder="CN-2024-XXX" 
-                         className="h-12 rounded-xl bg-slate-50 border-transparent focus:border-primary/20 focus:bg-white transition-all font-bold text-sm shadow-inner"
-                       />
-                     </div>
-                   </div>
 
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">نوع المشروع</Label>
-                       <select 
-                         value={newProject.projectType}
-                         onChange={e => setNewProject({...newProject, projectType: e.target.value})}
-                         className="w-full h-12 rounded-xl bg-slate-50 border-transparent focus:border-primary/20 focus:bg-white transition-all font-bold text-sm px-4 shadow-inner appearance-none"
-                       >
-                         <option value="residential">سكني فاخر</option>
-                         <option value="commercial">تجاري استثماري</option>
-                         <option value="industrial">منشأة صناعية</option>
-                         <option value="renovation">تطوير وترميم</option>
-                       </select>
-                     </div>
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">المكتب الهندسي</Label>
-                       <Input 
-                         value={newProject.engOffice}
-                         onChange={e => setNewProject({...newProject, engOffice: e.target.value})}
-                         placeholder="اسم المكتب الاستشاري" 
-                         className="h-12 rounded-xl bg-slate-50 border-transparent focus:border-primary/20 focus:bg-white transition-all font-bold text-sm shadow-inner"
-                       />
-                     </div>
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">المساحة الإجمالية (م²)</Label>
-                       <Input 
-                         value={newProject.totalArea}
-                         onChange={e => setNewProject({...newProject, totalArea: e.target.value})}
-                         placeholder="مثال: 500" 
-                         className="h-12 rounded-xl bg-slate-50 border-transparent focus:border-primary/20 focus:bg-white transition-all font-bold text-sm shadow-inner"
-                       />
-                     </div>
-                   </div>
+              {/* 🌟 قسم التعبئة التلقائية بالذكاء الاصطناعي */}
+              <div className="mt-6 bg-gradient-to-br from-primary/5 via-indigo-500/5 to-transparent border border-primary/10 rounded-3xl p-5 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <Sparkles className="w-5 h-5 text-indigo-500 animate-pulse" />
+                  <h4 className="font-black text-sm text-slate-800">التأسيس السريع بالذكاء الاصطناعي ✨</h4>
                 </div>
+                <p className="text-[11px] font-bold text-slate-500 leading-relaxed">
+                  انسخ نص العقد أو تفاصيل المشروع من الواتساب والصقها بالأسفل، وسيقوم نظام Gemini بملء النموذج بالكامل بلمحة عين!
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <textarea
+                    value={aiInputText}
+                    onChange={(e) => setAiInputText(e.target.value)}
+                    placeholder="مثال: مشروع قصر سكني للمالك محمد العتيبي 0555123456 بقيمة 950,000 ريال، المساحة 600 متر، يبدأ العمل في 2026-07-01 بإشراف المهندس عبدالمحسن ومكتب الرياض للاستشارات..."
+                    rows={2}
+                    className="flex-1 rounded-2xl bg-white border border-slate-200 shadow-inner font-bold p-3 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+                  />
+                  <Button 
+                    type="button"
+                    onClick={handleAiAutofill}
+                    disabled={isAiParsing}
+                    className="h-auto px-6 rounded-2xl bg-slate-900 hover:bg-primary text-white font-black text-xs transition-all flex items-center justify-center gap-2 shrink-0 shadow-md self-stretch sm:self-auto"
+                  >
+                    {isAiParsing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        جاري التحليل...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        تعبئة ذكية
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
 
-                {/* القسم الثاني: التفاصيل المالية وتعيين المسؤولين */}
-                <div className="space-y-4">
-                   <div className="flex items-center gap-2 border-r-4 border-emerald-500 pr-3">
-                      <span className="text-xs font-black text-slate-900 uppercase">التفاصيل المالية والمسؤوليات</span>
-                   </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">إجمالي قيمة العقد (ر.س)</Label>
-                       <div className="relative">
+              {/* محتوى الخطوات مع تأثيرات Framer Motion */}
+              <div className="min-h-[350px] mt-8 pb-4">
+                <AnimatePresence mode="wait">
+                  {activeStep === 1 && (
+                    <motion.div
+                      key="step1"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      <div className="flex items-center gap-2 border-r-4 border-primary pr-3 mb-2">
+                        <span className="text-xs font-black text-slate-900 uppercase">الخطوة 1: المعلومات الأساسية للهوية</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">عنوان المشروع *</Label>
                           <Input 
-                            type="text"
-                            inputMode="numeric"
-                            value={newProject.budget}
-                            onChange={e => {
-                               const val = e.target.value.replace(/[^0-9]/g, '');
-                               setNewProject({...newProject, budget: Number(val)});
-                            }}
-                            className="h-14 rounded-xl bg-slate-50 border-transparent focus:border-emerald-500/20 focus:bg-white transition-all font-black text-xl text-emerald-600 shadow-inner pr-12"
+                            value={newProject.title}
+                            onChange={e => setNewProject({...newProject, title: e.target.value})}
+                            placeholder="مثال: قصر الأميرة - حي الملقا" 
+                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner ${
+                              highlightedFields.title ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
                           />
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xs">SAR</div>
-                       </div>
-                     </div>
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">المشرف المسؤول</Label>
-                       <Input 
-                         value={newProject.supervisor}
-                         onChange={e => setNewProject({...newProject, supervisor: e.target.value})}
-                         placeholder="اسم المهندس المشرف" 
-                         className="h-14 rounded-xl bg-slate-50 border-transparent focus:border-primary/20 focus:bg-white transition-all font-bold text-sm shadow-inner"
-                       />
-                     </div>
-                   </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">رقم العقد / المرجع</Label>
+                          <Input 
+                            value={newProject.contractNumber}
+                            onChange={e => setNewProject({...newProject, contractNumber: e.target.value})}
+                            placeholder="CN-2026-XXX" 
+                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner ${
+                              highlightedFields.contractNumber ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* بطاقات اختيار نوع المشروع بصرياً */}
+                      <div className="space-y-2">
+                        <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">نوع المشروع *</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {[
+                            { value: 'residential', label: 'سكني فاخر', desc: 'قصور، فلل، شقق' },
+                            { value: 'commercial', label: 'تجاري استثماري', desc: 'مكاتب، معارض، محلات' },
+                            { value: 'industrial', label: 'منشأة صناعية', desc: 'مستودعات، مصانع' },
+                            { value: 'renovation', label: 'تطوير وترميم', desc: 'إعادة تهيئة وتشطيب' }
+                          ].map((type) => (
+                            <div
+                              key={type.value}
+                              onClick={() => setNewProject({...newProject, projectType: type.value})}
+                              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-right flex flex-col justify-between h-24 ${
+                                newProject.projectType === type.value
+                                  ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                                  : highlightedFields.projectType && newProject.projectType === type.value
+                                    ? 'border-emerald-500 bg-emerald-50/30 text-emerald-700'
+                                    : 'border-slate-100 bg-slate-50 hover:bg-slate-100/70 text-slate-700'
+                              }`}
+                            >
+                              <span className="font-black text-xs">{type.label}</span>
+                              <span className="text-[9px] font-bold text-slate-400">{type.desc}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">المكتب الهندسي</Label>
+                          <Input 
+                            value={newProject.engOffice}
+                            onChange={e => setNewProject({...newProject, engOffice: e.target.value})}
+                            placeholder="اسم المكتب الاستشاري" 
+                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner ${
+                              highlightedFields.engOffice ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">المساحة الإجمالية (م²)</Label>
+                          <Input 
+                            value={newProject.totalArea}
+                            onChange={e => setNewProject({...newProject, totalArea: e.target.value})}
+                            placeholder="مثال: 500" 
+                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner ${
+                              highlightedFields.totalArea ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {activeStep === 2 && (
+                    <motion.div
+                      key="step2"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      <div className="flex items-center gap-2 border-r-4 border-emerald-500 pr-3 mb-2">
+                        <span className="text-xs font-black text-slate-900 uppercase">الخطوة 2: التفاصيل المالية والمسؤوليات</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">إجمالي قيمة العقد (ر.س) *</Label>
+                          <div className="relative">
+                            <Input 
+                              type="text"
+                              inputMode="numeric"
+                              value={newProject.budget}
+                              onChange={e => {
+                                 const val = e.target.value.replace(/[^0-9]/g, '');
+                                 setNewProject({...newProject, budget: Number(val)});
+                              }}
+                              className={`h-14 rounded-xl bg-slate-50 border-transparent transition-all font-black text-xl text-emerald-600 shadow-inner pr-12 ${
+                                highlightedFields.budget ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-emerald-500/20 focus:bg-white'
+                              }`}
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xs">SAR</div>
+                          </div>
+                          <p className="text-[10px] font-bold text-slate-400 pr-1">القيمة المالية الكلية المدونة في العقد الأصلي.</p>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">المشرف المسؤول</Label>
+                          <Input 
+                            value={newProject.supervisor}
+                            onChange={e => setNewProject({...newProject, supervisor: e.target.value})}
+                            placeholder="اسم المهندس المشرف ميدانياً" 
+                            className={`h-14 rounded-xl bg-slate-50 border-transparent transition-all font-bold text-sm shadow-inner ${
+                              highlightedFields.supervisor ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
+                          />
+                          <p className="text-[10px] font-bold text-slate-400 pr-1">المهندس أو المندوب الذي سيتولى المراقبة الميدانية.</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {activeStep === 3 && (
+                    <motion.div
+                      key="step3"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      <div className="flex items-center gap-2 border-r-4 border-blue-500 pr-3 mb-2">
+                        <span className="text-xs font-black text-slate-900 uppercase">الخطوة 3: سجل العميل والجدولة الزمنية</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">اسم العميل</Label>
+                          <Input 
+                            value={newProject.clientName}
+                            onChange={e => setNewProject({...newProject, clientName: e.target.value})}
+                            placeholder="اسم المالك أو العميل"
+                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all shadow-inner font-bold text-sm ${
+                              highlightedFields.clientName ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">رقم الجوال</Label>
+                          <Input 
+                            value={newProject.clientPhone}
+                            onChange={e => setNewProject({...newProject, clientPhone: e.target.value})}
+                            placeholder="05xxxxxxx"
+                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all shadow-inner font-bold text-sm ${
+                              highlightedFields.clientPhone ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">البريد الإلكتروني</Label>
+                          <Input 
+                            type="email"
+                            value={newProject.clientEmail}
+                            onChange={e => setNewProject({...newProject, clientEmail: e.target.value})}
+                            placeholder="client@mail.com"
+                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all shadow-inner font-bold text-sm text-left ${
+                              highlightedFields.clientEmail ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">تاريـخ البدء</Label>
+                          <Input 
+                            type="date"
+                            value={newProject.startDate}
+                            onChange={e => setNewProject({...newProject, startDate: e.target.value})}
+                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all shadow-inner font-bold text-sm ${
+                              highlightedFields.startDate ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">تاريـخ الانتهاء (تقديري)</Label>
+                          <Input 
+                            type="date"
+                            value={newProject.endDate}
+                            onChange={e => setNewProject({...newProject, endDate: e.target.value})}
+                            className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all shadow-inner font-bold text-sm ${
+                              highlightedFields.endDate ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">الموقع الجغرافي (Google Maps Link)</Label>
+                        <Input 
+                          value={newProject.locationLink}
+                          onChange={e => setNewProject({...newProject, locationLink: e.target.value})}
+                          placeholder="https://maps.app.goo.gl/..."
+                          className={`h-12 rounded-xl bg-slate-50 border-transparent transition-all shadow-inner font-bold text-sm text-left ${
+                            highlightedFields.locationLink ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:border-primary/20 focus:bg-white'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="font-black text-slate-500 text-[11px] uppercase tracking-wider pr-1">نطاق العمل الفني والملاحظات</Label>
+                        <textarea 
+                          value={newProject.description}
+                          onChange={e => setNewProject({...newProject, description: e.target.value})}
+                          rows={3}
+                          placeholder="أدخل تفاصيل الهيكل الإنشائي، التشطيبات، والملاحظات الهندسية الهامة..."
+                          className={`w-full rounded-2xl bg-slate-50 border-transparent shadow-inner font-bold p-4 text-sm focus:ring-0 transition-all ${
+                            highlightedFields.description ? 'ring-2 ring-emerald-500/50 bg-emerald-50/50 border-emerald-500/20' : 'focus:bg-white focus:border-primary/20'
+                          }`}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* أزرار التحكم بالخطوات والاعتماد */}
+              <div className="flex items-center justify-between border-t border-slate-100 pt-5 mt-6">
+                <div>
+                  {activeStep > 1 ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setActiveStep(prev => prev - 1)}
+                      className="h-12 px-6 rounded-xl border-slate-200 bg-white font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                      السابق
+                    </Button>
+                  ) : (
+                    <div />
+                  )}
                 </div>
 
-                {/* القسم الثالث: معلومات العميل والاتصال */}
-                <div className="space-y-4">
-                   <div className="flex items-center gap-2 border-r-4 border-blue-500 pr-3">
-                      <span className="text-xs font-black text-slate-900 uppercase">سجل العميل وبيانات الاتصال</span>
-                   </div>
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <div className="space-y-2 md:col-span-1">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">اسم العميل</Label>
-                       <Input 
-                         value={newProject.clientName}
-                         onChange={e => setNewProject({...newProject, clientName: e.target.value})}
-                         className="h-12 rounded-xl bg-slate-50 border-transparent shadow-inner font-bold"
-                       />
-                     </div>
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">رقم الجوال</Label>
-                       <Input 
-                         value={newProject.clientPhone}
-                         onChange={e => setNewProject({...newProject, clientPhone: e.target.value})}
-                         placeholder="05xxxxxxx"
-                         className="h-12 rounded-xl bg-slate-50 border-transparent shadow-inner font-bold"
-                       />
-                     </div>
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">البريد الإلكتروني</Label>
-                       <Input 
-                         type="email"
-                         value={newProject.clientEmail}
-                         onChange={e => setNewProject({...newProject, clientEmail: e.target.value})}
-                         placeholder="client@mail.com"
-                         className="h-12 rounded-xl bg-slate-50 border-transparent shadow-inner font-bold text-left"
-                       />
-                     </div>
-                   </div>
+                <div className="flex items-center gap-3">
+                  {activeStep < 3 ? (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        // التحقق من الحقول المطلوبة قبل الانتقال للخطوات التالية
+                        if (activeStep === 1 && !newProject.title) {
+                          toast.error("يرجى إدخال عنوان المشروع قبل الانتقال");
+                          return;
+                        }
+                        setActiveStep(prev => prev + 1);
+                      }}
+                      className="h-12 px-8 rounded-xl bg-slate-900 hover:bg-primary text-white font-black text-sm transition-all flex items-center gap-2"
+                    >
+                      التالي
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button 
+                      type="button"
+                      onClick={handleCreateProject}
+                      className="h-14 px-8 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-black text-base shadow-xl shadow-slate-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
+                    >
+                      <CheckCircle2 className="w-5 h-5" />
+                      اعتماد وتأسيس المشروع
+                    </Button>
+                  )}
                 </div>
-
-                {/* القسم الرابع: التخطيط والجدول الزمني */}
-                <div className="space-y-4">
-                   <div className="flex items-center gap-2 border-r-4 border-slate-900 pr-3">
-                      <span className="text-xs font-black text-slate-900 uppercase">المواقع والجدولة الزمنية</span>
-                   </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">تاريـخ البدء</Label>
-                       <Input 
-                         type="date"
-                         value={newProject.startDate}
-                         onChange={e => setNewProject({...newProject, startDate: e.target.value})}
-                         className="h-12 rounded-xl bg-slate-50 border-transparent shadow-inner font-bold"
-                       />
-                     </div>
-                     <div className="space-y-2">
-                       <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">تاريـخ الانتهاء (تقديري)</Label>
-                       <Input 
-                         type="date"
-                         value={newProject.endDate}
-                         onChange={e => setNewProject({...newProject, endDate: e.target.value})}
-                         className="h-12 rounded-xl bg-slate-50 border-transparent shadow-inner font-bold"
-                       />
-                     </div>
-                   </div>
-                   <div className="space-y-2">
-                     <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">الموقع الجغرافي (Google Maps Link)</Label>
-                     <Input 
-                       value={newProject.locationLink}
-                       onChange={e => setNewProject({...newProject, locationLink: e.target.value})}
-                       placeholder="https://maps.app.goo.gl/..."
-                       className="h-12 rounded-xl bg-slate-50 border-transparent shadow-inner font-bold text-left"
-                     />
-                   </div>
-                   <div className="space-y-2">
-                     <Label className="font-black text-slate-400 text-[10px] uppercase tracking-wider pr-1">نطاق العمل الفني</Label>
-                     <textarea 
-                       value={newProject.description}
-                       onChange={e => setNewProject({...newProject, description: e.target.value})}
-                       rows={3}
-                       placeholder="أدخل تفاصيل الهيكل الإنشائي، التشطيبات، والملاحظات الهندسية الهامة..."
-                       className="w-full rounded-2xl bg-slate-50 border-transparent shadow-inner font-bold p-4 text-sm focus:ring-0 focus:bg-white transition-all"
-                     />
-                   </div>
-                </div>
-
-                <Button 
-                  onClick={handleCreateProject}
-                  className="w-full h-16 rounded-2xl bg-slate-900 hover:bg-primary text-white font-black text-xl shadow-2xl shadow-slate-200 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
-                >
-                  <CheckCircle2 className="w-6 h-6" />
-                  اعتماد الملف والمباشرة بالتأسيس
-                </Button>
               </div>
             </DialogContent>
           </Dialog>

@@ -166,10 +166,33 @@ app.get('/test-aliphia-connection', async (req, res) => {
   res.json(results);
 });
 
-// تقديم ملفات التطبيق المبني
-app.use(express.static(path.join(__dirname, 'dist')));
+// تقديم ملفات التطبيق المبني مع إعدادات كاش ذكية لضمان التحديث التلقائي
+app.use(express.static(path.join(__dirname, 'dist'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) {
+      // نمنع كاش index.html تماماً لكي يجلب المتصفح الروابط الجديدة فوراً
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    } else {
+      // الملفات المرفقة (CSS/JS) تكون بأسماء مشفرة فريدة (Hashed) لذا يمكن كشها بأمان
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+}));
 
+// معالجة كافة المسارات الأخرى للتوجيه الداخلي (React Router)
 app.get('*all', (req, res) => {
+  // إذا كان الطلب لملف مفقود (مثل ملف JS قديم بـ Hash مختلف)، نرجع 404 بدلاً من إرجاع index.html
+  // هذا يمنع خطأ "Unexpected token '<'" والصفحة البيضاء
+  const ext = path.extname(req.path);
+  if (ext && ext !== '.html' && !req.path.endsWith('/')) {
+    return res.status(404).send('Asset Not Found');
+  }
+
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 

@@ -228,3 +228,84 @@ export const analyzeProjectSpending = async (projectData: Partial<Project>, tran
     return generateLocalSpendingAnalysis(projectData, transactions);
   }
 };
+
+export interface ExtractedProjectData {
+  title?: string;
+  description?: string;
+  budget?: number;
+  clientName?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  locationLink?: string;
+  startDate?: string;
+  endDate?: string;
+  projectType?: 'residential' | 'commercial' | 'industrial' | 'renovation';
+  supervisor?: string;
+  contractNumber?: string;
+  engOffice?: string;
+  totalArea?: string;
+}
+
+export const parseProjectFromText = async (text: string): Promise<ExtractedProjectData | null> => {
+  const ai = getGeminiClient();
+  if (!ai) {
+    throw new Error("مفتاح API غير متوفر أو غير صالح. يرجى إعداد مفتاح الذكاء الاصطناعي في الإعدادات.");
+  }
+
+  try {
+    const prompt = `
+      قم بتحليل النص التالي واستخراج تفاصيل المشروع الهندسية والمالية بدقة وتنسيقها في الكائن المطلوب.
+      
+      النص المراد تحليله:
+      "${text}"
+      
+      ملاحظات هامة للاستخراج:
+      1. title: عنوان المشروع (مثال: فيلا سكنية - حي الياسمين).
+      2. budget: القيمة المالية للعقد كـ رقم فقط (مثال: 500000).
+      3. clientPhone: رقم الجوال (حاول توحيده بصيغة 05xxxxxxxx إن أمكن).
+      4. startDate & endDate: التواريخ بصيغة YYYY-MM-DD (إذا ذكر مثلاً "تبدأ في يوليو" وكان هذا العام 2026، اجعله 2026-07-01).
+      5. projectType: يجب أن يكون أحد هذه الخيارات فقط: 'residential' (إذا كان فيلا، شقة، قصر، سكني)، 'commercial' (معارض، مكاتب، تجاري)، 'industrial' (مصنع، مستودع، هنجر)، 'renovation' (ترميم، تعديل، تشطيب لشيء قائم).
+      6. description: نطاق العمل الفني (تفاصيل إضافية عن العمل أو البنود).
+      
+      أرجع فقط كائن JSON يطابق المواصفات.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            budget: { type: Type.NUMBER },
+            clientName: { type: Type.STRING },
+            clientPhone: { type: Type.STRING },
+            clientEmail: { type: Type.STRING },
+            locationLink: { type: Type.STRING },
+            startDate: { type: Type.STRING },
+            endDate: { type: Type.STRING },
+            projectType: { 
+              type: Type.STRING,
+              enum: ['residential', 'commercial', 'industrial', 'renovation']
+            },
+            supervisor: { type: Type.STRING },
+            contractNumber: { type: Type.STRING },
+            engOffice: { type: Type.STRING },
+            totalArea: { type: Type.STRING }
+          }
+        }
+      }
+    });
+
+    if (response.text) {
+      return JSON.parse(response.text) as ExtractedProjectData;
+    }
+    return null;
+  } catch (error) {
+    console.error("AI parsing failed:", error);
+    throw error;
+  }
+};
