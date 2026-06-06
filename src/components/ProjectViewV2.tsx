@@ -365,11 +365,11 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
       }
     );
 
-    const unsubWorkers = onSnapshot(collection(db, 'employees'), 
+    const unsubWorkers = onSnapshot(collection(db, 'workers'), 
       (snapshot) => {
         setWorkers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Worker)));
       },
-      (err) => handleFirestoreError(err, OperationType.GET, 'employees', auth)
+      (err) => handleFirestoreError(err, OperationType.GET, 'workers', auth)
     );
 
     const unsubUsers = onSnapshot(
@@ -414,8 +414,26 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
 
   const projectWorkers = useMemo(() => {
     if (!project?.workerIds) return [];
-    return workers.filter(w => project.workerIds?.includes(w.id));
-  }, [project, workers]);
+    const allAvailable = [
+      ...usersList.map(u => ({ ...u, isDailyWage: false })),
+      ...workers.map(w => ({ ...w, isDailyWage: true, role: w.role || 'عامل يومية' }))
+    ] as Array<any>;
+    return allAvailable.filter(w => project.workerIds?.includes(w.id));
+  }, [project, usersList, workers]);
+
+  const teamCandidates = useMemo(() => {
+    const productionEmployees = usersList
+      .filter(u => u.department === 'الإنتاج' || u.dept === 'الإنتاج' || u.role === 'worker')
+      .map(u => ({ ...u, isDailyWage: false }));
+      
+    const dailyWageWorkers = workers.map(w => ({
+      ...w,
+      isDailyWage: true,
+      role: w.role || 'عامل يومية'
+    }));
+    
+    return [...productionEmployees, ...dailyWageWorkers] as Array<any>;
+  }, [usersList, workers]);
 
   const siteSupervisor = useMemo(() => {
     if (project?.supervisor && project.supervisor.trim() !== '') {
@@ -987,62 +1005,75 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                                  <DialogTitle className="text-right font-black">إدارة أعضاء الفريق الفني</DialogTitle>
                               </DialogHeader>
                               <div className="space-y-4 mt-4 max-h-[400px] overflow-y-auto pr-1">
-                                 {workers.map(worker => {
-                                    const isAssigned = project.workerIds?.includes(worker.id);
-                                    return (
-                                       <div key={worker.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
-                                          <div>
-                                             <p className="font-bold text-sm text-slate-900">{worker.name}</p>
-                                             <p className="text-[10px] text-slate-400 font-semibold">
-                                                {worker.role === 'worker' ? 'فني مختص' : 
-                                                 worker.role === 'supervisor' ? 'مشرف فني' : 
-                                                 worker.role === 'manager' ? 'مدير المشروع' : worker.role || 'عضو الفريق'}
-                                             </p>
+                                 {teamCandidates.map(worker => {
+                                       const isAssigned = project.workerIds?.includes(worker.id);
+                                       return (
+                                          <div key={worker.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
+                                             <div>
+                                                <p className="font-bold text-sm text-slate-900">{worker.name}</p>
+                                                <p className="text-[10px] text-slate-400 font-semibold">
+                                                   {worker.isDailyWage ? `عامل يومية (${worker.role})` : 
+                                                    worker.role === 'worker' ? 'فني مختص' : 
+                                                    worker.role === 'supervisor' ? 'مشرف فني' : 
+                                                    worker.role === 'manager' ? 'مدير المشروع' : worker.role || 'عضو الفريق'}
+                                                </p>
+                                             </div>
+                                             <Button 
+                                                onClick={() => handleToggleWorker(worker.id, !!isAssigned)}
+                                                variant={isAssigned ? "destructive" : "default"}
+                                                size="sm"
+                                                className="rounded-xl font-black text-[10px] h-8"
+                                             >
+                                                {isAssigned ? "إزالة" : "إضافة"}
+                                             </Button>
                                           </div>
-                                          <Button 
-                                             onClick={() => handleToggleWorker(worker.id, !!isAssigned)}
-                                             variant={isAssigned ? "destructive" : "default"}
-                                             size="sm"
-                                             className="rounded-xl font-black text-[10px] h-8"
-                                          >
-                                             {isAssigned ? "إزالة" : "إضافة"}
-                                          </Button>
-                                       </div>
-                                    );
-                                 })}
-                                 {workers.length === 0 && (
-                                    <p className="text-center text-xs font-bold text-slate-400 py-4">لا يوجد موظفين مسجلين في النظام</p>
+                                       );
+                                    })
+                                 }
+                                 {teamCandidates.length === 0 && (
+                                    <p className="text-center text-xs font-bold text-slate-400 py-4">لا يوجد موظفين أو عمال مسجلين</p>
                                  )}
                               </div>
                            </DialogContent>
                         </Dialog>
                      </div>
-                     <div className="flex flex-col gap-3">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {projectWorkers.length === 0 && (
-                           <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-[3rem] bg-slate-50/50">
+                           <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 rounded-[3rem] bg-slate-50/50">
                               <Users className="w-12 h-12 mx-auto text-slate-300 mb-4" />
                               <p className="font-black text-slate-400">لا يوجد أعضاء في الفريق الفني حالياً</p>
                               <p className="text-xs font-bold text-slate-300 mt-1">اضغط على زر "إدارة أعضاء الفريق" لإسناد فنيين للمشروع</p>
                            </div>
                         )}
                         {projectWorkers.map(worker => (
-                           <Card key={worker.id} className="p-6 rounded-[2rem] border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                           <Card key={worker.id} className="p-6 rounded-[2rem] border-slate-100 flex flex-row items-center justify-between shadow-sm hover:shadow-md transition-all">
                               <div className="flex items-center gap-4">
                                  <div className="h-14 w-14 bg-gradient-to-br from-primary to-accent text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-md shadow-primary/10">
                                     {worker.name.charAt(0)}
                                  </div>
-                                 <div>
+                                 <div className="text-right">
                                     <p className="font-black text-slate-900">{worker.name}</p>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                       {worker.role === 'worker' ? 'فني مختص' : 
+                                       {worker.isDailyWage ? `عامل يومية (${worker.role})` : 
+                                        worker.role === 'worker' ? 'فني مختص' : 
                                         worker.role === 'supervisor' ? 'مشرف فني' : 
                                         worker.role === 'manager' ? 'مدير المشروع' : 'عضو الفريق'}
                                     </p>
                                  </div>
                               </div>
-                              <Button variant="ghost" size="icon" className="rounded-xl h-12 w-12 text-emerald-500 bg-emerald-50">
-                                 <Phone className="w-5 h-5" />
-                              </Button>
+                              {worker.phone ? (
+                                 <a 
+                                    href={`tel:${worker.phone}`} 
+                                    className="rounded-xl h-12 w-12 text-emerald-500 bg-emerald-50 flex items-center justify-center transition-colors hover:bg-emerald-100 hover:text-emerald-600 outline-none"
+                                    title="اتصال هاتفى"
+                                 >
+                                    <Phone className="w-5 h-5" />
+                                 </a>
+                              ) : (
+                                 <Button variant="ghost" size="icon" className="rounded-xl h-12 w-12 text-slate-300 bg-slate-50 cursor-not-allowed">
+                                    <Phone className="w-5 h-5" />
+                                 </Button>
+                              )}
                            </Card>
                         ))}
                      </div>
