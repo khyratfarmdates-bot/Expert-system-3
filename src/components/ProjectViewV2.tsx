@@ -302,7 +302,8 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
     } catch (err) {
       toast.dismiss(toastId);
       console.error(err);
-      toast.error("فشل رفع المرفقات: تأكد من تهيئة وتفعيل الـ Storage وتعديل القواعد لتسمح بالرفع في لوحة Firebase Console.");
+      const errMsg = err && err.message ? err.message : String(err);
+      toast.error(`فشل رفع المرفقات: ${errMsg}. تأكد من تفعيل Storage وتهيئة CORS وقواعد الحماية.`);
     } finally {
       setIsUploading(false);
     }
