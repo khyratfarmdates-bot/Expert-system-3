@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, Send, Upload, Camera, Loader2, Plus, Trash2, 
   CheckCircle2, Share2, ExternalLink,
-  FileText, Receipt, ShieldCheck,
+  FileText, Receipt, ShieldCheck, Clock,
   Coins, UserCheck, ChevronDown, Search, X, Bot
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,7 +15,8 @@ import { GoogleGenAI } from '@google/genai';
 import { useAuth } from '../lib/AuthContext';
 import { fetchAliphiaClients, fetchAliphiaQuotations, fetchAliphiaInvoices, createAliphiaDocument } from '../lib/aliphia';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { sendNotification } from '../lib/notifications';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot } from 'firebase/firestore';
 
 interface Item {
   name: string;
@@ -26,10 +27,25 @@ interface Item {
 
 export default function SmartOfferBot() {
   const { profile } = useAuth();
+  const [dbProfile, setDbProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (!profile?.uid) return;
+    const q = query(collection(db, 'users'), where('uid', '==', profile.uid));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      if (!snap.empty) {
+        setDbProfile(snap.docs[0].data());
+      }
+    });
+    return () => unsubscribe();
+  }, [profile?.uid]);
+
   const isManager = profile?.role === 'manager';
   const isSalesRep = profile?.role === 'sales_rep';
+  const blockQuotations = dbProfile?.blockQuotations === true;
+  const blockInvoices = dbProfile?.blockInvoices === true;
   const canCreateQuote = isManager || isSalesRep;
-  const canCreateInvoice = isManager;
+  const canCreateInvoice = isManager || isSalesRep;
 
   const [promptInput, setPromptInput] = useState('');
   const [photoURL, setPhotoURL] = useState('');
@@ -266,7 +282,7 @@ export default function SmartOfferBot() {
     }
 
     if (docType === 'invoice' && !canCreateInvoice) {
-      toast.error('عذراً، فقط المدير يملك صلاحية إنشاء الفواتير.');
+      toast.error('عذراً، فقط المدير أو المندوب يملكون صلاحية إنشاء الفواتير.');
       return;
     }
     if (docType === 'quotation' && !canCreateQuote) {
@@ -274,70 +290,123 @@ export default function SmartOfferBot() {
       return;
     }
 
+    const needsApproval = !isManager && (docType === 'quotation' ? blockQuotations : blockInvoices);
+
     setShowConfirm(false);
     setIsSending(true);
-    const tid = toast.loading(`جاري إنشاء ${docType === 'quotation' ? 'عرض السعر' : 'الفاتورة'} في ألف ياء...`);
-    
-    try {
-      const docData = {
-        client_id: selectedClient.id,
-        date: new Date().toISOString().split('T')[0],
-        notes: offerNotes + (discountPercent > 0 ? `\n(تم تطبيق خصم بقيمة ${discountPercent}%)` : ''),
-        items: extractedItems.filter(i => i.name).map(i => ({
-          name: i.name,
-          quantity: i.qty,
-          price: i.price * (1 - discountPercent / 100),
-          description: i.desc
-        }))
-      };
 
-      // Create Aliphia record
-      const res = await createAliphiaDocument(docType, docData);
+    const filteredItems = extractedItems.filter(i => i.name).map(i => ({
+      name: i.name,
+      qty: i.qty,
+      price: i.price * (1 - discountPercent / 100),
+      desc: i.desc || ''
+    }));
 
-      const docNum = res?.response?.quote_number || res?.response?.invoice_number ||
-                     res?.quote_number || res?.invoice_number ||
-                     res?.response?.id || res?.id || '—';
-      const pdfUrl = res?.response?.pdf_url || res?.pdf_url || '';
-      const aliphiaId = res?.response?.id || res?.id || '';
+    if (needsApproval) {
+      const label = docType === 'quotation' ? 'عرض السعر' : 'الفاتورة';
+      const tid = toast.loading(`جاري إرسال طلب اعتماد ${label} للمدير...`);
+      try {
+        // Save to Firebase as pending, no Aliphia call
+        await addDoc(collection(db, docType === 'quotation' ? 'quotations' : 'invoices'), {
+          clientName: selectedClient.name,
+          clientId: selectedClient.id,
+          totalAmount: total,
+          items: extractedItems.filter(i => i.name).map(i => i.name).join(', '),
+          status: 'pending',
+          salesRepId: profile?.uid || '',
+          salesRepName: profile?.name || '',
+          createdAt: serverTimestamp(),
+          docNumber: '',
+          pdfUrl: '',
+          aliphiaId: '',
+          docType: docType,
+          itemsDetail: filteredItems,
+          notes: offerNotes + (discountPercent > 0 ? `\n(تم تطبيق خصم بقيمة ${discountPercent}%)` : '')
+        });
 
-      const filteredItems = extractedItems.filter(i => i.name).map(i => ({
-        name: i.name,
-        qty: i.qty,
-        price: i.price * (1 - discountPercent / 100),
-        desc: i.desc || ''
-      }));
+        // Send manager notification
+        await sendNotification({
+          title: `طلب اعتماد ${label} جديد`,
+          message: `المندوب ${profile?.name || 'غير معروف'} يطلب اعتماد ${label} للعميل ${selectedClient.name} بقيمة ${total.toLocaleString()} ر.س. البنود: ${filteredItems.map(i => `${i.name} (x${i.qty})`).join('، ')}`,
+          type: 'approval',
+          category: 'financial',
+          targetRole: 'manager',
+          priority: 'high',
+          requiresAcknowledge: true
+        });
 
-      // Save Quotation/Invoice local status in Firebase
-      await addDoc(collection(db, docType === 'quotation' ? 'quotations' : 'invoices'), {
-        clientName: selectedClient.name,
-        clientId: selectedClient.id,
-        totalAmount: total,
-        items: extractedItems.filter(i => i.name).map(i => i.name).join(', '),
-        status: docType === 'quotation' ? 'pending' : 'approved',
-        salesRepId: profile?.uid || '',
-        salesRepName: profile?.name || '',
-        createdAt: serverTimestamp(),
-        docNumber: String(docNum),
-        pdfUrl: pdfUrl,
-        aliphiaId: aliphiaId,
-        docType: docType,
-        itemsDetail: filteredItems
-      });
+        setResult({
+          type: docType,
+          clientName: selectedClient.name,
+          total,
+          pendingApproval: true
+        } as any);
 
-      setResult({
-        type: docType,
-        docNumber: String(docNum),
-        pdfUrl,
-        clientName: selectedClient.name,
-        total
-      });
+        toast.success('تم إرسال الطلب بنجاح بانتظار موافقة المدير!', { id: tid });
+      } catch (err: any) {
+        console.error(err);
+        toast.error(`فشل إرسال الطلب: ${err.message || 'خطأ غير معروف'}`, { id: tid });
+      } finally {
+        setIsSending(false);
+      }
+    } else {
+      const tid = toast.loading(`جاري إنشاء ${docType === 'quotation' ? 'عرض السعر' : 'الفاتورة'} في ألف ياء...`);
+      try {
+        const docData = {
+          client_id: selectedClient.id,
+          date: new Date().toISOString().split('T')[0],
+          notes: offerNotes + (discountPercent > 0 ? `\n(تم تطبيق خصم بقيمة ${discountPercent}%)` : ''),
+          items: extractedItems.filter(i => i.name).map(i => ({
+            name: i.name,
+            quantity: i.qty,
+            price: i.price * (1 - discountPercent / 100),
+            description: i.desc
+          }))
+        };
 
-      toast.success('تمت العملية وحفظ المستند بنجاح!', { id: tid });
-    } catch (err: any) {
-      console.error(err);
-      toast.error(`فشل إنشاء المستند: ${err.message || 'خطأ غير معروف'}`, { id: tid });
-    } finally {
-      setIsSending(false);
+        // Create Aliphia record
+        const res = await createAliphiaDocument(docType, docData);
+
+        const docNum = res?.response?.quote_number || res?.response?.invoice_number ||
+                       res?.quote_number || res?.invoice_number ||
+                       res?.response?.id || res?.id || '—';
+        const pdfUrl = res?.response?.pdf_url || res?.pdf_url || '';
+        const aliphiaId = res?.response?.id || res?.id || '';
+
+        // Save Quotation/Invoice local status in Firebase
+        await addDoc(collection(db, docType === 'quotation' ? 'quotations' : 'invoices'), {
+          clientName: selectedClient.name,
+          clientId: selectedClient.id,
+          totalAmount: total,
+          items: extractedItems.filter(i => i.name).map(i => i.name).join(', '),
+          status: 'approved',
+          salesRepId: profile?.uid || '',
+          salesRepName: profile?.name || '',
+          createdAt: serverTimestamp(),
+          docNumber: String(docNum),
+          pdfUrl: pdfUrl,
+          aliphiaId: aliphiaId,
+          docType: docType,
+          itemsDetail: filteredItems,
+          notes: offerNotes + (discountPercent > 0 ? `\n(تم تطبيق خصم بقيمة ${discountPercent}%)` : '')
+        });
+
+        setResult({
+          type: docType,
+          docNumber: String(docNum),
+          pdfUrl,
+          clientName: selectedClient.name,
+          total,
+          pendingApproval: false
+        });
+
+        toast.success('تمت العملية وحفظ المستند بنجاح!', { id: tid });
+      } catch (err: any) {
+        console.error(err);
+        toast.error(`فشل إنشاء المستند: ${err.message || 'خطأ غير معروف'}`, { id: tid });
+      } finally {
+        setIsSending(false);
+      }
     }
   };
 
@@ -359,22 +428,36 @@ export default function SmartOfferBot() {
   };
 
   if (result) {
+    const isPendingApproval = (result as any).pendingApproval;
     return (
       <div className="max-w-xl mx-auto text-right" dir="rtl">
         <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white">
-          <div className="bg-gradient-to-br from-primary to-teal-700 p-8 text-center text-white relative">
-            <div className="absolute top-4 right-4 bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">المنقّح الذكي</div>
-            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/30 animate-pulse">
-              <CheckCircle2 className="w-10 h-10 text-white" />
+          {isPendingApproval ? (
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-8 text-center text-white relative">
+              <div className="absolute top-4 right-4 bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">بانتظار الموافقة</div>
+              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/30 animate-pulse">
+                <Clock className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-2xl font-black">طلب قيد المراجعة والإنشاء ⏳</h2>
+              <p className="text-amber-100 mt-1 font-medium">تم إرسال الطلب للمدير وسيتلقى إشعاراً للموافقة</p>
             </div>
-            <h2 className="text-2xl font-black">تم تصدير المستند بنجاح!</h2>
-            <p className="text-teal-100 mt-1 font-medium">تم إنشاء المستند وحفظ السجل المحاسبي في ألف ياء</p>
-          </div>
+          ) : (
+            <div className="bg-gradient-to-br from-primary to-teal-700 p-8 text-center text-white relative">
+              <div className="absolute top-4 right-4 bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">المنقّح الذكي</div>
+              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/30 animate-pulse">
+                <CheckCircle2 className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-2xl font-black">تم تصدير المستند بنجاح!</h2>
+              <p className="text-teal-100 mt-1 font-medium">تم إنشاء المستند وحفظ السجل المحاسبي في ألف ياء</p>
+            </div>
+          )}
           <CardContent className="p-8 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
-                <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">رقم المستند</span>
-                <span className="text-xl font-black text-slate-800 font-mono">{result.docNumber}</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">حالة الطلب</span>
+                <span className={`text-lg font-black block ${isPendingApproval ? 'text-amber-600' : 'text-slate-800'}`}>
+                  {isPendingApproval ? 'بانتظار الاعتماد' : 'تم الإصدار'}
+                </span>
               </div>
               <div className="bg-teal-50/50 rounded-2xl p-4 text-center border border-teal-100">
                 <span className="text-[10px] font-black text-teal-600 uppercase block mb-1">القيمة الإجمالية</span>
@@ -389,27 +472,36 @@ export default function SmartOfferBot() {
               <span className="text-xs font-bold text-slate-400">العميل المستهدف</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <Button
-                onClick={shareWhatsApp}
-                className="h-12 rounded-xl bg-[#25D366] hover:bg-[#1ebe57] text-white font-black gap-2 shadow-lg shadow-green-100"
-              >
-                <Share2 className="w-4 h-4" /> مشاركة واتساب
-              </Button>
-              {result.pdfUrl ? (
+            {isPendingApproval ? (
+              <div className="pt-2">
+                <Button onClick={reset} className="w-full h-12 rounded-xl bg-slate-900 hover:bg-black text-white font-black">
+                  إنشاء مستند جديد
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 pt-2">
                 <Button
-                  onClick={() => window.open(result.pdfUrl, '_blank')}
-                  className="h-12 rounded-xl bg-slate-900 hover:bg-black text-white font-black gap-2"
+                  onClick={shareWhatsApp}
+                  className="h-12 rounded-xl bg-[#25D366] hover:bg-[#1ebe57] text-white font-black gap-2 shadow-lg shadow-green-100"
                 >
-                  <ExternalLink className="w-4 h-4" /> فتح ملف PDF
+                  <Share2 className="w-4 h-4" /> مشاركة واتساب
                 </Button>
-              ) : (
-                <Button variant="outline" className="h-12 rounded-xl font-black" onClick={reset}>
-                  مستند جديد
-                </Button>
-              )}
-            </div>
-            {result.pdfUrl && (
+                {result.pdfUrl ? (
+                  <Button
+                    onClick={() => window.open(result.pdfUrl, '_blank')}
+                    className="h-12 rounded-xl bg-slate-900 hover:bg-black text-white font-black gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" /> فتح ملف PDF
+                  </Button>
+                ) : (
+                  <Button variant="outline" className="h-12 rounded-xl font-black" onClick={reset}>
+                    مستند جديد
+                  </Button>
+                )}
+              </div>
+            )}
+            
+            {!isPendingApproval && result.pdfUrl && (
               <Button variant="ghost" onClick={reset} className="w-full text-slate-400 hover:text-slate-600 font-bold text-xs pt-2">
                 + العودة لإنشاء عرض جديد
               </Button>
@@ -796,9 +888,25 @@ export default function SmartOfferBot() {
             </div>
 
             {!isManager && (
-              <p className="text-[9.5px] text-red-500 font-bold text-center leading-relaxed">
-                ⚠️ تنبيه الصلاحيات: بصفتك مندوب مبيعات، يمكنك تصدير العروض للمراجعة والاعتماد فقط. إصدار الفواتير المباشرة هو صلاحية حصرية للمدير العام.
-              </p>
+              <div className="text-xs font-bold text-center leading-relaxed space-y-2">
+                {blockQuotations && blockInvoices ? (
+                  <span className="text-rose-600 font-black block bg-rose-50/70 p-3 rounded-xl border border-rose-100">
+                    ℹ️ حسابك يتطلب موافقة المدير العام قبل اعتماد عروض الأسعار أو إصدار الفواتير.
+                  </span>
+                ) : blockQuotations ? (
+                  <span className="text-rose-600 font-black block bg-rose-50/70 p-3 rounded-xl border border-rose-100">
+                    ℹ️ حسابك يتطلب موافقة المدير العام لاعتماد عروض الأسعار. (الفواتير مباشرة)
+                  </span>
+                ) : blockInvoices ? (
+                  <span className="text-rose-600 font-black block bg-rose-50/70 p-3 rounded-xl border border-rose-100">
+                    ℹ️ حسابك يتطلب موافقة المدير العام لإصدار الفواتير. (عروض الأسعار مباشرة)
+                  </span>
+                ) : (
+                  <span className="text-emerald-600 font-black block bg-emerald-50/70 p-3 rounded-xl border border-emerald-100">
+                    ✅ حسابك مصرح له بتصدير عروض الأسعار وإصدار الفواتير مباشرة دون موافقة مسبقة.
+                  </span>
+                )}
+              </div>
             )}
 
           </CardContent>

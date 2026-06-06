@@ -47,6 +47,8 @@ import {
   MessageCircle,
   Volume2,
   Factory,
+  Sparkles,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -76,6 +78,7 @@ import PerformanceEvaluation from "./components/PerformanceEvaluation";
 import AttendanceManager from "./components/AttendanceManager";
 import SystemSettings from "./components/SystemSettings";
 import Analytics from "./components/Analytics";
+import GeneralLedger from "./components/GeneralLedger";
 import ExecutiveBriefingSystem from "./components/ExecutiveBriefingSystem";
 import WorkerView from "./components/WorkerView";
 import OnboardingGuide from "./components/OnboardingGuide";
@@ -92,6 +95,7 @@ import BankingAndVault from "./components/BankingAndVault";
 import Subcontractors from "./components/Subcontractors";
 import CompanyProfile from "./components/CompanyProfile";
 import SalesRepDashboard from "./components/SalesRepDashboard";
+import PrivateJobsWorkspace from "./components/PrivateJobsWorkspace";
 import SalesRepsManagement from "./components/SalesRepsManagement";
 import SalesRepProfile from "./components/SalesRepProfile";
 
@@ -162,6 +166,7 @@ function AppContent() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
     null,
   );
+  const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["overview"]);
   const [expandedSubMenus, setExpandedSubMenus] = useState<string[]>([]);
@@ -222,7 +227,18 @@ function AppContent() {
   const [showPublicWorkerOnboarding, setShowPublicWorkerOnboarding] =
     useState(false);
 
-  const menuGroups: any[] = [
+  const menuGroups: any[] = profile?.role === "sales_rep" ? [
+    {
+      id: "repWorkspace",
+      items: [
+        { id: "rep_dashboard", label: "الرئيسية", icon: LayoutDashboard, roles: ["sales_rep"] },
+        { id: "rep_smart_bot", label: "المساعد الذكي (ألف ياء)", icon: Sparkles, roles: ["sales_rep"] },
+        { id: "rep_documents", label: "وثائقي الصادرة", icon: FileSpreadsheet, roles: ["sales_rep"] },
+        { id: "rep_statement", label: "كشف حسابي الرسمي", icon: Wallet, roles: ["sales_rep"] },
+        { id: "private_jobs_page", label: "المقاولات الخاصة", icon: Briefcase, roles: ["sales_rep"] },
+      ]
+    }
+  ] : [
     {
       id: "dashboardGroup",
       items: [
@@ -231,79 +247,116 @@ function AppContent() {
       ],
     },
     {
-      id: "salesGroup",
+      id: "commercialGroup",
+      title: "النشاط التجاري",
       items: [
         {
           id: "sales_group",
           label: "المبيعات",
           icon: TrendingUp,
-          roles: ["manager", "sales_rep"],
+          roles: ["manager"],
           subItems: [
-            { id: "sales", label: "سجل المبيعات والإيرادات", roles: ["manager"] },
-            { id: "sales_rep_dashboard", label: "لوحة المبيعات الذكية", roles: ["manager", "sales_rep"] },
+            { id: "sales", label: "سجل المبيعات", roles: ["manager"] },
+            { id: "private_jobs_page", label: "المقاولات الخاصة", roles: ["manager"] },
             { id: "sales_reps", label: "إدارة المناديب", roles: ["manager"] },
+          ]
+        },
+        {
+          id: "purchases_group",
+          label: "المشتريات",
+          icon: ShoppingCart,
+          roles: ["manager", "supervisor"],
+          subItems: [
+            { id: "purchases", label: "سجل المشتريات", roles: ["manager", "supervisor"] },
+            { id: "suppliers", label: "الموردين", roles: ["manager"] },
+            { id: "camera", label: "مسح الفواتير", roles: ["manager", "supervisor"] },
           ]
         },
       ]
     },
     {
-      id: "finance",
-      title: "المالية",
+      id: "financialGroup",
+      title: "المالية والمحاسبة",
       items: [
-        { id: "financials", label: "المالية", icon: Wallet, roles: ["manager"] },
-        { id: "approvals", label: "الاعتمادات", icon: ShieldCheck, roles: ["manager"] },
-        { id: "expenses", label: "المصروفات", icon: Receipt, roles: ["manager"] },
-        { id: "banking", label: "البنوك", icon: Landmark, roles: ["manager"] },
-      ],
+        {
+          id: "finance_group",
+          label: "المالية",
+          icon: Wallet,
+          roles: ["manager"],
+          subItems: [
+            { id: "financials", label: "الحالة المالية", roles: ["manager"] },
+            { id: "general_ledger", label: "الأستاذ العام", roles: ["manager"] },
+            { id: "expenses", label: "المصروفات", roles: ["manager"] },
+            { id: "banking", label: "البنوك والخزينة", roles: ["manager"] },
+            { id: "approvals", label: "الاعتمادات", roles: ["manager"] },
+          ]
+        }
+      ]
     },
     {
-      id: "purchasesGroup",
-      title: "المشتريات",
+      id: "operationsGroup",
+      title: "المشاريع والعمليات",
       items: [
-        { id: "purchases", label: "المشتريات", icon: ShoppingCart, roles: ["manager", "supervisor"] },
-        { id: "suppliers", label: "الموردين", icon: Store, roles: ["manager"] },
-        { id: "camera", label: "مسح الفواتير", icon: Scan, roles: ["manager", "supervisor"] },
-      ],
+        {
+          id: "ops_group",
+          label: "المشاريع",
+          icon: Briefcase,
+          roles: ["manager", "supervisor"],
+          subItems: [
+            { id: "projects", label: "سجل المشاريع", roles: ["manager", "supervisor"] },
+            { id: "tasks", label: "المهام", roles: ["manager", "supervisor"] },
+            { id: "subcontractors", label: "المقاولين", roles: ["manager", "supervisor"] },
+          ]
+        },
+        {
+          id: "inventory_group",
+          label: "المخازن",
+          icon: Package,
+          roles: ["manager", "supervisor"],
+          subItems: [
+            { id: "inventory", label: "المخزون والمواد", roles: ["manager", "supervisor"] },
+            { id: "production", label: "خطوط الإنتاج", roles: ["manager", "supervisor"] },
+            { id: "assets", label: "الأصول والمعدات", roles: ["manager", "supervisor"] },
+          ]
+        }
+      ]
     },
     {
-      id: "inventoryGroup",
-      title: "المخزون",
+      id: "hrGroup",
+      title: "الموارد البشرية",
       items: [
-        { id: "inventory", label: "المخزن", icon: Package, roles: ["manager", "supervisor"] },
-        { id: "assets", label: "الأصول", icon: ShieldCheck, roles: ["manager", "supervisor"] },
-        { id: "production", label: "الإنتاج", icon: Factory, roles: ["manager", "supervisor"] },
-      ],
+        {
+          id: "hr_group",
+          label: "الموارد",
+          icon: UsersRound,
+          roles: ["manager", "supervisor"],
+          subItems: [
+            { id: "employees", label: "الموظفين", roles: ["manager", "supervisor"] },
+            { id: "attendance_manager", label: "الحضور والغياب", roles: ["manager", "supervisor"] },
+            { id: "payrolls", label: "الرواتب", roles: ["manager"] },
+            { id: "workers_management", label: "العمالة اليومية", roles: ["manager", "supervisor"] },
+            { id: "evaluation", label: "تقييم الأداء", roles: ["manager", "supervisor"] },
+          ]
+        }
+      ]
     },
     {
-      id: "hr",
-      title: "الموارد",
+      id: "mediaGroup",
+      title: "التقارير والأرشيف",
       items: [
-        { id: "employees", label: "الموظفين", icon: UsersRound, roles: ["manager", "supervisor"] },
-        { id: "attendance_manager", label: "الحضور", icon: Clock, roles: ["manager", "supervisor"] },
-        { id: "payrolls", label: "الرواتب", icon: CreditCard, roles: ["manager"] },
-        { id: "workers_management", label: "العمالة", icon: Users, roles: ["manager", "supervisor"] },
-        { id: "evaluation", label: "الأداء", icon: TrendingUp, roles: ["manager", "supervisor"] },
-      ],
-    },
-    {
-      id: "ops",
-      title: "المشاريع",
-      items: [
-        { id: "projects", label: "المشاريع", icon: Briefcase, roles: ["manager", "supervisor"] },
-        { id: "subcontractors", label: "المقاولين", icon: Users, roles: ["manager", "supervisor"] },
-        { id: "tasks", label: "المهام", icon: ClipboardPaste, roles: ["manager", "supervisor"] },
-      ],
-    },
-    {
-      id: "reports",
-      title: "التقارير",
-      items: [
-        { id: "analytics", label: "التحليلات", icon: PieChart, roles: ["manager"] },
-        { id: "archive", label: "الأرشيف", icon: ArchiveIcon, roles: ["manager"] },
-        { id: "gallery", label: "المعرض", icon: ImageIcon, roles: ["manager", "supervisor", "employee"] },
-        { id: "general_ledger", label: "الأستاذ", icon: FileText, roles: ["manager"] },
-      ],
-    },
+        {
+          id: "reports_group",
+          label: "التقارير",
+          icon: PieChart,
+          roles: ["manager", "supervisor", "employee"],
+          subItems: [
+            { id: "analytics", label: "التحليلات", roles: ["manager"] },
+            { id: "archive", label: "الأرشيف", roles: ["manager"] },
+            { id: "gallery", label: "المعرض", roles: ["manager", "supervisor", "employee"] },
+          ]
+        }
+      ]
+    }
   ];
 
   const isTabAllowed = (tabId: string) => {
@@ -350,12 +403,12 @@ function AppContent() {
 
   useEffect(() => {
     if (profile) {
-      if (activeTab === "dashboard" && profile.role === "sales_rep") {
-        setActiveTab("sales_rep_dashboard");
+      if ((activeTab === "dashboard" || activeTab === "sales_rep_dashboard") && profile.role === "sales_rep") {
+        setActiveTab("rep_dashboard");
         return;
       }
       if (!isTabAllowed(activeTab)) {
-        setActiveTab(profile.role === "sales_rep" ? "sales_rep_dashboard" : "dashboard");
+        setActiveTab(profile.role === "sales_rep" ? "rep_dashboard" : "dashboard");
         toast.error("ليس لديك صلاحية الوصول لهذه الصفحة");
       }
     }
@@ -805,7 +858,7 @@ function AppContent() {
               <Menu className="w-6 h-6" />
             </Button>
             <div
-              onClick={() => setActiveTab(profile?.role === "sales_rep" ? "sales_rep_dashboard" : "dashboard")}
+              onClick={() => setActiveTab(profile?.role === "sales_rep" ? "rep_dashboard" : "dashboard")}
               className="flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
             >
               <img
@@ -893,7 +946,7 @@ function AppContent() {
             >
               <div className="flex items-center justify-between">
                 <div 
-                  onClick={() => setActiveTab(profile?.role === "sales_rep" ? "sales_rep_dashboard" : "dashboard")}
+                  onClick={() => setActiveTab(profile?.role === "sales_rep" ? "rep_dashboard" : "dashboard")}
                   className="flex items-center gap-3 min-w-0 cursor-pointer active:scale-95 transition-all"
                   title="الذهاب للوحة الرئيسية"
                 >
@@ -1138,102 +1191,95 @@ function AppContent() {
               className="bg-red-500 text-white text-[10px] font-black py-1 px-4 flex items-center justify-center gap-2 z-[60] shrink-0"
             >
               <Zap className="w-3 h-3 animate-pulse" />
-              <span>أنت تعمل الآن في وضع المتصل (أوفلاين) - قد لا تظهر بعض البيانات المحدثة</span>
+              <span>أنت تعمل الآن في وضع أوفلاين - قد لا تظهر بعض البيانات المحدثة</span>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Header (Desktop) */}
-        <header className="hidden lg:flex h-[72px] bg-white border-b border-border items-center justify-between px-8 shrink-0">
-          <div className="flex items-center gap-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-slate-400 hover:text-primary transition-colors"
+        {/* ══ DESKTOP HEADER ══ */}
+        <header className="hidden lg:flex h-14 bg-white border-b border-slate-100 items-center justify-between px-5 shrink-0" dir="rtl">
+
+          {/* يمين = زر القائمة + الترحيب (جانب الشريط الجانبي) */}
+          <div className="flex items-center gap-3">
+            <button
               onClick={handleSidebarCollapseToggle}
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors text-slate-500"
             >
-              <Menu className="w-6 h-6" />
-            </Button>
-            <div className="flex flex-col">
-              {sysSettings.showWelcomeMessage && sysSettings.generalAnnouncement && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <div className="mb-0.5 animate-in fade-in slide-in-from-right-4 duration-1000 delay-500 cursor-pointer hover:opacity-90 transition-opacity">
-                      <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2.5 py-0.5 rounded-md border border-slate-200">
-                        <Volume2 className="w-3 h-3 text-slate-400 shrink-0" />
-                        <span className="text-[10px] font-bold text-slate-700 leading-none max-w-[250px] truncate block">
-                          {sysSettings.generalAnnouncement}
-                        </span>
-                      </div>
-                    </div>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px] rounded-xl p-5 border border-slate-200 bg-white" dir="rtl">
-                     <DialogHeader>
-                       <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-                         <Volume2 className="w-4 h-4 text-slate-600" />
-                         الرسالة العامة والتوجه الإداري
-                       </DialogTitle>
-                     </DialogHeader>
-                     <div className="mt-3.5 p-4 bg-slate-50 rounded-lg border border-slate-200 flex items-start gap-3.5">
-                       <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 border border-slate-200">
-                         <Bell className="w-4 h-4 text-slate-700" />
-                       </div>
-                       <p className="text-slate-700 font-medium leading-relaxed text-xs">
-                         {sysSettings.generalAnnouncement}
-                       </p>
-                     </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-              <div className="font-bold text-lg text-primary tracking-tight">
-                مرحباً،{" "}
-                <span className="text-slate-900">{profile?.role === "manager" ? "مدير النظام" : profile?.name}</span>
-              </div>
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <p className="text-[10px] text-slate-400 font-semibold leading-none mb-0.5">مرحباً</p>
+              <p className="text-sm font-black text-slate-900 leading-none">
+                {profile?.role === "manager" ? "مدير النظام" : profile?.name}
+              </p>
             </div>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative hover:bg-slate-50 transition-colors"
+          </div>
+
+          {/* يسار = الإعلان + الجرس + البروفايل */}
+          <div className="flex items-center gap-3">
+
+            {/* الإعلان */}
+            {sysSettings.generalAnnouncement && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-2.5 py-1.5 text-[10px] font-bold max-w-[200px] hover:bg-amber-100 transition">
+                    <Volume2 className="w-3 h-3 text-amber-500 shrink-0" />
+                    <span className="truncate">{sysSettings.generalAnnouncement}</span>
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-sm rounded-2xl" dir="rtl">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-sm font-black">
+                      <Bell className="w-4 h-4 text-amber-500" /> إعلان الإدارة
+                    </DialogTitle>
+                  </DialogHeader>
+                  <p className="text-sm text-slate-700 leading-relaxed bg-amber-50 rounded-xl p-4 border border-amber-100">
+                    {sysSettings.generalAnnouncement}
+                  </p>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {/* الجرس */}
+            <button
+              className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors"
               onClick={() => setActiveTab("notifications")}
             >
-              <Bell className="w-5 h-5 text-slate-400 group-hover:text-primary" />
+              <Bell className="w-5 h-5 text-slate-500" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full ring-2 ring-white">
-                  {unreadCount}
+                <span className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full ring-2 ring-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
-            </Button>
-          </div>
-          <div
-            onClick={() => setActiveTab(profile?.role === "sales_rep" ? "sales_rep_profile" : "profile")}
-            className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 px-4 py-2 rounded-2xl transition-all group active:scale-95"
-          >
-            <div className="text-left">
-              <div className="text-sm font-black text-primary leading-tight group-hover:text-accent">
-                {profile?.name}
+            </button>
+
+            <div className="w-px h-6 bg-slate-200" />
+
+            {/* البروفايل */}
+            <div
+              onClick={() => setActiveTab(profile?.role === "sales_rep" ? "sales_rep_profile" : "profile")}
+              className="flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 px-3 py-1.5 rounded-xl transition-all group active:scale-95"
+            >
+              <div className="text-right">
+                <p className="text-sm font-black text-slate-800 leading-tight">{profile?.name}</p>
+                <p className="text-[10px] text-slate-400 font-bold">
+                  {profile?.role === "manager" ? "مدير عام" :
+                   profile?.role === "supervisor" ? "مشرف" :
+                   profile?.role === "sales_rep" ? "مندوب مبيعات" : "موظف"}
+                </p>
               </div>
-              <div className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">
-                {profile?.role === "manager"
-                  ? "مدير عام المؤسسة"
-                  : profile?.role === "sales_rep"
-                  ? "مندوب مبيعات"
-                  : "عضو الفريق"}
+              <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-sm group-hover:bg-primary group-hover:text-white transition-all shrink-0">
+                {(profile?.name?.[0] || user?.displayName?.[0] || "U").toUpperCase()}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center text-primary font-black group-hover:bg-primary group-hover:text-white transition-all overflow-hidden">
-              {(
-                profile?.name?.[0] ||
-                user?.displayName?.[0] ||
-                "U"
-              ).toUpperCase()}
-            </div>
+
           </div>
+
         </header>
 
         <main className="flex-1 overflow-auto bg-background pb-28 lg:pb-8">
           <GlobalNotificationListener />
-          <div className="p-2 md:p-8 max-w-7xl mx-auto">
+            <div className="p-2 md:p-5">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -1256,7 +1302,7 @@ function AppContent() {
                 {activeTab === "sales_rep_profile" && (
                   <SalesRepProfile
                     salesRepId={user.uid}
-                    onBack={() => setActiveTab("sales_rep_dashboard")}
+                    onBack={() => setActiveTab("rep_dashboard")}
                   />
                 )}
                 {/* Finance Group */}
@@ -1266,8 +1312,33 @@ function AppContent() {
                 {activeTab === "archive" && <Archive />}
                 {activeTab === "gallery" && <Gallery />}
                 {activeTab === "sales" && <Sales />}
-                {activeTab === "sales_reps" && <SalesRepsManagement />}
-                {activeTab === "sales_rep_dashboard" && <SalesRepDashboard />}
+                {activeTab === "sales_reps" && (
+                  <>
+                    {!selectedSalesRepId ? (
+                      <SalesRepsManagement onSelectRep={setSelectedSalesRepId} />
+                    ) : (
+                      <SalesRepProfile
+                        salesRepId={selectedSalesRepId}
+                        onBack={() => setSelectedSalesRepId(null)}
+                      />
+                    )}
+                  </>
+                )}
+                {activeTab === "rep_dashboard" && (
+                  <SalesRepDashboard subPage="dashboard" onNavigate={setActiveTab} />
+                )}
+                {activeTab === "rep_smart_bot" && (
+                  <SalesRepDashboard subPage="bot" onNavigate={setActiveTab} />
+                )}
+                {activeTab === "rep_documents" && (
+                  <SalesRepDashboard subPage="documents" onNavigate={setActiveTab} />
+                )}
+                {activeTab === "rep_statement" && (
+                  <SalesRepDashboard subPage="statement" onNavigate={setActiveTab} />
+                )}
+                {activeTab === "private_jobs_page" && (
+                  <PrivateJobsWorkspace onNavigate={setActiveTab} />
+                )}
                 {activeTab === "subcontractors" && <Subcontractors />}
                 
                 {/* Purchases Group */}
@@ -1299,8 +1370,8 @@ function AppContent() {
                 {activeTab === "evaluation" && <PerformanceEvaluation />}
                 {activeTab === "notifications" && <Notifications />}
                 {activeTab === "camera" && <CameraCapture />}
-                {activeTab === "briefing" && <ExecutiveBriefingSystem />}
-                {activeTab === "general_ledger" && <Analytics onBack={() => setActiveTab("dashboard")} />}
+                {activeTab === "briefing" && <ExecutiveBriefingSystem goToTab={setActiveTab} />}
+                {activeTab === "general_ledger" && <GeneralLedger />}
                 {activeTab === "attendance_manager" && <AttendanceManager />}
                 {activeTab === "settings" && <SystemSettings />}
               </motion.div>

@@ -1,5 +1,5 @@
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 
 export type NotificationType = 'success' | 'warning' | 'info' | 'error' | 'approval' | 'financial' | 'project' | 'inventory' | 'system' | 'hr';
 
@@ -28,6 +28,7 @@ export interface AppNotification {
   timestamp: any;
   priority?: 'low' | 'medium' | 'high';
   actions?: NotificationAction[];
+  createdBy?: string;
 }
 
 export const sendNotification = async (notif: Omit<AppNotification, 'timestamp' | 'read'>): Promise<void> => {
@@ -36,15 +37,9 @@ export const sendNotification = async (notif: Omit<AppNotification, 'timestamp' 
       ...notif,
       read: false,
       timestamp: serverTimestamp(),
-      priority: notif.priority || 'medium'
+      priority: notif.priority || 'medium',
+      createdBy: notif.createdBy || auth.currentUser?.uid || 'system'
     });
-    
-    // Dispatch a local event for immediate feedback if sound is needed
-    if (notif.priority === 'high') {
-      window.dispatchEvent(new CustomEvent('newHighPriorityNotification', { 
-        detail: { title: notif.title, message: notif.message } 
-      }));
-    }
   } catch (error) {
     console.error("Failed to send notification:", error);
   }

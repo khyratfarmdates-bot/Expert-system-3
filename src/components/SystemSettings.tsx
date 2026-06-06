@@ -69,6 +69,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import CompanyProfile from './CompanyProfile';
+import GeminiKeyCard from './GeminiKeyCard';
 
 export default function SystemSettings() {
   const { user, profile } = useAuth();
@@ -952,31 +953,12 @@ export default function SystemSettings() {
                       </Card>
 
                       {/* API credentials */}
-                      <Card className="rounded-[2.5rem] border-none bg-slate-50/50 shadow-sm p-6 space-y-4">
-                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                          <Sparkles className="w-5 h-5 text-amber-500" />
-                          مفتاح Gemini API للذكاء الاصطناعي
-                        </h3>
-                        <p className="text-xs font-bold text-slate-400">المفتاح المعتمد بالمنصة لمعالجة صور الفواتير والتنبؤ بالتكلفة وكتابة العروض الفنية</p>
-                        
-                        <div className="relative">
-                          <Input
-                            type={showGeminiKey ? 'text' : 'password'}
-                            placeholder="أدخل مفتاح ربط Gemini API (مثال: AIzaSy...)"
-                            value={settings.geminiApiKey || ''}
-                            onChange={e => setSettings({...settings, geminiApiKey: e.target.value})}
-                            className="h-12 rounded-xl text-left font-mono pr-4 pl-12 bg-white border-slate-200 focus:ring-primary/20"
-                            dir="ltr"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowGeminiKey(!showGeminiKey)}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all"
-                          >
-                            {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </Card>
+                      <GeminiKeyCard
+                        value={settings.geminiApiKey || ''}
+                        onChange={(v) => setSettings({...settings, geminiApiKey: v})}
+                        showKey={showGeminiKey}
+                        onToggleShow={() => setShowGeminiKey(!showGeminiKey)}
+                      />
 
                       {/* Briefing settings */}
                       <Card className="rounded-[2.5rem] border-none bg-slate-50/50 shadow-sm p-6 space-y-4">

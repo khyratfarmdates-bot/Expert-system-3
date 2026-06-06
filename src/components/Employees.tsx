@@ -133,9 +133,12 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
                      imageType === 'license' ? formData.drivingLicensePhotoURL :
                      formData.passportPhotoURL;
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!imageData || !apiKey || apiKey === 'undefined' || apiKey === 'MY_GEMINI_API_KEY') {
+    const apiKey = import.meta.env?.VITE_GEMINI_API_KEY ||
+                   (typeof localStorage !== 'undefined' ? localStorage.getItem('VITE_GEMINI_API_KEY') : '') ||
+                   (typeof window !== 'undefined' ? (window as any).VITE_GEMINI_API_KEY : '') || '';
+    if (!imageData || !apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
       if (!imageData) toast.error('يرجى رفع الصورة أولاً لمسحها');
+      else toast.error('مفتاح الذكاء الاصطناعي غير مُفعّل — أضفه من الإعدادات');
       return;
     }
 

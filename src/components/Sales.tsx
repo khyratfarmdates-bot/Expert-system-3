@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import SmartOfferBot from "./SmartOfferBot";
+import AIQuotationBuilder from "./AIQuotationBuilder";
 import AliphiaStatusCard from "./AliphiaStatusCard";
 import AliphiaClientSelector, { AliphiaClient } from "./AliphiaClientSelector";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -34,7 +35,9 @@ import {
   fetchAliphiaInvoices, 
   fetchAliphiaQuotations, 
   fetchAliphiaClients, 
-  createAliphiaDocument 
+  createAliphiaDocument,
+  fetchAliphiaInvoiceDetails,
+  fetchAliphiaQuotationDetails
 } from "../lib/aliphia";
 
 export default function Sales() {
@@ -79,6 +82,39 @@ export default function Sales() {
 
   // Quote Conversion state
   const [isConvertingQuote, setIsConvertingQuote] = useState<string | null>(null);
+
+  // Aliphia details state
+  const [selectedAliphiaDoc, setSelectedAliphiaDoc] = useState<any | null>(null);
+  const [aliphiaDocDetails, setAliphiaDocDetails] = useState<any | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [detailDocType, setDetailDocType] = useState<'invoice' | 'quote'>('invoice');
+
+  const handleOpenDocDetails = async (doc: any, type: 'invoice' | 'quote') => {
+    setSelectedAliphiaDoc(doc);
+    setDetailDocType(type);
+    setLoadingDetails(true);
+    setAliphiaDocDetails(null);
+    try {
+      const docId = doc.id || doc.invoice_id || doc.quote_id;
+      if (!docId) {
+        throw new Error("معرّف المستند غير موجود");
+      }
+      
+      let details;
+      if (type === 'invoice') {
+        details = await fetchAliphiaInvoiceDetails(docId);
+      } else {
+        details = await fetchAliphiaQuotationDetails(docId);
+      }
+      setAliphiaDocDetails(details);
+    } catch (err: any) {
+      console.error("Error fetching doc details:", err);
+      toast.error(err.message || "فشل جلب تفاصيل المستند من ألف ياء");
+      setSelectedAliphiaDoc(null);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   // Aliphia Creator States
   const [docType, setDocType] = useState<'invoice' | 'quotation'>('invoice');
@@ -1360,8 +1396,21 @@ export default function Sales() {
       </TabsContent>
 
       {/* AI PRICING / QUOTATION BUILDER */}
-      <TabsContent value="ai_pricing" className="space-y-6">
-         <SmartOfferBot />
+      <TabsContent value="ai_pricing" className="space-y-6 animate-in fade-in duration-300">
+        <Tabs defaultValue="offer_bot" className="w-full space-y-4">
+          <div className="flex justify-start">
+            <TabsList className="bg-slate-100/80 p-1 rounded-xl border border-slate-200/50">
+              <TabsTrigger value="offer_bot" className="rounded-lg px-4 py-2 text-xs font-black">المساعد الذكي للتسعير 🤖</TabsTrigger>
+              <TabsTrigger value="doc_builder" className="rounded-lg px-4 py-2 text-xs font-black">باني الوثائق والمسح بـ AI 📄</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="offer_bot" className="space-y-4">
+            <SmartOfferBot />
+          </TabsContent>
+          <TabsContent value="doc_builder" className="space-y-4">
+            <AIQuotationBuilder type="quotation" />
+          </TabsContent>
+        </Tabs>
       </TabsContent>
 
       {/* ALIPHIA INTELLIGENT MANAGEMENT DASHBOARD */}
@@ -1486,7 +1535,11 @@ export default function Sales() {
                       {filteredInvoices.map((inv, index) => {
                         const statusUI = getInvoiceStatusLabel(inv.invoice_status_id || inv.status);
                         return (
-                          <tr key={inv.id || inv.invoice_id || index} className="hover:bg-slate-50/50 transition-colors">
+                           <tr 
+                            key={inv.id || inv.invoice_id || index} 
+                            onClick={() => handleOpenDocDetails(inv, 'invoice')}
+                            className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                          >
                             <td className="py-3.5 pr-2 font-mono font-black text-slate-800">{inv.invoice_number || inv.number || `INV-${inv.invoice_id}`}</td>
                             <td className="py-3.5 text-slate-800">{inv.client_name || inv.client || 'عميل غير معروف'}</td>
                             <td className="py-3.5 font-mono text-xs">{inv.invoice_date_created || inv.date || inv.invoice_date || '—'}</td>
@@ -1497,7 +1550,7 @@ export default function Sales() {
                                 {statusUI.label}
                               </span>
                             </td>
-                            <td className="py-3.5 text-center">
+                            <td className="py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                               <div className="inline-flex gap-1.5">
                                 {inv.pdf_url && (
                                   <Button
@@ -1570,7 +1623,11 @@ export default function Sales() {
                         const statusUI = getQuoteStatusLabel(quote.quote_status_id || quote.status);
                         const isConverting = isConvertingQuote === (quote.id || quote.quote_id);
                         return (
-                          <tr key={quote.id || quote.quote_id || index} className="hover:bg-slate-50/50 transition-colors">
+                           <tr 
+                            key={quote.id || quote.quote_id || index} 
+                            onClick={() => handleOpenDocDetails(quote, 'quote')}
+                            className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                          >
                             <td className="py-3.5 pr-2 font-mono font-black text-slate-800">{quote.quote_number || quote.number || `Q-${quote.id || quote.quote_id}`}</td>
                             <td className="py-3.5 text-slate-800">{quote.client_name || quote.client || 'عميل غير معروف'}</td>
                             <td className="py-3.5 font-mono text-xs">{quote.quote_date_created || quote.date || '—'}</td>
@@ -1581,7 +1638,7 @@ export default function Sales() {
                                 {statusUI.label}
                               </span>
                             </td>
-                            <td className="py-3.5 text-center">
+                            <td className="py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                               <div className="inline-flex gap-1.5">
                                 <Button
                                   size="sm"
@@ -1909,6 +1966,222 @@ export default function Sales() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* ALIPHIA DOCUMENT DETAILS DIALOG */}
+      {selectedAliphiaDoc && (
+        <Dialog open={!!selectedAliphiaDoc} onOpenChange={(open) => { if (!open) setSelectedAliphiaDoc(null); }}>
+          <DialogContent className="max-w-3xl rounded-[28px] p-6 text-right overflow-y-auto max-h-[90vh] border-none shadow-2xl bg-white/95 backdrop-blur-xl" dir="rtl">
+            <DialogHeader className="border-b border-slate-100 pb-4 mb-4">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
+                  {detailDocType === 'invoice' ? (
+                    <ReceiptText className="w-5 h-5 text-emerald-600" />
+                  ) : (
+                    <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+                  )}
+                  <span>{detailDocType === 'invoice' ? 'تفاصيل فاتورة مبيعات' : 'تفاصيل عرض سعر'}</span>
+                  <span className="font-mono text-slate-400 mr-2">
+                    #{aliphiaDocDetails?.invoice_number || aliphiaDocDetails?.quote_number || selectedAliphiaDoc?.invoice_number || selectedAliphiaDoc?.quote_number || selectedAliphiaDoc?.number || selectedAliphiaDoc?.id}
+                  </span>
+                </DialogTitle>
+                
+                {/* Status Badge */}
+                {(() => {
+                  const statusUI = detailDocType === 'invoice'
+                    ? getInvoiceStatusLabel(aliphiaDocDetails?.invoice_status_id || selectedAliphiaDoc?.invoice_status_id || selectedAliphiaDoc?.status)
+                    : getQuoteStatusLabel(aliphiaDocDetails?.quote_status_id || selectedAliphiaDoc?.quote_status_id || selectedAliphiaDoc?.status);
+                  return (
+                    <span className={`px-3 py-1 rounded-full text-xs font-black border ${statusUI.color}`}>
+                      {statusUI.label}
+                    </span>
+                  );
+                })()}
+              </div>
+              <DialogDescription className="font-bold text-slate-400 text-xs mt-1">
+                تفاصيل المستند المسجلة والمزامنة مع منصة ألف ياء للربط المحاسبي.
+              </DialogDescription>
+            </DialogHeader>
+
+            {loadingDetails ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Loader2 className="w-10 h-10 animate-spin text-emerald-600" />
+                <span className="text-sm font-bold text-slate-400">جاري جلب البنود والتفاصيل من ألف ياء...</span>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Info Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                  <div>
+                    <span className="text-xs text-slate-400 block mb-1">العميل</span>
+                    <span className="text-sm font-black text-slate-800">
+                      {aliphiaDocDetails?.client_name || selectedAliphiaDoc?.client_name || selectedAliphiaDoc?.client || 'عميل غير معروف'}
+                    </span>
+                    {(aliphiaDocDetails?.client_phone || aliphiaDocDetails?.client_email) && (
+                      <span className="text-xs text-slate-500 block mt-1 font-mono">
+                        {aliphiaDocDetails.client_phone} {aliphiaDocDetails.client_email && ` | ${aliphiaDocDetails.client_email}`}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-400 block mb-1">تاريخ الإصدار</span>
+                    <span className="text-sm font-bold text-slate-700 font-mono">
+                      {aliphiaDocDetails?.invoice_date_created || aliphiaDocDetails?.quote_date_created || selectedAliphiaDoc?.invoice_date_created || selectedAliphiaDoc?.quote_date_created || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-400 block mb-1">
+                      {detailDocType === 'invoice' ? 'تاريخ الاستحقاق' : 'صلاحية العرض'}
+                    </span>
+                    <span className="text-sm font-bold text-slate-700 font-mono">
+                      {aliphiaDocDetails?.invoice_date_due || aliphiaDocDetails?.quote_date_expires || selectedAliphiaDoc?.invoice_date_due || selectedAliphiaDoc?.quote_date_expires || '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Items Table */}
+                <div>
+                  <h4 className="text-xs font-black text-slate-800 mb-3 flex items-center gap-1.5">
+                    <ReceiptText className="w-4 h-4 text-slate-400" />
+                    <span>بنود المستند التفصيلية</span>
+                  </h4>
+                  <div className="border border-slate-100 rounded-2xl overflow-hidden">
+                    <table className="w-full text-right border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/50 text-xs font-black text-slate-400 border-b border-slate-100">
+                          <th className="py-3 px-4">البند</th>
+                          <th className="py-3 px-4">الوصف</th>
+                          <th className="py-3 px-4 text-center">الكمية</th>
+                          <th className="py-3 px-4 text-left">سعر الوحدة</th>
+                          <th className="py-3 px-4 text-left">المجموع</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-sm font-bold text-slate-700">
+                        {(() => {
+                          const items = aliphiaDocDetails?.invoice_items || aliphiaDocDetails?.quote_items || aliphiaDocDetails?.items || [];
+                          if (items.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={5} className="py-8 text-center text-slate-400 text-xs font-bold">
+                                  لا توجد بنود مسجلة لهذا المستند
+                                </td>
+                              </tr>
+                            );
+                          }
+                          return items.map((item: any, idx: number) => {
+                            const qty = parseFloat(item.item_quantity || item.quantity || 1);
+                            const price = parseFloat(item.item_price || item.price || 0);
+                            const total = parseFloat(item.item_total || item.total || (qty * price));
+                            return (
+                              <tr key={item.item_id || idx} className="hover:bg-slate-50/35 transition-colors">
+                                <td className="py-3.5 px-4 font-black text-slate-800">{item.item_name || item.name}</td>
+                                <td className="py-3.5 px-4 text-slate-500 text-xs max-w-[200px] truncate">
+                                  {item.item_description || item.description || '—'}
+                                </td>
+                                <td className="py-3.5 px-4 text-center font-mono">{qty}</td>
+                                <td className="py-3.5 px-4 text-left font-mono">{price.toLocaleString()} ر.س</td>
+                                <td className="py-3.5 px-4 text-left font-black text-slate-900 font-mono">
+                                  {total.toLocaleString()} ر.س
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Totals Section */}
+                <div className="flex justify-end">
+                  <div className="w-full md:w-80 bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2.5 text-xs font-bold text-slate-600">
+                    <div className="flex justify-between">
+                      <span>المجموع الفرعي:</span>
+                      <span className="font-mono text-slate-800">
+                        {parseFloat(aliphiaDocDetails?.invoice_subtotal || aliphiaDocDetails?.quote_subtotal || aliphiaDocDetails?.subtotal || 0).toLocaleString()} ر.س
+                      </span>
+                    </div>
+                    
+                    {parseFloat(aliphiaDocDetails?.invoice_discount_amount || aliphiaDocDetails?.quote_discount_amount || aliphiaDocDetails?.discount || 0) > 0 && (
+                      <div className="flex justify-between text-rose-600">
+                        <span>الخصم:</span>
+                        <span className="font-mono">
+                          -{parseFloat(aliphiaDocDetails?.invoice_discount_amount || aliphiaDocDetails?.quote_discount_amount || aliphiaDocDetails?.discount || 0).toLocaleString()} ر.س
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between">
+                      <span>الضريبة (15%):</span>
+                      <span className="font-mono text-slate-800">
+                        {parseFloat(aliphiaDocDetails?.invoice_total_tax || aliphiaDocDetails?.quote_total_tax || aliphiaDocDetails?.tax || 0).toLocaleString()} ر.س
+                      </span>
+                    </div>
+
+                    <div className="border-t border-slate-200/80 my-2 pt-2.5 flex justify-between text-sm font-black text-slate-900">
+                      <span>المجموع الكلي:</span>
+                      <span className="font-mono text-emerald-600 text-lg">
+                        {parseFloat(aliphiaDocDetails?.invoice_total || aliphiaDocDetails?.quote_total || aliphiaDocDetails?.total || 0).toLocaleString()} ر.س
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes & Terms */}
+                {(aliphiaDocDetails?.notes || aliphiaDocDetails?.terms) && (
+                  <div className="space-y-3 pt-6 border-t border-slate-100">
+                    {aliphiaDocDetails?.notes && (
+                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                        <span className="text-xs font-black text-slate-500 block mb-1">ملاحظات المستند</span>
+                        <p className="text-xs text-slate-700 leading-relaxed">{aliphiaDocDetails.notes}</p>
+                      </div>
+                    )}
+                    {aliphiaDocDetails?.terms && (
+                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                        <span className="text-xs font-black text-slate-500 block mb-1">الشروط والأحكام</span>
+                        <p className="text-xs text-slate-700 leading-relaxed">{aliphiaDocDetails.terms}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-6 border-t border-slate-100 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedAliphiaDoc(null)}
+                className="rounded-xl font-bold text-xs h-11 border-slate-200 hover:bg-slate-50 cursor-pointer sm:order-first"
+              >
+                إغلاق
+              </Button>
+              
+              <div className="flex flex-1 gap-2 w-full sm:w-auto">
+                {(aliphiaDocDetails?.pdf_url || selectedAliphiaDoc?.pdf_url) && (
+                  <Button
+                    onClick={() => window.open(aliphiaDocDetails?.pdf_url || selectedAliphiaDoc?.pdf_url, '_blank')}
+                    className="flex-1 rounded-xl font-black text-xs h-11 bg-slate-900 text-white hover:bg-black transition-all gap-1.5 cursor-pointer"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    عرض ملف PDF
+                  </Button>
+                )}
+                <Button
+                  onClick={() => {
+                    setShareDoc(aliphiaDocDetails || selectedAliphiaDoc);
+                    setShareType(detailDocType);
+                    setShareOpen(true);
+                  }}
+                  className="flex-1 rounded-xl font-black text-xs h-11 bg-emerald-600 text-white hover:bg-emerald-700 transition-all gap-1.5 cursor-pointer"
+                >
+                  <Share2 className="w-4 h-4" />
+                  مشاركة عبر واتساب
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       <ShareDialog open={shareOpen} onOpenChange={setShareOpen} doc={shareDoc} type={shareType} />
     </Tabs>
   );

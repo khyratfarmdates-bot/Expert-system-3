@@ -20,7 +20,8 @@ import {
   FileDown,
   XCircle,
   Clock,
-  FileText
+  FileText,
+  Briefcase
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, collection, query, where, onSnapshot, addDoc, Timestamp } from 'firebase/firestore';
@@ -38,6 +39,7 @@ export default function SalesRepProfile({ salesRepId, onBack }: { salesRepId: st
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [repTransactions, setRepTransactions] = useState<Transaction[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [privateJobs, setPrivateJobs] = useState<any[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('docs');
@@ -112,11 +114,24 @@ export default function SalesRepProfile({ salesRepId, onBack }: { salesRepId: st
       setBankAccounts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BankAccount)));
     });
 
+    // Fetch representative private projects
+    const qPrivate = query(collection(db, 'rep_private_jobs'), where('salesRepId', '==', salesRepId));
+    const unsubPrivate = onSnapshot(qPrivate, (snap) => {
+      const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      items.sort((a, b) => {
+        const dateA = a.createdAt?.seconds || a.createdAt?.toDate?.()?.getTime() || 0;
+        const dateB = b.createdAt?.seconds || b.createdAt?.toDate?.()?.getTime() || 0;
+        return dateB - dateA;
+      });
+      setPrivateJobs(items);
+    });
+
     return () => {
       unsubQuotes();
       unsubInvoices();
       unsubTx();
       unsubAccounts();
+      unsubPrivate();
     };
   }, [salesRepId]);
 
@@ -265,14 +280,16 @@ export default function SalesRepProfile({ salesRepId, onBack }: { salesRepId: st
           </div>
 
           {/* Action to Record Payout */}
-          <div className="shrink-0">
-            <Button 
-              onClick={() => setIsPayoutOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-white rounded-2xl font-black gap-2 h-11 px-5 shadow-sm text-xs"
-            >
-              <Plus className="w-4 h-4" /> تسجيل دفعة مالية للمندوب
-            </Button>
-          </div>
+          {profile?.role === 'manager' && (
+            <div className="shrink-0">
+              <Button 
+                onClick={() => setIsPayoutOpen(true)}
+                className="bg-primary hover:bg-primary/90 text-white rounded-2xl font-black gap-2 h-11 px-5 shadow-sm text-xs"
+              >
+                <Plus className="w-4 h-4" /> تسجيل دفعة مالية للمندوب
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -321,12 +338,15 @@ export default function SalesRepProfile({ salesRepId, onBack }: { salesRepId: st
 
       {/* Tabs list */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full bg-white shadow-sm border border-slate-100 p-1 rounded-2xl grid grid-cols-2 mb-6">
+        <TabsList className="w-full bg-white shadow-sm border border-slate-100 p-1 rounded-2xl grid grid-cols-3 mb-6">
           <TabsTrigger value="docs" className="rounded-xl font-bold py-2.5 data-[state=active]:bg-primary data-[state=active]:text-white gap-2 flex items-center justify-center text-xs">
             <Receipt className="w-4 h-4" /> المستندات والوثائق المعتمدة ({approvedDocs.length})
           </TabsTrigger>
           <TabsTrigger value="payouts" className="rounded-xl font-bold py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white gap-2 flex items-center justify-center text-xs">
             <Landmark className="w-4 h-4" /> كشف الحساب والدفعات ({approvedPayouts.length})
+          </TabsTrigger>
+          <TabsTrigger value="private_jobs" className="rounded-xl font-bold py-2.5 data-[state=active]:bg-amber-600 data-[state=active]:text-white gap-2 flex items-center justify-center text-xs">
+            <Briefcase className="w-4 h-4" /> أعمال المقاولات الخاصة ({privateJobs.length})
           </TabsTrigger>
         </TabsList>
 
@@ -448,6 +468,160 @@ export default function SalesRepProfile({ salesRepId, onBack }: { salesRepId: st
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Private Jobs Tab (Manager Auditing) */}
+        <TabsContent value="private_jobs">
+          <Card className="rounded-3xl shadow-sm border-border bg-white">
+            <CardHeader className="pb-3 border-b border-slate-50">
+              <CardTitle className="text-base font-black flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-amber-600" />
+                أعمال ومشاريع المقاولات الخاصة للمندوب (مراقبة وتدقيق)
+              </CardTitle>
+              <p className="text-xs text-slate-400 mt-1">تتبع كافة أنشطة المندوب الخاصة للتأكد من توافقها وعدم وجود تعارض مصالح وتحصيل عمولة الـ 15% للمشاريع المشتركة.</p>
+            </CardHeader>
+            <CardContent className="p-6">
+
+              {/* Stats Grid for Manager */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-slate-50 border p-4 rounded-2xl">
+                  <p className="text-[10px] font-bold text-slate-500">إجمالي العقود الخاصة للمندوب</p>
+                  <h4 className="text-lg font-black text-slate-800 mt-1">
+                    {privateJobs.reduce((sum, j) => sum + (j.contractAmount || 0), 0).toLocaleString('ar-SA')} <span className="text-xs font-normal">ر.س</span>
+                  </h4>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl">
+                  <p className="text-[10px] font-bold text-amber-700">عمولة المؤسسة المستحقة (15%)</p>
+                  <h4 className="text-lg font-black text-amber-900 mt-1">
+                    {privateJobs.reduce((sum, j) => {
+                      return sum + (j.projectType === 'company' ? (j.contractAmount || 0) * 0.15 : 0);
+                    }, 0).toLocaleString('ar-SA')} <span className="text-xs font-normal">ر.س</span>
+                  </h4>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl">
+                  <p className="text-[10px] font-bold text-emerald-700">المحصل للمندوب (كاش/تحويلات)</p>
+                  <h4 className="text-lg font-black text-emerald-900 mt-1">
+                    {privateJobs.reduce((sum, j) => {
+                      const txs = j.transactions || [];
+                      return sum + txs.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + (t.amount || 0), 0);
+                    }, 0).toLocaleString('ar-SA')} <span className="text-xs font-normal">ر.س</span>
+                  </h4>
+                </div>
+                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl">
+                  <p className="text-[10px] font-bold text-rose-700">مصاريف المندوب (مواد وعمال)</p>
+                  <h4 className="text-lg font-black text-rose-900 mt-1">
+                    {privateJobs.reduce((sum, j) => {
+                      const txs = j.transactions || [];
+                      return sum + txs.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + (t.amount || 0), 0);
+                    }, 0).toLocaleString('ar-SA')} <span className="text-xs font-normal">ر.س</span>
+                  </h4>
+                </div>
+              </div>
+
+              {privateJobs.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 font-bold text-sm">لا توجد أي مشاريع مقاولات خاصة مسجلة لهذا المندوب بعد.</div>
+              ) : (
+                <div className="space-y-4">
+                  {privateJobs.map((job) => {
+                    const txs = job.transactions || [];
+                    const jobIncome = txs.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + (t.amount || 0), 0);
+                    const jobExpense = txs.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + (t.amount || 0), 0);
+                    const comm = job.projectType === 'company' ? (job.contractAmount || 0) * 0.15 : 0;
+                    const jobProfit = jobIncome - jobExpense - comm;
+
+                    return (
+                      <div key={job.id} className="p-4 bg-slate-50 hover:bg-slate-100/50 rounded-2xl border border-slate-100 transition-all space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-black text-slate-800 text-sm">{job.projectTitle}</h4>
+                              {job.projectType === 'company' ? (
+                                <Badge className="bg-blue-50 text-blue-700 border border-blue-100 font-bold text-[9px] shadow-none">عبر المؤسسة 15%</Badge>
+                              ) : (
+                                <Badge className="bg-slate-100 text-slate-600 font-bold text-[9px] shadow-none">خارجي 0%</Badge>
+                              )}
+                              <Badge className={`border-none shadow-none font-bold text-[9px] ${
+                                job.status === 'completed' 
+                                  ? 'bg-emerald-50 text-emerald-700' 
+                                  : 'bg-amber-50 text-amber-700'
+                              }`}>
+                                {job.status === 'completed' ? 'مكتمل' : 'نشط'}
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-1">العميل: {job.clientName} {job.clientPhone && `| جوال: ${job.clientPhone}`}</p>
+                            {job.linkedDocNumber && (
+                              <p className="text-[10px] text-slate-400 font-bold mt-0.5">مربوط بالمستند الرسمي: #{job.linkedDocNumber}</p>
+                            )}
+                          </div>
+
+                          <div className="text-right sm:text-left shrink-0">
+                            <span className="text-[10px] text-slate-400 block font-bold">قيمة العقد</span>
+                            <span className="font-black text-primary text-sm">{job.contractAmount?.toLocaleString('ar-SA')} ر.س</span>
+                          </div>
+                        </div>
+
+                        {job.notes && (
+                          <div className="bg-white p-3 rounded-xl border border-slate-100/80 text-[11px] text-slate-600 font-normal">
+                            <strong className="text-slate-700 block mb-1">ملاحظات المشروع:</strong>
+                            {job.notes}
+                          </div>
+                        )}
+
+                        {/* Financial Table for specific project */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-[11px] font-bold bg-white p-3 rounded-xl border border-slate-100">
+                          <div className="border-l border-slate-100 last:border-0">
+                            <span className="text-[9px] text-slate-400 block">عمولة المؤسسة</span>
+                            <span className="text-slate-800">{comm?.toLocaleString('ar-SA')} ر.س</span>
+                          </div>
+                          <div className="border-l border-slate-100 last:border-0">
+                            <span className="text-[9px] text-slate-400 block">المقبوضات المفصح عنها</span>
+                            <span className="text-emerald-600">{jobIncome?.toLocaleString('ar-SA')} ر.س</span>
+                          </div>
+                          <div className="border-l border-slate-100 last:border-0">
+                            <span className="text-[9px] text-slate-400 block">المصاريف والتكاليف</span>
+                            <span className="text-rose-600">{jobExpense?.toLocaleString('ar-SA')} ر.س</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-slate-400 block">صافي أرباح المندوب</span>
+                            <span className={jobProfit >= 0 ? 'text-blue-600' : 'text-rose-600'}>{jobProfit?.toLocaleString('ar-SA')} ر.س</span>
+                          </div>
+                        </div>
+
+                        {/* Project Transactions audit */}
+                        {txs.length > 0 && (
+                          <div className="space-y-1">
+                            <span className="text-[10px] text-slate-400 font-bold block">تفاصيل حركات المشروع المالية:</span>
+                            <div className="bg-white rounded-xl border border-slate-100 overflow-hidden max-h-[120px] overflow-y-auto">
+                              <table className="w-full text-right text-[10px]">
+                                <thead>
+                                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold">
+                                    <th className="p-2">البيان</th>
+                                    <th className="p-2 text-center">التاريخ</th>
+                                    <th className="p-2 text-left">المبلغ</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {txs.map((t: any) => (
+                                    <tr key={t.id} className="border-b border-slate-100 last:border-0">
+                                      <td className="p-2 text-slate-700">{t.description}</td>
+                                      <td className="p-2 text-center text-slate-500">{t.date}</td>
+                                      <td className={`p-2 text-left font-bold ${t.type === 'income' ? 'text-green-600' : 'text-rose-600'}`}>
+                                        {t.type === 'income' ? '+' : '-'}{(t.amount || 0).toLocaleString('ar-SA')} ر.س
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

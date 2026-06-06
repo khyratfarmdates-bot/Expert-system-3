@@ -35,30 +35,14 @@ export default function GlobalNotificationListener() {
 
   const playNotificationSound = (priority: string = 'high') => {
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
-      
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      osc.type = 'sine';
-      const freq = priority === 'critical' ? 880 : 587.33; 
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, ctx.currentTime + 0.12);
-      
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.start();
-      osc.stop(ctx.currentTime + 0.6);
+      const audio = new Audio('/notification.mp3');
+      audio.volume = 0.65; // Balanced, premium volume
+      audio.play().catch(err => console.log('Audio autoplay blocked by browser:', err));
     } catch (e) {
       console.log("Audio play error:", e);
     }
   };
+
 
   useEffect(() => {
     if (!profile) return;
@@ -67,15 +51,6 @@ export default function GlobalNotificationListener() {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
-
-    const handleLocalHighPriority = (e: any) => {
-      playNotificationSound();
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(e.detail.title, { body: e.detail.message });
-      }
-    };
-
-    window.addEventListener('newHighPriorityNotification', handleLocalHighPriority);
 
     // Listen for all notifications to play sound for new ones
     const q = query(
@@ -93,7 +68,11 @@ export default function GlobalNotificationListener() {
         snapshot.docs.forEach(docSnap => {
           const data = docSnap.data();
           const id = docSnap.id;
-          const isTargeted = data.targetRole === 'all' || data.targetRole === profile.role || data.workerId === profile.uid || data.userId === profile.uid;
+          const isTargeted = data.targetRole === 'all' || 
+                             data.targetRole === profile.role || 
+                             data.workerId === profile.uid || 
+                             data.userId === profile.uid ||
+                             data.targetUserId === profile.uid;
           if (isTargeted && ['high', 'critical'].includes(data.priority) && data.requiresAcknowledge && (!data.acknowledgedBy || !data.acknowledgedBy.includes(profile.uid))) {
              setCriticalNotif({ id, ...data });
              setIsModalOpen(true);
@@ -103,13 +82,23 @@ export default function GlobalNotificationListener() {
       }
 
       snapshot.docChanges().forEach((change) => {
+        // Skip local optimistic writes to prevent double notifications/sounds
+        if (change.doc.metadata.hasPendingWrites) return;
+
         if (change.type === "added") {
           const data = change.doc.data();
           const id = change.doc.id;
           
           // Check if it targets this user
-          const isTargeted = data.targetRole === 'all' || data.targetRole === profile.role || data.workerId === profile.uid || data.userId === profile.uid;
+          const isTargeted = data.targetRole === 'all' || 
+                             data.targetRole === profile.role || 
+                             data.workerId === profile.uid || 
+                             data.userId === profile.uid ||
+                             data.targetUserId === profile.uid;
           
+          // Skip if notification was created by this user to avoid self-notification sounds/popups
+          if (data.createdBy === profile.uid) return;
+
           if (isTargeted) {
              if (id !== lastCheckedId.current) {
                 lastCheckedId.current = id;
@@ -135,7 +124,6 @@ export default function GlobalNotificationListener() {
 
     return () => {
       unsubscribe();
-      window.removeEventListener('newHighPriorityNotification', handleLocalHighPriority);
     };
   }, [profile]);
 

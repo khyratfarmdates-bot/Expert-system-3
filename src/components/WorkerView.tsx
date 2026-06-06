@@ -363,6 +363,16 @@ export default function WorkerView({ workerId, onBack, readOnly = false }: Worke
     window.location.href = url.toString();
   };
 
+  const playNotificationSound = (priority: string = 'high') => {
+    try {
+      const audio = new Audio('/notification.mp3');
+      audio.volume = 0.65; // Balanced, premium volume
+      audio.play().catch(err => console.log('Audio autoplay blocked by browser:', err));
+    } catch (e) {
+      console.log("Audio play error:", e);
+    }
+  };
+
   const shareMessages = {
     ar: {
       label: 'العربية',
@@ -502,24 +512,7 @@ export default function WorkerView({ workerId, onBack, readOnly = false }: Worke
               // Check if it's new (last 2 minutes) for sound and toast
               const isRecent = data.createdAt?.toMillis ? (Date.now() - data.createdAt.toMillis() < 60000) : true;
               if (isRecent) {
-                try {
-                  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                  if (AudioContext) {
-                    const ctx = new AudioContext();
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = 'sine';
-                    const freq = data.priority === 'critical' ? 880 : 587.33;
-                    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(freq * 1.5, ctx.currentTime + 0.12);
-                    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start();
-                    osc.stop(ctx.currentTime + 0.6);
-                  }
-                } catch(e) {}
+                playNotificationSound(data.priority);
                 
                 toast.error(data.title || 'إشعار من الإدارة', {
                   description: data.message,
@@ -608,24 +601,8 @@ export default function WorkerView({ workerId, onBack, readOnly = false }: Worke
 
   const testNotifSound = () => {
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContext) {
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(587.33 * 1.5, ctx.currentTime + 0.12);
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.6);
-        toast.info('إذا سمعت الصوت، فإن التنبيهات تعمل جيداً');
-      } else {
-        toast.error('المستعرض لا يدعم مخرجات الصوت التخليقية');
-      }
+      playNotificationSound('high');
+      toast.info('إذا سمعت الصوت، فإن التنبيهات تعمل جيداً');
     } catch (e) {
       toast.error('لم نتمكن من تشغيل الصوت، تأكد من إعدادات المتصفح');
     }

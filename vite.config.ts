@@ -13,6 +13,8 @@ export default defineConfig(({mode}) => {
   return {
     base: '/',
     server: {
+      host: '0.0.0.0',
+      port: 5173,
       hmr: process.env.DISABLE_HMR !== 'true',
       proxy: {
         '/api_public': {

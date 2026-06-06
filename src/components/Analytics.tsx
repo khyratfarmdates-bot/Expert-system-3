@@ -214,7 +214,7 @@ export default function Analytics({ onBack }: { onBack?: () => void }) {
             </div>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="h-[320px] w-full">
+            <div className="h-[320px] w-full" style={{ minHeight: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={filteredData.chartData}>
                   <defs>
@@ -316,7 +316,7 @@ export default function Analytics({ onBack }: { onBack?: () => void }) {
               توزيع وتخصيص التدفقات النقدية
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-               <div className="h-[180px]">
+               <div className="h-[180px] w-full" style={{ minHeight: 180 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie

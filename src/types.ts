@@ -19,6 +19,8 @@ export interface UserProfile {
   compensationType?: 'salary' | 'commission_only';
   commissionRate?: number;
   baseSalary?: number;
+  blockQuotations?: boolean;
+  blockInvoices?: boolean;
 }
 
 export interface ProjectMilestone {

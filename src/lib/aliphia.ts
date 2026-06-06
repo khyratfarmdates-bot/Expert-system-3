@@ -469,3 +469,39 @@ export const fetchAliphiaQuotations = async () => {
     return [];
   }
 };
+
+export const fetchAliphiaInvoiceDetails = async (invoiceId: string) => {
+  const creds = await getAliphiaCredentials();
+  if (!creds) throw new Error('بيانات الربط مع ألف ياء غير متوفرة');
+
+  try {
+    const response = await fetch(`${ALIPHIA_API_URL}/invoice/${invoiceId}`, {
+      method: 'GET',
+      headers: await getHeaders(''),
+    });
+    if (!response.ok) throw new Error('فشل جلب تفاصيل الفاتورة من ألف ياء');
+    const data = await response.json();
+    return data.response?.invoice || data.invoice || data.response || data;
+  } catch (error) {
+    console.error('Aliphia invoice detail fetch error:', error);
+    throw error;
+  }
+};
+
+export const fetchAliphiaQuotationDetails = async (quoteId: string) => {
+  const creds = await getAliphiaCredentials();
+  if (!creds) throw new Error('بيانات الربط مع ألف ياء غير متوفرة');
+
+  try {
+    const response = await fetch(`${ALIPHIA_API_URL}/quote/${quoteId}`, {
+      method: 'GET',
+      headers: await getHeaders(''),
+    });
+    if (!response.ok) throw new Error('فشل جلب تفاصيل عرض السعر من ألف ياء');
+    const data = await response.json();
+    return data.response?.quote || data.quote || data.response || data;
+  } catch (error) {
+    console.error('Aliphia quote detail fetch error:', error);
+    throw error;
+  }
+};
