@@ -52,7 +52,8 @@ const getHeaders = async (contentType = 'application/json') => {
   const creds = await getAliphiaCredentials();
   if (!creds?.username || !creds?.apiKey) return {};
   
-  const basicAuth = btoa(`${creds.username}:${creds.password}`);
+  const rawAuth = `${creds.username}:${creds.password || ''}`;
+  const basicAuth = btoa(unescape(encodeURIComponent(rawAuth)));
   const headers: Record<string, string> = {
     'Authorization': `Basic ${basicAuth}`,
     'X-KEYALI-API': creds.apiKey
@@ -375,10 +376,14 @@ export const checkAliphiaConnection = async () => {
     } else {
       let errorText = '';
       try {
-        const errJson = await response.json();
-        errorText = errJson.error || errJson.message || '';
+        const clone = response.clone();
+        const errJson = await clone.json();
+        errorText = errJson.error || errJson.message || errJson.msg || (typeof errJson === 'object' ? JSON.stringify(errJson) : '');
       } catch (e) {
-        // Fallback text check
+        try {
+          const clone = response.clone();
+          errorText = await clone.text();
+        } catch (et) {}
       }
 
       if (errorText.toLowerCase().includes('hourly limit') || response.status === 429) {
@@ -389,10 +394,16 @@ export const checkAliphiaConnection = async () => {
         };
       }
 
-      return { status: 'error', latency, message: 'بيانات غير صحيحة أو الخادم يرفض الاتصال' };
+      const cleanErrorMsg = errorText ? errorText.substring(0, 150) : `كود الخطأ: ${response.status}`;
+      return { 
+        status: 'error', 
+        latency, 
+        message: `الخادم يرفض الاتصال: ${cleanErrorMsg}` 
+      };
     }
-  } catch (error) {
-    return { status: 'error', latency: Date.now() - start, message: 'المتصفح أو الخادم يمنع الاتصال' };
+  } catch (error: any) {
+    const errMsg = error?.message || 'خطأ في الشبكة';
+    return { status: 'error', latency: Date.now() - start, message: `المتصفح أو الخادم يمنع الاتصال: ${errMsg}` };
   }
 };
 
@@ -479,7 +490,21 @@ export const fetchAliphiaInvoiceDetails = async (invoiceId: string) => {
       method: 'GET',
       headers: await getHeaders(''),
     });
-    if (!response.ok) throw new Error('فشل جلب تفاصيل الفاتورة من ألف ياء');
+    if (!response.ok) {
+      let errorText = '';
+      try {
+        const clone = response.clone();
+        const errJson = await clone.json();
+        errorText = errJson.error || errJson.message || errJson.msg || (typeof errJson === 'object' ? JSON.stringify(errJson) : '');
+      } catch (e) {
+        try {
+          const clone = response.clone();
+          errorText = await clone.text();
+        } catch (et) {}
+      }
+      const cleanMsg = errorText ? errorText.substring(0, 150) : `كود الحالة: ${response.status}`;
+      throw new Error(`فشل جلب تفاصيل الفاتورة من ألف ياء: ${cleanMsg}`);
+    }
     const data = await response.json();
     return data.response?.invoice || data.invoice || data.response || data;
   } catch (error) {
@@ -497,7 +522,21 @@ export const fetchAliphiaQuotationDetails = async (quoteId: string) => {
       method: 'GET',
       headers: await getHeaders(''),
     });
-    if (!response.ok) throw new Error('فشل جلب تفاصيل عرض السعر من ألف ياء');
+    if (!response.ok) {
+      let errorText = '';
+      try {
+        const clone = response.clone();
+        const errJson = await clone.json();
+        errorText = errJson.error || errJson.message || errJson.msg || (typeof errJson === 'object' ? JSON.stringify(errJson) : '');
+      } catch (e) {
+        try {
+          const clone = response.clone();
+          errorText = await clone.text();
+        } catch (et) {}
+      }
+      const cleanMsg = errorText ? errorText.substring(0, 150) : `كود الحالة: ${response.status}`;
+      throw new Error(`فشل جلب تفاصيل عرض السعر من ألف ياء: ${cleanMsg}`);
+    }
     const data = await response.json();
     return data.response?.quote || data.quote || data.response || data;
   } catch (error) {

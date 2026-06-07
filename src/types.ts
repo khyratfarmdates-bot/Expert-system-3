@@ -29,6 +29,8 @@ export interface ProjectMilestone {
   weight?: number; // Weight percentage for progress calculation
   status: 'pending' | 'in-progress' | 'completed' | 'review-requested';
   date: string;
+  dueDate?: string;
+  assignedWorkerId?: string;
   verification?: {
     status: 'pending' | 'approved' | 'rejected';
     verifiedBy?: string;

@@ -50,7 +50,7 @@ export const quickAnalyzeInvoice = async (dataUrl: string): Promise<QuickScanRes
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.5-flash",
       contents: [
         {
           parts: [
@@ -115,7 +115,7 @@ export const analyzeInvoice = async (dataUrl: string): Promise<InvoiceData> => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.5-flash",
       contents: [
         {
           parts: [
@@ -216,7 +216,7 @@ export const analyzeProjectSpending = async (projectData: Partial<Project>, tran
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.5-flash",
       contents: [{ parts: [{ text: prompt }] }],
     });
 
@@ -275,7 +275,7 @@ export const parseProjectFromText = async (text: string): Promise<ExtractedProje
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.5-flash",
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
@@ -354,7 +354,7 @@ export const analyzeProjectDocument = async (dataUrl: string, mimeType: string):
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.5-flash",
       contents: [
         {
           parts: [
@@ -401,3 +401,38 @@ export const analyzeProjectDocument = async (dataUrl: string, mimeType: string):
     throw error;
   }
 };
+
+export const analyzeCompanyPortfolioCredit = async (projects: any[], transactions: any[]): Promise<string> => {
+  const ai = getGeminiClient();
+  if (!ai) {
+    return "يرجى تهيئة مفتاح الذكاء الاصطناعي (Gemini) في الإعدادات لتفعيل التحليل الائتماني الشامل للمحفظة.";
+  }
+  try {
+    const prompt = `
+      أنت رئيس القطاع المالي (CFO) لشركة "خبراء الرسم للمقاولات".
+      إليك قائمة بالمشاريع التشغيلية النشطة حالياً وتفاصيل ميزانيتها والمصروفات الفعلية المسجلة في النظام:
+      المشاريع والمصروفات: ${JSON.stringify(projects)}
+      
+      المعاملات المالية كاملةً (كعينة لفهم النفقات): ${JSON.stringify(transactions.slice(0, 30))}
+      
+      المطلوب: تقديم تقرير موجز تنفيذي ائتماني احترافي جداً باللغة العربية يشمل:
+      1. تقييم كلي للسيولة والوضع الائتماني للمشاريع كمنظومة متكاملة.
+      2. كشف أي مشروع يواجه خطراً داهماً للميزانية (أو تجاوز الصرف ميزانيته أو قارب على ذلك بشكل غير متناسب مع نسبة الإنجاز الفعلي).
+      3. إنذار مبكر محدد بالخطوات العملية لمنع حدوث عجز نقدي قبل أن تقع الكارثة.
+      4. توجيه عاجل لضبط التخصيص المالي والتحكم بالهدر.
+      
+      اجعل الرد بصيغة نقاط قوية، واضحة، مهنية، ومكتوبة للمدير التنفيذي فوراً.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: [{ parts: [{ text: prompt }] }],
+    });
+
+    return response.text || "فشل توليد التقرير.";
+  } catch (error: any) {
+    console.warn("Portfolio analysis error:", error);
+    return "حدث خطأ أثناء فحص محفظة الائتمان بالذكاء الاصطناعي: " + error.message;
+  }
+};
+

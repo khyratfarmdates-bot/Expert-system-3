@@ -1,6 +1,4 @@
 import * as React from 'react';
-import { ModuleHelp } from '@/components/ui/HelpTooltip';
-import { UserPlus, Search, Edit2, FileText, Zap, Users } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -448,24 +446,6 @@ export default function Employees({ onSelectEmployee, filterRole }: { onSelectEm
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto px-4 sm:px-6">
-      <ModuleHelp
-        title="إدارة الكوادر البشرية"
-        description="سجل وتتبع جميع موظفي الشركة — بياناتهم، وثائقهم، رواتبهم، واتصالاتهم — مع مسح ذكي لوثائق الإقامة والجواز."
-        steps={[
-          { icon: UserPlus, title: 'إضافة موظف جديد', desc: 'اضغط "إضافة موظف جديد" وأدخل البيانات الأساسية. إذا كان على كفالة فعّل خيار الكفالة لإدخال وثائق الإقامة ورخصة القيادة والجواز.', color: 'bg-blue-100 text-blue-600' },
-          { icon: Zap, title: 'المسح الذكي للوثائق', desc: 'بعد رفع صورة الإقامة/الجواز اضغط "مسح ذكي" ليستخرج الذكاء الاصطناعي الرقم وتاريخ انتهاء الوثيقة تلقائياً.', color: 'bg-amber-100 text-amber-600' },
-          { icon: Search, title: 'البحث والتصفية', desc: 'ابحث بالاسم أو القسم لعرض موظفين محددين. اضغط على بطاقة الموظف لعرض ملفه الكامل.', color: 'bg-emerald-100 text-emerald-600' },
-          { icon: Edit2, title: 'تعديل بيانات الموظف', desc: 'من قائمة الخيارات (3 نقاط) على بطاقة الموظف يمكن تعديل بياناته أو أرشفته (الحذف آمن — ينتقل للأرشيف).', color: 'bg-purple-100 text-purple-600' },
-          { icon: FileText, title: 'تصدير تقارير', desc: 'أزرار تصدير PDF و CSV لتقارير الموظفين بنطاق تاريخي مخصص.', color: 'bg-slate-100 text-slate-600' },
-          { icon: Users, title: 'الأدوار الوظيفية', desc: 'الشارة البنفسجية = مدير، الزرقاء = مشرف، الخضراء = موظف عادي. كل دور له صلاحيات خاصة في النظام.', color: 'bg-red-100 text-red-600' },
-        ]}
-        tips={[
-          'البريد الإلكتروني يجب أن يكون فريداً — يُستخدم كمعرّف تسجيل دخول للموظف.',
-          'حدد القسم بدقة لضبط صلاحيات الحضور (مكتب/معرض/مشروع).',
-          'المسح الذكي للوثائق يوفر وقتاً كبيراً — استخدمه دائماً!',
-          'بطاقة الموظف تعرض ملفه الكامل بما فيه الوثائق وسجل الرواتب.',
-        ]}
-      />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-lg md:text-2xl font-bold text-primary tracking-tight">إدارة الكوادر البشرية</h1>

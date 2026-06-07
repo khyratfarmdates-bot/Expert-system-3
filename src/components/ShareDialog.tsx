@@ -48,7 +48,11 @@ export function ShareDialog({ open, onOpenChange, doc, type }: ShareDialogProps)
   const toggleSelect = (id: string) => {
     setSelected(prev => {
       const newSet = new Set(prev);
-      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
       return newSet;
     });
   };

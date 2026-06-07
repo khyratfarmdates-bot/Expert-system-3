@@ -10,7 +10,7 @@ import {
   RefreshCw, Building, FileText, CheckCircle2, AlertTriangle, 
   ExternalLink, Share2, Search, ArrowRight, Check, Send, Sparkles,
   UserCheck, Receipt, FileSpreadsheet, Ban, Clock, Users, Percent, Calculator,
-  Wallet, Trash2
+  Wallet, Trash2, Printer
 } from "lucide-react";
 import { db } from "../lib/firebase";
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp, doc, updateDoc, where, deleteDoc } from "firebase/firestore";
@@ -88,6 +88,360 @@ export default function Sales() {
   const [aliphiaDocDetails, setAliphiaDocDetails] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailDocType, setDetailDocType] = useState<'invoice' | 'quote'>('invoice');
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'details' | 'pdf'>('details');
+
+  useEffect(() => {
+    if (selectedAliphiaDoc) {
+      setViewMode('details');
+    }
+  }, [selectedAliphiaDoc]);
+
+  // Real-time listener for company profile settings
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "system", "company_profile"), (snap) => {
+      if (snap.exists()) {
+        setCompanyProfile(snap.data());
+      }
+    });
+    return unsub;
+  }, []);
+
+  const handlePrintDoc = (docToPrint: any, type: 'invoice' | 'quote') => {
+    if (!docToPrint) return;
+
+    // Create a temporary hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const docFrame = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!docFrame) return;
+
+    // Fallback variables
+    const number = docToPrint.invoice_number || docToPrint.quote_number || docToPrint.number || docToPrint.id || '—';
+    const client = docToPrint.client_name || docToPrint.client || '—';
+    const dateCreated = docToPrint.invoice_date_created || docToPrint.quote_date_created || docToPrint.date || '—';
+    const dateDue = docToPrint.invoice_date_due || docToPrint.quote_date_expires || docToPrint.date_due || '—';
+    const subtotal = parseFloat(docToPrint.invoice_subtotal || docToPrint.quote_subtotal || docToPrint.subtotal || 0);
+    const discount = parseFloat(docToPrint.invoice_discount_amount || docToPrint.quote_discount_amount || docToPrint.discount || 0);
+    const tax = parseFloat(docToPrint.invoice_total_tax || docToPrint.quote_total_tax || docToPrint.tax || 0);
+    const total = parseFloat(docToPrint.invoice_total || docToPrint.quote_total || docToPrint.total || 0);
+    const items = docToPrint.invoice_items || docToPrint.quote_items || docToPrint.items || [];
+    const notes = docToPrint.notes || '';
+    const terms = docToPrint.terms || '';
+
+    // Get company details either from Firestore profile or standard fallbacks
+    const compName = companyProfile?.companyName || "مؤسسة خبراء الرسم للمقاولات والديكور";
+    const compSub = companyProfile?.companySub || "رقم السجل التجاري: 1010656203 | الرقم الضريبي: 310865893400003";
+    const compAddress = companyProfile?.companyAddress || "الرياض، المملكة العربية السعودية";
+    const compPhone = companyProfile?.companyPhone || "0500000000";
+    const compEmail = companyProfile?.companyEmail || "info@paintexperts.sa";
+
+    // Build Items Table rows in HTML
+    let tableRows = '';
+    if (items.length === 0) {
+      tableRows = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 20px; color: #94a3b8; font-size: 13px;">
+            لا توجد بنود مسجلة لهذا المستند
+          </td>
+        </tr>
+      `;
+    } else {
+      items.forEach((item: any, idx: number) => {
+        const itemName = item.item_name || item.name || '—';
+        const itemDesc = item.item_description || item.description || '—';
+        const qty = parseFloat(item.item_quantity || item.quantity || 1);
+        const price = parseFloat(item.item_price || item.price || 0);
+        const itemTotal = parseFloat(item.item_total || item.total || (qty * price));
+        tableRows += `
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 12px; font-weight: bold; color: #1e293b;">${itemName}</td>
+            <td style="padding: 12px; color: #64748b; font-size: 12px; max-width: 200px;">${itemDesc}</td>
+            <td style="padding: 12px; text-align: center;">${qty}</td>
+            <td style="padding: 12px; text-align: left; font-family: monospace;">${price.toLocaleString()} ر.س</td>
+            <td style="padding: 12px; text-align: left; font-weight: bold; color: #0f172a; font-family: monospace;">${itemTotal.toLocaleString()} ر.س</td>
+          </tr>
+        `;
+      });
+    }
+
+    const titleLabel = type === 'invoice' ? 'فاتورة ضريبية مبسطة' : 'عرض سعر محاسبي';
+    const dateDueLabel = type === 'invoice' ? 'تاريخ الاستحقاق' : 'صلاحية العرض';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>${titleLabel} #${number}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+        <style>
+          body {
+            font-family: 'Cairo', 'Inter', sans-serif;
+            margin: 40px;
+            color: #1e293b;
+            background: #ffffff;
+            font-size: 14px;
+            line-height: 1.6;
+          }
+          .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid #0f172a;
+            padding-bottom: 25px;
+            margin-bottom: 30px;
+            direction: rtl;
+          }
+          .company-profile {
+            text-align: right;
+            flex: 1;
+          }
+          .company-name {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0 0 5px 0;
+          }
+          .company-sub {
+            font-size: 12px;
+            color: #64748b;
+            margin: 0 0 4px 0;
+            font-weight: 600;
+          }
+          .doc-badge {
+            text-align: left;
+            flex: 1;
+          }
+          .badge-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: ${type === 'invoice' ? '#059669' : '#2563eb'};
+            margin: 0 0 5px 0;
+          }
+          .badge-number {
+            font-family: monospace;
+            font-size: 16px;
+            color: #475569;
+            margin: 0;
+            font-weight: bold;
+          }
+          .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            direction: rtl;
+          }
+          .info-block h3 {
+            font-size: 13px;
+            color: #94a3b8;
+            margin: 0 0 5px 0;
+            font-weight: 700;
+          }
+          .info-block p {
+            font-size: 15px;
+            color: #1e293b;
+            margin: 0;
+            font-weight: bold;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: right;
+            margin-bottom: 30px;
+            direction: rtl;
+          }
+          .items-table th {
+            background-color: #f1f5f9;
+            color: #475569;
+            padding: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            border-bottom: 2px solid #cbd5e1;
+          }
+          .items-table td {
+            padding: 12px;
+            vertical-align: middle;
+          }
+          .totals-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 40px;
+            direction: rtl;
+          }
+          .totals-table {
+            width: 320px;
+            border-collapse: collapse;
+          }
+          .totals-table td {
+            padding: 10px 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+          }
+          .totals-table tr.grand-total td {
+            border-top: 2px solid #e2e8f0;
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+          }
+          .totals-table tr.grand-total .val {
+            color: #059669;
+          }
+          .notes-container {
+            background: #f8fafc;
+            border-right: 4px solid #cbd5e1;
+            padding: 15px;
+            border-radius: 4px 12px 12px 4px;
+            margin-top: 20px;
+            text-align: right;
+            direction: rtl;
+          }
+          .notes-title {
+            font-weight: 800;
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 5px;
+            display: block;
+          }
+          .notes-text {
+            font-size: 12px;
+            color: #334155;
+            margin: 0;
+          }
+          .footer {
+            margin-top: 60px;
+            text-align: center;
+            font-size: 11px;
+            color: #94a3b8;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 15px;
+          }
+          @media print {
+            body { margin: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header-container">
+          <div class="company-profile">
+            <h1 class="company-name">${compName}</h1>
+            <p class="company-sub">${compSub}</p>
+            <p class="company-sub">${compAddress} | هاتف: ${compPhone}</p>
+            <p class="company-sub">${compEmail}</p>
+          </div>
+          <div class="doc-badge">
+            <h2 class="badge-title">${titleLabel}</h2>
+            <p class="badge-number">رقم المستند: ${number}</p>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-block">
+            <h3>العميل / المرسل إليه</h3>
+            <p>${client}</p>
+            ${docToPrint.client_phone ? `<span style="font-size: 12px; color: #64748b; font-family: monospace;">${docToPrint.client_phone}</span>` : ''}
+            ${docToPrint.client_email ? `<span style="font-size: 12px; color: #64748b; font-family: monospace; margin-right: 10px;">${docToPrint.client_email}</span>` : ''}
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: right;">
+            <div class="info-block">
+              <h3>تاريخ الإصدار</h3>
+              <p style="font-family: monospace;">${dateCreated}</p>
+            </div>
+            <div class="info-block">
+              <h3>${dateDueLabel}</h3>
+              <p style="font-family: monospace;">${dateDue}</p>
+            </div>
+          </div>
+        </div>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="width: 25%;">البند</th>
+              <th style="width: 40%;">الوصف</th>
+              <th style="width: 10%; text-align: center;">الكمية</th>
+              <th style="width: 12.5%; text-align: left;">سعر الوحدة</th>
+              <th style="width: 12.5%; text-align: left;">المجموع</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+
+        <div class="totals-container">
+          <table class="totals-table">
+            <tr>
+              <td>المجموع الفرعي:</td>
+              <td style="text-align: left; font-family: monospace;">${subtotal.toLocaleString()} ر.س</td>
+            </tr>
+            ${discount > 0 ? `
+              <tr style="color: #e11d48;">
+                <td>الخصم:</td>
+                <td style="text-align: left; font-family: monospace;">-${discount.toLocaleString()} ر.س</td>
+              </tr>
+            ` : ''}
+            <tr>
+              <td>الضريبة (15%):</td>
+              <td style="text-align: left; font-family: monospace;">${tax.toLocaleString()} ر.س</td>
+            </tr>
+            <tr class="grand-total">
+              <td>المجموع الكلي:</td>
+              <td class="val" style="text-align: left; font-family: monospace;">${total.toLocaleString()} ر.س</td>
+            </tr>
+          </table>
+        </div>
+
+        ${notes || terms ? `
+          <div style="display: grid; grid-template-columns: ${notes && terms ? '1fr 1fr' : '1fr'}; gap: 20px; text-align: right; direction: rtl;">
+            ${notes ? `
+              <div class="notes-container">
+                <span class="notes-title">ملاحظات</span>
+                <p class="notes-text">${notes}</p>
+              </div>
+            ` : ''}
+            ${terms ? `
+              <div class="notes-container" style="border-right-color: #3b82f6;">
+                <span class="notes-title">الشروط والأحكام</span>
+                <p class="notes-text">${terms}</p>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+
+        <div class="footer">
+          تم إنشاء هذا المستند عبر منصة الإدارة السحابية والربط مع نظام ألف ياء المحاسبي. نشكر ثقتكم بنا.
+        </div>
+      </body>
+      </html>
+    `;
+
+    docFrame.write(htmlContent);
+    docFrame.close();
+
+    // Trigger Print after loading font styles nicely
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1500);
+    }, 700);
+  };
 
   const handleOpenDocDetails = async (doc: any, type: 'invoice' | 'quote') => {
     setSelectedAliphiaDoc(doc);
@@ -109,8 +463,9 @@ export default function Sales() {
       setAliphiaDocDetails(details);
     } catch (err: any) {
       console.error("Error fetching doc details:", err);
-      toast.error(err.message || "فشل جلب تفاصيل المستند من ألف ياء");
-      setSelectedAliphiaDoc(null);
+      // fallback so the dialog stays open and they can still view/print local fields
+      toast.error(`تعذر جلب البيانات الكاملة من ألف ياء: ${err.message || ''}. تعرض الواجهة الآن بيانات المستند المحلية المتوفرة.`);
+      setAliphiaDocDetails(doc);
     } finally {
       setLoadingDetails(false);
     }
@@ -1970,7 +2325,7 @@ export default function Sales() {
       {/* ALIPHIA DOCUMENT DETAILS DIALOG */}
       {selectedAliphiaDoc && (
         <Dialog open={!!selectedAliphiaDoc} onOpenChange={(open) => { if (!open) setSelectedAliphiaDoc(null); }}>
-          <DialogContent className="max-w-3xl rounded-[28px] p-6 text-right overflow-y-auto max-h-[90vh] border-none shadow-2xl bg-white/95 backdrop-blur-xl" dir="rtl">
+          <DialogContent className="sm:max-w-4xl md:max-w-5xl w-full rounded-[28px] p-6 text-right overflow-y-auto max-h-[90vh] border-none shadow-2xl bg-white/95 backdrop-blur-xl" dir="rtl">
             <DialogHeader className="border-b border-slate-100 pb-4 mb-4">
               <div className="flex items-center justify-between">
                 <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
@@ -2009,139 +2364,192 @@ export default function Sales() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Info Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                  <div>
-                    <span className="text-xs text-slate-400 block mb-1">العميل</span>
-                    <span className="text-sm font-black text-slate-800">
-                      {aliphiaDocDetails?.client_name || selectedAliphiaDoc?.client_name || selectedAliphiaDoc?.client || 'عميل غير معروف'}
-                    </span>
-                    {(aliphiaDocDetails?.client_phone || aliphiaDocDetails?.client_email) && (
-                      <span className="text-xs text-slate-500 block mt-1 font-mono">
-                        {aliphiaDocDetails.client_phone} {aliphiaDocDetails.client_email && ` | ${aliphiaDocDetails.client_email}`}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-400 block mb-1">تاريخ الإصدار</span>
-                    <span className="text-sm font-bold text-slate-700 font-mono">
-                      {aliphiaDocDetails?.invoice_date_created || aliphiaDocDetails?.quote_date_created || selectedAliphiaDoc?.invoice_date_created || selectedAliphiaDoc?.quote_date_created || '—'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-400 block mb-1">
-                      {detailDocType === 'invoice' ? 'تاريخ الاستحقاق' : 'صلاحية العرض'}
-                    </span>
-                    <span className="text-sm font-bold text-slate-700 font-mono">
-                      {aliphiaDocDetails?.invoice_date_due || aliphiaDocDetails?.quote_date_expires || selectedAliphiaDoc?.invoice_date_due || selectedAliphiaDoc?.quote_date_expires || '—'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Items Table */}
-                <div>
-                  <h4 className="text-xs font-black text-slate-800 mb-3 flex items-center gap-1.5">
-                    <ReceiptText className="w-4 h-4 text-slate-400" />
-                    <span>بنود المستند التفصيلية</span>
-                  </h4>
-                  <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                    <table className="w-full text-right border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50/50 text-xs font-black text-slate-400 border-b border-slate-100">
-                          <th className="py-3 px-4">البند</th>
-                          <th className="py-3 px-4">الوصف</th>
-                          <th className="py-3 px-4 text-center">الكمية</th>
-                          <th className="py-3 px-4 text-left">سعر الوحدة</th>
-                          <th className="py-3 px-4 text-left">المجموع</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-sm font-bold text-slate-700">
-                        {(() => {
-                          const items = aliphiaDocDetails?.invoice_items || aliphiaDocDetails?.quote_items || aliphiaDocDetails?.items || [];
-                          if (items.length === 0) {
-                            return (
-                              <tr>
-                                <td colSpan={5} className="py-8 text-center text-slate-400 text-xs font-bold">
-                                  لا توجد بنود مسجلة لهذا المستند
-                                </td>
-                              </tr>
-                            );
-                          }
-                          return items.map((item: any, idx: number) => {
-                            const qty = parseFloat(item.item_quantity || item.quantity || 1);
-                            const price = parseFloat(item.item_price || item.price || 0);
-                            const total = parseFloat(item.item_total || item.total || (qty * price));
-                            return (
-                              <tr key={item.item_id || idx} className="hover:bg-slate-50/35 transition-colors">
-                                <td className="py-3.5 px-4 font-black text-slate-800">{item.item_name || item.name}</td>
-                                <td className="py-3.5 px-4 text-slate-500 text-xs max-w-[200px] truncate">
-                                  {item.item_description || item.description || '—'}
-                                </td>
-                                <td className="py-3.5 px-4 text-center font-mono">{qty}</td>
-                                <td className="py-3.5 px-4 text-left font-mono">{price.toLocaleString()} ر.س</td>
-                                <td className="py-3.5 px-4 text-left font-black text-slate-900 font-mono">
-                                  {total.toLocaleString()} ر.س
-                                </td>
-                              </tr>
-                            );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Totals Section */}
-                <div className="flex justify-end">
-                  <div className="w-full md:w-80 bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2.5 text-xs font-bold text-slate-600">
-                    <div className="flex justify-between">
-                      <span>المجموع الفرعي:</span>
-                      <span className="font-mono text-slate-800">
-                        {parseFloat(aliphiaDocDetails?.invoice_subtotal || aliphiaDocDetails?.quote_subtotal || aliphiaDocDetails?.subtotal || 0).toLocaleString()} ر.س
-                      </span>
+                {/* Segmented Web View Mode Selector */}
+                {(() => {
+                  const pdfUrl = aliphiaDocDetails?.pdf_url || aliphiaDocDetails?.pdf_link || aliphiaDocDetails?.response?.pdf_url || selectedAliphiaDoc?.pdf_url || selectedAliphiaDoc?.pdf_link;
+                  if (!pdfUrl) return null;
+                  return (
+                    <div className="flex justify-center mb-6">
+                      <div className="bg-slate-100 p-1 rounded-2xl flex gap-1 border border-slate-200/50">
+                        <button
+                          type="button"
+                          onClick={() => setViewMode('details')}
+                          className={`px-5 py-2 rounded-xl text-xs font-black transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                            viewMode === 'details'
+                              ? 'bg-white text-slate-800 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          <ReceiptText className="w-3.5 h-3.5" />
+                          تفاصيل البنود والكميات
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode('pdf')}
+                          className={`px-5 py-2 rounded-xl text-xs font-black transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                            viewMode === 'pdf'
+                              ? 'bg-white text-emerald-600 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          <FileText className="w-3.5 h-3.5 font-bold" />
+                          معاينة المستند الفعلي (PDF)
+                        </button>
+                      </div>
                     </div>
-                    
-                    {parseFloat(aliphiaDocDetails?.invoice_discount_amount || aliphiaDocDetails?.quote_discount_amount || aliphiaDocDetails?.discount || 0) > 0 && (
-                      <div className="flex justify-between text-rose-600">
-                        <span>الخصم:</span>
-                        <span className="font-mono">
-                          -{parseFloat(aliphiaDocDetails?.invoice_discount_amount || aliphiaDocDetails?.quote_discount_amount || aliphiaDocDetails?.discount || 0).toLocaleString()} ر.س
+                  );
+                })()}
+
+                {viewMode === 'pdf' ? (
+                  <div className="w-full h-[60vh] rounded-3xl overflow-hidden border border-slate-200 shadow-md bg-slate-50 flex flex-col relative">
+                    {(() => {
+                      const pdfUrl = aliphiaDocDetails?.pdf_url || aliphiaDocDetails?.pdf_link || aliphiaDocDetails?.response?.pdf_url || selectedAliphiaDoc?.pdf_url || selectedAliphiaDoc?.pdf_link;
+                      return (
+                        <iframe
+                          src={pdfUrl}
+                          className="w-full h-full border-0"
+                          title="Aliphia PDF Viewer"
+                        />
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <>
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                      <div>
+                        <span className="text-xs text-slate-400 block mb-1">العميل</span>
+                        <span className="text-sm font-black text-slate-800">
+                          {aliphiaDocDetails?.client_name || selectedAliphiaDoc?.client_name || selectedAliphiaDoc?.client || 'عميل غير معروف'}
+                        </span>
+                        {(aliphiaDocDetails?.client_phone || aliphiaDocDetails?.client_email) && (
+                          <span className="text-xs text-slate-500 block mt-1 font-mono">
+                            {aliphiaDocDetails.client_phone} {aliphiaDocDetails.client_email && ` | ${aliphiaDocDetails.client_email}`}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-400 block mb-1">تاريخ الإصدار</span>
+                        <span className="text-sm font-bold text-slate-700 font-mono">
+                          {aliphiaDocDetails?.invoice_date_created || aliphiaDocDetails?.quote_date_created || selectedAliphiaDoc?.invoice_date_created || selectedAliphiaDoc?.quote_date_created || '—'}
                         </span>
                       </div>
-                    )}
-
-                    <div className="flex justify-between">
-                      <span>الضريبة (15%):</span>
-                      <span className="font-mono text-slate-800">
-                        {parseFloat(aliphiaDocDetails?.invoice_total_tax || aliphiaDocDetails?.quote_total_tax || aliphiaDocDetails?.tax || 0).toLocaleString()} ر.س
-                      </span>
+                      <div>
+                        <span className="text-xs text-slate-400 block mb-1">
+                          {detailDocType === 'invoice' ? 'تاريخ الاستحقاق' : 'صلاحية العرض'}
+                        </span>
+                        <span className="text-sm font-bold text-slate-700 font-mono">
+                          {aliphiaDocDetails?.invoice_date_due || aliphiaDocDetails?.quote_date_expires || selectedAliphiaDoc?.invoice_date_due || selectedAliphiaDoc?.quote_date_expires || '—'}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="border-t border-slate-200/80 my-2 pt-2.5 flex justify-between text-sm font-black text-slate-900">
-                      <span>المجموع الكلي:</span>
-                      <span className="font-mono text-emerald-600 text-lg">
-                        {parseFloat(aliphiaDocDetails?.invoice_total || aliphiaDocDetails?.quote_total || aliphiaDocDetails?.total || 0).toLocaleString()} ر.س
-                      </span>
+                    {/* Items Table */}
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800 mb-3 flex items-center gap-1.5">
+                        <ReceiptText className="w-4 h-4 text-slate-400" />
+                        <span>بنود المستند التفصيلية</span>
+                      </h4>
+                      <div className="border border-slate-100 rounded-2xl overflow-hidden">
+                        <table className="w-full text-right border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50/50 text-xs font-black text-slate-400 border-b border-slate-100">
+                              <th className="py-3 px-4">البند</th>
+                              <th className="py-3 px-4">الوصف</th>
+                              <th className="py-3 px-4 text-center">الكمية</th>
+                              <th className="py-3 px-4 text-left">سعر الوحدة</th>
+                              <th className="py-3 px-4 text-left">المجموع</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-sm font-bold text-slate-700">
+                            {(() => {
+                              const items = aliphiaDocDetails?.invoice_items || aliphiaDocDetails?.quote_items || aliphiaDocDetails?.items || [];
+                              if (items.length === 0) {
+                                return (
+                                  <tr>
+                                    <td colSpan={5} className="py-8 text-center text-slate-400 text-xs font-bold">
+                                      لا توجد بنود مسجلة لهذا المستند
+                                    </td>
+                                  </tr>
+                                );
+                              }
+                              return items.map((item: any, idx: number) => {
+                                const qty = parseFloat(item.item_quantity || item.quantity || 1);
+                                const price = parseFloat(item.item_price || item.price || 0);
+                                const total = parseFloat(item.item_total || item.total || (qty * price));
+                                return (
+                                  <tr key={item.item_id || idx} className="hover:bg-slate-50/35 transition-colors">
+                                    <td className="py-3.5 px-4 font-black text-slate-800">{item.item_name || item.name}</td>
+                                    <td className="py-3.5 px-4 text-slate-500 text-xs max-w-xs md:max-w-md whitespace-normal break-words">
+                                      {item.item_description || item.description || '—'}
+                                    </td>
+                                    <td className="py-3.5 px-4 text-center font-mono">{qty}</td>
+                                    <td className="py-3.5 px-4 text-left font-mono">{price.toLocaleString()} ر.س</td>
+                                    <td className="py-3.5 px-4 text-left font-black text-slate-900 font-mono">
+                                      {total.toLocaleString()} ر.س
+                                    </td>
+                                  </tr>
+                                );
+                              });
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Notes & Terms */}
-                {(aliphiaDocDetails?.notes || aliphiaDocDetails?.terms) && (
-                  <div className="space-y-3 pt-6 border-t border-slate-100">
-                    {aliphiaDocDetails?.notes && (
-                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
-                        <span className="text-xs font-black text-slate-500 block mb-1">ملاحظات المستند</span>
-                        <p className="text-xs text-slate-700 leading-relaxed">{aliphiaDocDetails.notes}</p>
+                    {/* Totals Section */}
+                    <div className="flex justify-end">
+                      <div className="w-full md:w-80 bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2.5 text-xs font-bold text-slate-600">
+                        <div className="flex justify-between">
+                          <span>المجموع الفرعي:</span>
+                          <span className="font-mono text-slate-800">
+                            {parseFloat(aliphiaDocDetails?.invoice_subtotal || aliphiaDocDetails?.quote_subtotal || aliphiaDocDetails?.subtotal || 0).toLocaleString()} ر.س
+                          </span>
+                        </div>
+                        
+                        {parseFloat(aliphiaDocDetails?.invoice_discount_amount || aliphiaDocDetails?.quote_discount_amount || aliphiaDocDetails?.discount || 0) > 0 && (
+                          <div className="flex justify-between text-rose-600">
+                            <span>الخصم:</span>
+                            <span className="font-mono">
+                              -{parseFloat(aliphiaDocDetails?.invoice_discount_amount || aliphiaDocDetails?.quote_discount_amount || aliphiaDocDetails?.discount || 0).toLocaleString()} ر.س
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between">
+                          <span>الضريبة (15%):</span>
+                          <span className="font-mono text-slate-800">
+                            {parseFloat(aliphiaDocDetails?.invoice_total_tax || aliphiaDocDetails?.quote_total_tax || aliphiaDocDetails?.tax || 0).toLocaleString()} ر.س
+                          </span>
+                        </div>
+
+                        <div className="border-t border-slate-200/80 my-2 pt-2.5 flex justify-between text-sm font-black text-slate-900">
+                          <span>المجموع الكلي:</span>
+                          <span className="font-mono text-emerald-600 text-lg">
+                            {parseFloat(aliphiaDocDetails?.invoice_total || aliphiaDocDetails?.quote_total || aliphiaDocDetails?.total || 0).toLocaleString()} ر.س
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes & Terms */}
+                    {(aliphiaDocDetails?.notes || aliphiaDocDetails?.terms) && (
+                      <div className="space-y-3 pt-6 border-t border-slate-100">
+                        {aliphiaDocDetails?.notes && (
+                          <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                            <span className="text-xs font-black text-slate-500 block mb-1">ملاحظات المستند</span>
+                            <p className="text-xs text-slate-700 leading-relaxed">{aliphiaDocDetails.notes}</p>
+                          </div>
+                        )}
+                        {aliphiaDocDetails?.terms && (
+                          <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                            <span className="text-xs font-black text-slate-500 block mb-1">الشروط والأحكام</span>
+                            <p className="text-xs text-slate-700 leading-relaxed">{aliphiaDocDetails.terms}</p>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {aliphiaDocDetails?.terms && (
-                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
-                        <span className="text-xs font-black text-slate-500 block mb-1">الشروط والأحكام</span>
-                        <p className="text-xs text-slate-700 leading-relaxed">{aliphiaDocDetails.terms}</p>
-                      </div>
-                    )}
-                  </div>
+                  </>
                 )}
               </div>
             )}
@@ -2155,23 +2563,36 @@ export default function Sales() {
                 إغلاق
               </Button>
               
-              <div className="flex flex-1 gap-2 w-full sm:w-auto">
-                {(aliphiaDocDetails?.pdf_url || selectedAliphiaDoc?.pdf_url) && (
-                  <Button
-                    onClick={() => window.open(aliphiaDocDetails?.pdf_url || selectedAliphiaDoc?.pdf_url, '_blank')}
-                    className="flex-1 rounded-xl font-black text-xs h-11 bg-slate-900 text-white hover:bg-black transition-all gap-1.5 cursor-pointer"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    عرض ملف PDF
-                  </Button>
-                )}
+              <div className="flex flex-1 flex-wrap gap-2 w-full sm:w-auto">
+                {(() => {
+                  const pdfUrl = aliphiaDocDetails?.pdf_url || aliphiaDocDetails?.pdf_link || aliphiaDocDetails?.response?.pdf_url || selectedAliphiaDoc?.pdf_url || selectedAliphiaDoc?.pdf_link;
+                  if (!pdfUrl) return null;
+                  return (
+                    <Button
+                      onClick={() => window.open(pdfUrl, '_blank')}
+                      className="flex-1 min-w-[120px] rounded-xl font-black text-xs h-11 bg-slate-900 text-white hover:bg-black transition-all gap-1.5 cursor-pointer font-sans"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      عرض ملف PDF الأجنبي (ألف ياء)
+                    </Button>
+                  );
+                })()}
+
+                <Button
+                  onClick={() => handlePrintDoc(aliphiaDocDetails || selectedAliphiaDoc, detailDocType)}
+                  className="flex-1 min-w-[120px] rounded-xl font-black text-xs h-11 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 transition-all gap-1.5 cursor-pointer font-sans"
+                >
+                  <Printer className="w-4 h-4" />
+                  طباعة / تصدير PDF
+                </Button>
+
                 <Button
                   onClick={() => {
                     setShareDoc(aliphiaDocDetails || selectedAliphiaDoc);
                     setShareType(detailDocType);
                     setShareOpen(true);
                   }}
-                  className="flex-1 rounded-xl font-black text-xs h-11 bg-emerald-600 text-white hover:bg-emerald-700 transition-all gap-1.5 cursor-pointer"
+                  className="flex-1 min-w-[120px] rounded-xl font-black text-xs h-11 bg-emerald-600 text-white hover:bg-emerald-700 transition-all gap-1.5 cursor-pointer font-sans"
                 >
                   <Share2 className="w-4 h-4" />
                   مشاركة عبر واتساب

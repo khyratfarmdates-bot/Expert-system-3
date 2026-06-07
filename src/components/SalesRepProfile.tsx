@@ -715,7 +715,7 @@ export default function SalesRepProfile({ salesRepId, onBack }: { salesRepId: st
 
       {/* Document Details Modal */}
       <Dialog open={!!selectedDoc} onOpenChange={(open) => !open && setSelectedDoc(null)}>
-        <DialogContent className="max-w-lg rounded-[2rem] p-6 text-right" dir="rtl">
+        <DialogContent className="sm:max-w-3xl w-full rounded-[2rem] p-6 text-right" dir="rtl">
           <DialogHeader className="border-b pb-3 mb-4">
             <DialogTitle className="text-base font-black text-slate-800 flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />

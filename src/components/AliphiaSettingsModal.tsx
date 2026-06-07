@@ -57,7 +57,7 @@ export default function AliphiaSettingsModal({ open, onOpenChange, onSuccess }: 
         if (onSuccess) onSuccess();
         onOpenChange(false);
       } else {
-        toast.error('بيانات غير صحيحة أو يوجد خلل في الاتصال', { id: toastId });
+        toast.error(checkResult.message || 'بيانات غير صحيحة أو يوجد خلل في الاتصال', { id: toastId });
       }
     } catch (e) {
       toast.error('حدث خطأ أثناء الاتصال', { id: toastId });

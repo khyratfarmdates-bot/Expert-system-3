@@ -23,7 +23,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
 // Parse JSON and URL-encoded request bodies
 app.use(express.json());
@@ -72,21 +72,33 @@ app.all('/api_public/*splat', async (req, res) => {
   // بناء الرابط الكامل بطريقة مضمونة ومباشرة مع معلمات الاستعلام
   const aliphiaUrl = 'https://aliphia.com/v1/api_public' + req.originalUrl.substring('/api_public'.length);
 
+  const clientContentType = req.headers['content-type'] || '';
   const headers = {
     'Authorization': authHeader,
     'X-KEYALI-API': apiKey,
-    'Content-Type': 'application/x-www-form-urlencoded',
     'Accept': 'application/json',
     'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   };
+
+  let requestBody;
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    if (clientContentType.includes('application/json')) {
+      headers['Content-Type'] = 'application/json';
+      requestBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    } else if (clientContentType.includes('application/x-www-form-urlencoded')) {
+      headers['Content-Type'] = 'application/x-www-form-urlencoded';
+      requestBody = typeof req.body === 'string' ? req.body : new URLSearchParams(req.body).toString();
+    } else {
+      headers['Content-Type'] = 'application/json'; // Default fallback
+      requestBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    }
+  }
 
   try {
     const fetchOptions = {
       method: req.method,
       headers,
-      body: ['POST', 'PUT', 'PATCH'].includes(req.method)
-        ? new URLSearchParams(req.body).toString()
-        : undefined,
+      body: requestBody,
     };
 
     const aliphiaRes = await fetch(aliphiaUrl, fetchOptions);

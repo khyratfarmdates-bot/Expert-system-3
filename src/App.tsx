@@ -269,7 +269,7 @@ function AppContent() {
           subItems: [
             { id: "purchases", label: "سجل المشتريات", roles: ["manager", "supervisor"] },
             { id: "suppliers", label: "الموردين", roles: ["manager"] },
-            { id: "camera", label: "مسح الفواتير", roles: ["manager", "supervisor"] },
+            { id: "camera", label: "الماسح الذكي", roles: ["manager", "supervisor"] },
           ]
         },
       ]
@@ -604,7 +604,11 @@ function AppContent() {
 
   const handleLogin = async () => {
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: "select_account",
+      });
+      await signInWithPopup(auth, provider);
       setShowWelcomeScreen(true);
       toast.success("تم تسجيل الدخول بنجاح");
     } catch {

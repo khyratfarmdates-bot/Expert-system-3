@@ -15,7 +15,7 @@ service cloud.firestore {
 
     // Connection Test
     match /_connection_test_/{docId} {
-      allow read: if isSignedIn();
+      allow read: if true;
     }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }

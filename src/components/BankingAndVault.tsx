@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { ModuleHelp } from '@/components/ui/HelpTooltip';
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -228,23 +227,6 @@ export default function BankingAndVault() {
 
   return (
     <div className="space-y-6 pb-20" dir="rtl">
-      <ModuleHelp
-        title="إدارة البنوك والخزينة"
-        description="النظام المالي المركزي — متابعة أرصدة جميع الحسابات البنكية والخزائن النقدية مع سجل كامل لكل تدفق مالي."
-        steps={[
-          { icon: Plus, title: 'إضافة حساب / خزينة', desc: 'اضغط "إضافة حساب / خزينة" وحدد النوع: حساب بنكي أو خزينة نقدية. أدخل الرصيد الافتتاحي بدقة.', color: 'bg-blue-100 text-blue-600' },
-          { icon: Wallet, title: 'تتبع الرصيد الفوري', desc: 'كل حساب يعرض رصيده المحدد تلقائياً بعد جمع جميع الواردات وخصم المصروفات والعهد.', color: 'bg-emerald-100 text-emerald-600' },
-          { icon: History, title: 'سجل التدفقات', desc: 'اضغط أيقونة التاريخ على أي حساب لعرض كشف تفصيلي بكل عملية واردة وصادرة.', color: 'bg-purple-100 text-purple-600' },
-          { icon: CreditCard, title: 'الآيبان وشهادة الحساب', desc: 'أدخل رقم الآيبان ورابط شهادة الحساب للوصول السريع للمستندات الرسمية.', color: 'bg-cyan-100 text-cyan-600' },
-          { icon: Landmark, title: 'تعليق / تفعيل الحساب', desc: 'من قائمة الخيارات يمكن تعليق حساب مؤقتاً. الحسابات المعلقة لا تقبل صرفاً جديداً.', color: 'bg-amber-100 text-amber-600' },
-        ]}
-        tips={[
-          'الرصيد الافتتاحي هو رصيد الحساب في بداية استخدام النظام — أدخله بدقة.',
-          'كل عملية مالية (إيراد/مصروف) تؤثر تلقائياً على رصيد الحساب المرتبط.',
-          'أضف رابط شهادة الآيبان لكل حساب بنكي لتسهيل مراجعة المستندات.',
-          'تويبة "الحسابات البنكية" و"العهد والخزائن" تفصل العرض لسهولة المتابعة.',
-        ]}
-      />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="w-full md:w-auto">
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">إدارة البنوك والخزينة</h1>

@@ -94,6 +94,15 @@ export default function WorkerView({ workerId, onBack, readOnly = false }: Worke
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Public Verification gate state
+  const [isVerifiedWorker, setIsVerifiedWorker] = useState(() => {
+    if (!readOnly) return true;
+    const cached = typeof window !== 'undefined' ? sessionStorage.getItem(`verified_worker_${workerId}`) : null;
+    return cached === 'true';
+  });
+  const [phoneDigitsInput, setPhoneDigitsInput] = useState('');
+  const [verificationError, setVerificationError] = useState('');
+
   // Modals
   const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
   const [isTxDialogOpen, setIsTxDialogOpen] = useState(false);
@@ -428,6 +437,29 @@ export default function WorkerView({ workerId, onBack, readOnly = false }: Worke
     return [...logData, ...txData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [worker, logs, transactions, projects]);
 
+  const lastFourDigits = useMemo(() => {
+    if (!worker || !worker.phone) return '';
+    const cleaned = worker.phone.replace(/\D/g, '');
+    return cleaned.slice(-4);
+  }, [worker]);
+
+  const handleVerifyPhone = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lastFourDigits) {
+      setIsVerifiedWorker(true);
+      return;
+    }
+    if (phoneDigitsInput.trim() === lastFourDigits) {
+      setIsVerifiedWorker(true);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`verified_worker_${workerId}`, 'true');
+      }
+      toast.success('تم التحقق من الهوية بنجاح');
+    } else {
+      setVerificationError('آخر 4 أرقام غير صحيحة. يرجى إعادة المحاولة.');
+      toast.error('رقم التحقق غير مطابق');
+    }
+  };
 
   // Forms
   const [logForm, setLogForm] = useState({
@@ -811,6 +843,59 @@ export default function WorkerView({ workerId, onBack, readOnly = false }: Worke
         <h3 className="text-xl font-bold text-slate-800">تعذر تحميل بيانات العامل</h3>
         <p className="text-slate-500 max-w-md">تأكد من صحة الرابط أو من وجود العامل في النظام. قد تحتاج لتسجيل الدخول إذا لم يكن هذا الرابط عاماً.</p>
         <Button onClick={onBack} variant="outline" className="rounded-xl">العودة للرئيسية</Button>
+      </div>
+    );
+  }
+
+  // Security gate for public access
+  if (readOnly && !isVerifiedWorker && worker && worker.phone && worker.phone.trim().length >= 4) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center p-4 bg-slate-950/5" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+        <Card className="w-full max-w-md rounded-[2.5rem] border border-slate-100 shadow-2xl p-8 md:p-12 bg-white text-center space-y-6">
+          <div className="mx-auto w-20 h-20 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 mb-2 relative">
+            <div className="absolute inset-0 bg-teal-500/10 rounded-2xl scale-110 animate-pulse" />
+            <Shield className="w-10 h-10 relative z-10" />
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight">بوابة الخصوصية والأمان</h3>
+            <p className="text-xs text-slate-500 leading-relaxed font-bold max-w-sm mx-auto">
+              مرحباً بك في بوابة الخدمة الذاتية لشركة خبراء الرسم للمقاولات. لحماية خصوصية بياناتك المالية وسرية كشف الحساب، يرجى كتابة آخر 4 أرقام من رقم جوالك المسجل لدينا لتأكيد هويتك:
+            </p>
+          </div>
+          <form onSubmit={handleVerifyPhone} className="space-y-6">
+            <div className="space-y-2 text-right">
+              <Label htmlFor="pin" className="text-xs font-black text-slate-500 block mr-1 text-center font-sans">آخر 4 أرقام من جوالك (مثال: ••••)</Label>
+              <Input
+                id="pin"
+                type="password"
+                maxLength={4}
+                pattern="[0-9]*"
+                inputMode="numeric"
+                placeholder="••••"
+                value={phoneDigitsInput}
+                onChange={(e) => {
+                  setPhoneDigitsInput(e.target.value.replace(/\D/g, ''));
+                  setVerificationError('');
+                }}
+                className="h-16 text-center tracking-[1.5em] text-xl font-mono font-black rounded-2xl border-slate-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-slate-50"
+                required
+              />
+              {verificationError && (
+                <p className="text-[11px] text-red-500 font-bold mt-1.5 text-center">{verificationError}</p>
+              )}
+            </div>
+            <Button
+              type="submit"
+              className="w-full h-13 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs transition-all shadow-lg shadow-teal-600/25 active:scale-95 flex items-center justify-center border-none"
+            >
+              التحقق الآمن والدخول للملف
+            </Button>
+          </form>
+          <div className="pt-6 border-t border-slate-100 text-[10px] text-slate-400 font-bold space-y-1">
+            <p className="uppercase tracking-wider text-slate-400">Experts Painting Co. Unified Security Gate</p>
+            <p>إذا واجهتك أي مشكلة، يرجى التواصل مع الإدارة المالية لتحديث رقم جوالك.</p>
+          </div>
+        </Card>
       </div>
     );
   }

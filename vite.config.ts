@@ -34,8 +34,12 @@ export default defineConfig(({mode}) => {
       outDir: 'dist',
       assetsDir: 'assets',
       emptyOutDir: true,
-      chunkSizeWarningLimit: 5000,
+      minify: 'esbuild',
+      cssMinify: true,
+      sourcemap: false,
+      chunkSizeWarningLimit: 10000,
       rollupOptions: {
+        maxParallelFileOps: 1,
         output: {
           manualChunks: undefined
         }

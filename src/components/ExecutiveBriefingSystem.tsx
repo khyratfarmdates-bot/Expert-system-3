@@ -4,13 +4,17 @@ import {
   BarChart3, Volume2, Play, Square, Loader2,
   TrendingUp, TrendingDown, Wallet, Clock,
   HardHat, CheckCircle, AlertTriangle, Building2,
-  RefreshCw, ChevronLeft
+  RefreshCw, ChevronLeft, Sparkles, ShieldCheck,
+  Coins, Activity, FileText
 } from 'lucide-react';
 import {
   collection, query, onSnapshot, where, orderBy, limit
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'motion/react';
+import { analyzeProjectSpending, analyzeCompanyPortfolioCredit } from '../lib/gemini';
+import { toast } from 'sonner';
+
 
 /* ─── Types ─── */
 interface BriefingItem {
@@ -77,6 +81,13 @@ export default function ExecutiveBriefingSystem({ goToTab }: { goToTab?: (tab: s
   });
   const [briefingItems, setBriefingItems] = useState<BriefingItem[]>([]);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Raw collections for AI analysis
+  const [rawProjects, setRawProjects] = useState<any[]>([]);
+  const [rawTransactions, setRawTransactions] = useState<any[]>([]);
+  const [projectAnalysisMap, setProjectAnalysisMap] = useState<Record<string, { reading: boolean; text?: string; isError?: boolean }>>({});
+  const [globalPortfolioAnalysis, setGlobalPortfolioAnalysis] = useState<{ reading: boolean; text?: string }>({ reading: false });
+
 
   /* ── Build briefing items from real stats ── */
   useEffect(() => {
@@ -156,12 +167,15 @@ export default function ExecutiveBriefingSystem({ goToTab }: { goToTab?: (tab: s
       query(collection(db, 'transactions'), where('date', '>=', ago90.toISOString())),
       snap => {
         let inc = 0, exp = 0, pend = 0;
+        const txsList: any[] = [];
         snap.forEach(d => {
           const data = d.data();
+          txsList.push({ id: d.id, ...data });
           if (data.type === 'income') inc += data.amount || 0;
           if (data.type === 'expense' || data.type === 'purchase') exp += data.amount || 0;
           if (data.status === 'pending') pend++;
         });
+        setRawTransactions(txsList);
         setStats(p => ({ ...p, income: inc, expenses: exp, net: inc - exp, pendingPurchases: pend }));
         setLoading(false);
       },
@@ -170,7 +184,12 @@ export default function ExecutiveBriefingSystem({ goToTab }: { goToTab?: (tab: s
 
     // Projects
     subs.push(onSnapshot(collection(db, 'projects'), snap => {
-      const active = snap.docs.filter(d => ['in-progress', 'active'].includes(d.data().status)).length;
+      const projsList: any[] = [];
+      snap.forEach(d => {
+        projsList.push({ id: d.id, ...d.data() });
+      });
+      setRawProjects(projsList);
+      const active = projsList.filter(p => ['in-progress', 'active'].includes(p.status)).length;
       setStats(p => ({ ...p, activeProjects: active }));
     }));
 
@@ -235,6 +254,53 @@ export default function ExecutiveBriefingSystem({ goToTab }: { goToTab?: (tab: s
     utterance.onerror = () => setIsSpeaking(false);
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
+  };
+
+  const handleProjectAIAnalysis = async (project: any) => {
+    setProjectAnalysisMap(prev => ({ ...prev, [project.id]: { reading: true } }));
+    try {
+      const relatedTxs = rawTransactions.filter(t => t.projectId === project.id);
+      const resText = await analyzeProjectSpending(project, relatedTxs);
+      setProjectAnalysisMap(prev => ({
+        ...prev,
+        [project.id]: { reading: false, text: resText || 'تعذر الحصول على استجابة.' }
+      }));
+      toast.success('تم تحليل بيانات المشروع بنجاح');
+    } catch (e: any) {
+      console.error(e);
+      setProjectAnalysisMap(prev => ({
+        ...prev,
+        [project.id]: { reading: false, text: 'حدث خطأ أثناء الاتصال بـ Gemini: ' + (e.message || e), isError: true }
+      }));
+      toast.error('فشل الاتصال بالذكاء الاصطناعي');
+    }
+  };
+
+  const handleCompanyPortfolioAIAnalysis = async () => {
+    setGlobalPortfolioAnalysis({ reading: true });
+    try {
+      const activeProjects = rawProjects.filter(p => !p.status || ['in-progress', 'active', 'on-hold'].includes(p.status));
+      const projectsSummary = activeProjects.map(p => {
+        const relatedTxs = rawTransactions.filter(t => t.projectId === p.id);
+        const totalExp = relatedTxs.filter(t => t.type === 'expense').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        return {
+          id: p.id,
+          title: p.title || p.name || 'مشروع بدون عنوان',
+          budget: Number(p.budget) || 0,
+          progress: Number(p.progress) || 0,
+          totalExpenses: totalExp,
+          remaining: (Number(p.budget) || 0) - totalExp
+        };
+      });
+
+      const resultText = await analyzeCompanyPortfolioCredit(projectsSummary, rawTransactions);
+      setGlobalPortfolioAnalysis({ reading: false, text: resultText });
+      toast.success('اكتمل التقرير المالي الاستشاري');
+    } catch (e: any) {
+      console.error(e);
+      setGlobalPortfolioAnalysis({ reading: false, text: 'عذراً، فشل تنفيذ التحليل الائتماني الشامل: ' + (e.message || e) });
+      toast.error('تعذر إجراء تقييم المحفظة');
+    }
   };
 
   /* ── Filter ── */
@@ -472,6 +538,185 @@ export default function ExecutiveBriefingSystem({ goToTab }: { goToTab?: (tab: s
             </AnimatePresence>
           </div>
         )}
+
+        {/* ══ AI FINANCIAL ANALYSIS & DEFICIT EARLY WARNING SECTION (EBS-3) ══ */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-indigo-600 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-800 leading-tight">الرقابة المالية الوقائية وتنبؤات العجز (Gemini AI)</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Project Financial standing & early deficit warnings</p>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleCompanyPortfolioAIAnalysis}
+              disabled={globalPortfolioAnalysis.reading || rawProjects.length === 0}
+              className="px-4 h-10 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 transition shadow-md shadow-indigo-600/10 cursor-pointer active:scale-95 border-none"
+            >
+              {globalPortfolioAnalysis.reading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  جاري فحص المحفظة الائتمانية بالكامل...
+                </>
+              ) : (
+                <>
+                  <Activity className="w-3.5 h-3.5 animate-bounce" />
+                  تحليل ائتماني وقائي شامل لشركة خبراء الرسم
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Global executive report */}
+          {globalPortfolioAnalysis.text && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-indigo-950 text-white rounded-xl p-5 space-y-3 relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center gap-2 border-b border-indigo-900/40 pb-2 mb-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <h4 className="text-xs font-black text-white">التقرير الائتماني المالي الشامل للمدير التنفيذي</h4>
+              </div>
+              <div className="text-xs leading-relaxed font-semibold text-slate-200 whitespace-pre-line text-right">
+                {globalPortfolioAnalysis.text}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Active Projects List with specific inline Gemini Credit analysis */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">تقييم المشاريع بشكل فردي وتدقيق نفقات المواقع</h4>
+            
+            {rawProjects.filter(p => !p.status || ['in-progress', 'active'].includes(p.status)).length === 0 ? (
+              <p className="text-xs text-slate-400 font-semibold text-center py-4 bg-slate-50 rounded-xl">لا توجد مشاريع نشطة حالياً لإخضاعها للفحص الذكي.</p>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {rawProjects
+                  .filter(p => !p.status || ['in-progress', 'active'].includes(p.status))
+                  .map(p => {
+                    const relatedTxs = rawTransactions.filter(t => t.projectId === p.id);
+                    const totalSpent = relatedTxs
+                      .filter(t => t.type === 'expense')
+                      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+                    const budget = Number(p.budget) || 0;
+                    const balance = budget - totalSpent;
+                    const pct = budget > 0 ? Math.min(100, Math.round((totalSpent / budget) * 100)) : 0;
+                    const isOverBudget = totalSpent > budget && budget > 0;
+                    const isApproachingCrisis = pct >= 75 && pct <= 100 && budget > 0;
+                    const aiResult = projectAnalysisMap[p.id];
+
+                    return (
+                      <div 
+                        key={p.id} 
+                        className={`border rounded-xl p-4 transition-all bg-white relative ${
+                          isOverBudget ? 'border-red-200 bg-red-50/5' :
+                          isApproachingCrisis ? 'border-amber-200 bg-amber-50/5' : 'border-slate-100 hover:border-slate-200 shadow-sm'
+                        }`}
+                      >
+                        {/* Project Header */}
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div>
+                            <span className="text-[9px] font-black uppercase text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-lg">
+                              {(p.projectType === 'hoardings' && 'أسوار دعائية') || 
+                               (p.projectType === 'signage_printing' && 'لوحات وطباعة') || 
+                               (p.projectType === 'cladding_letters' && 'كلادينج وحروف بارزة') || 
+                               (p.projectType === 'digital_screens' && 'شاشات ومجسمات') || 'دعاية وإنشاءات'}
+                            </span>
+                            <h5 className="font-black text-xs text-slate-800 mt-1">{p.title || p.name}</h5>
+                            <p className="text-[10px] text-slate-400 font-bold">العميل: {p.clientName || 'غير مسجل'}</p>
+                          </div>
+
+                          <div className="text-left">
+                            <span className="text-[10px] font-black bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-lg font-sans">
+                              إنجاز: {p.progress || 0}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Financial Parameters */}
+                        <div className="grid grid-cols-3 gap-2 py-3 border border-slate-100 mb-3 bg-slate-50/50 rounded-lg p-2 border-l-0 border-r-0">
+                          <div>
+                            <p className="text-[9px] font-bold text-slate-400">الميزانية</p>
+                            <p className="text-xs font-black text-slate-700">{budget > 0 ? budget.toLocaleString() : '—'} ر.س</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold text-slate-400">صرف تشغيلي فعلي</p>
+                            <p className={`text-xs font-black ${isOverBudget ? 'text-red-600' : 'text-slate-700'}`}>{totalSpent.toLocaleString()} ر.س</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold text-slate-400">السيولة المتبقية</p>
+                            <p className={`text-xs font-black ${balance < 0 ? 'text-red-500' : 'text-emerald-600'}`}>{balance.toLocaleString()} ر.س</p>
+                          </div>
+                        </div>
+
+                        {/* Cost Progress Bar */}
+                        {budget > 0 && (
+                          <div className="space-y-1 mb-4">
+                            <div className="flex justify-between text-[10px] font-bold">
+                              <span className="text-slate-400">استهلاك ميزانية المشروع:</span>
+                              <span className={`${pct > 90 ? 'text-red-600 font-black' : pct > 70 ? 'text-amber-600' : 'text-indigo-600'}`}>{pct}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  isOverBudget ? 'bg-red-500' :
+                                  isApproachingCrisis ? 'bg-amber-500' : 'bg-indigo-500'
+                                }`} 
+                                style={{ width: `${pct}%` }} 
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Actions and AI inline comments */}
+                        <div className="space-y-3">
+                          <button
+                            onClick={() => handleProjectAIAnalysis(p)}
+                            disabled={aiResult?.reading}
+                            className="w-full h-9 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 border border-slate-200 font-black text-[11px] rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 shadow-sm cursor-pointer"
+                          >
+                            {aiResult?.reading ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                                جاري تحليل الصرف بـ Gemini...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                                كشف مالي وقائي (Gemini AI)
+                              </>
+                            )}
+                          </button>
+
+                          {aiResult?.text && (
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.98 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className={`p-3 rounded-lg text-[11px] leading-relaxed font-semibold border ${
+                                aiResult.isError ? 'bg-red-50 text-red-700 border-red-100' : 'bg-slate-50 text-slate-705 border-slate-100'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 mb-1 font-black text-slate-800">
+                                <FileText className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                التقييم الائتماني والوقائي لـ Gemini:
+                              </div>
+                              <p className="text-right whitespace-pre-line">{aiResult.text}</p>
+                            </motion.div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* ══ SUMMARY BAR ══ */}
         <div className="bg-slate-900 rounded-xl p-5 text-white">
