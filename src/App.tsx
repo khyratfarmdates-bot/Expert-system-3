@@ -852,7 +852,7 @@ function AppContent() {
     >
       <style>{scrollbarStyles}</style>
       {/* Mobile Header */}
-      <div className="lg:hidden bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-50 h-[72px]">
+      <div className="lg:hidden bg-card/85 backdrop-blur-md border-b border-border/50 px-4 py-3 flex items-center justify-between sticky top-0 z-50 h-[72px]">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -1201,7 +1201,7 @@ function AppContent() {
         </AnimatePresence>
 
         {/* ══ DESKTOP HEADER ══ */}
-        <header className="hidden lg:flex h-14 bg-white border-b border-slate-100 items-center justify-between px-5 shrink-0" dir="rtl">
+        <header className="hidden lg:flex h-14 bg-card/85 backdrop-blur-md border-b border-border/50 items-center justify-between px-5 shrink-0" dir="rtl">
 
           {/* يمين = زر القائمة + الترحيب (جانب الشريط الجانبي) */}
           <div className="flex items-center gap-3">
@@ -1389,7 +1389,7 @@ function AppContent() {
       <SmartButler />
 
       {/* Native-style Bottom Navigation for Mobile */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-slate-100 z-50 px-2 pb-[env(safe-area-inset-bottom)] flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.05)] h-[70px]">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border/50 z-50 px-2 pb-[env(safe-area-inset-bottom)] flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.05)] h-[70px]">
         {/* Button 1: Workers */}
         <button
           onClick={() => {
