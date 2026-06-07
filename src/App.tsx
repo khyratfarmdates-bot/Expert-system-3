@@ -945,44 +945,40 @@ function AppContent() {
             exit={{ width: 0, opacity: 0 }}
             className={`fixed inset-y-0 right-0 lg:h-screen bg-sidebar/90 backdrop-blur-md text-sidebar-foreground border-l border-slate-200/50 dark:border-zinc-800/50 z-40 lg:relative lg:translate-x-0 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.08)] lg:shadow-none flex flex-col overflow-hidden rounded-l-[1.5rem] lg:rounded-none lg:top-0 top-16 bottom-[88px] h-auto`}
           >
-            <div
-              className={`px-5 py-6 border-b border-slate-100 dark:border-zinc-800/30 mb-2 transition-all duration-300 ${isSidebarCollapsed ? "items-center px-3" : ""}`}
-            >
-              <div className="flex items-center justify-between">
-                <div 
-                  onClick={() => setActiveTab(profile?.role === "sales_rep" ? "rep_dashboard" : "dashboard")}
-                  className="flex items-center gap-3 min-w-0 cursor-pointer active:scale-95 transition-all"
-                  title="الذهاب للوحة الرئيسية"
-                >
-                  <img
-                    src={sysSettings.logoUrl}
-                    alt="خبراء الرسم"
-                    className="w-10 h-10 object-contain rounded-xl shrink-0 transition-all shadow-xs border border-slate-100/80 p-0.5 bg-white dark:bg-zinc-900 dark:border-zinc-800"
-                  />
-                  {!isSidebarCollapsed && (
-                    <motion.div
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="flex flex-col overflow-hidden"
+            <div className={`p-4 mb-2 transition-all duration-300 ${isSidebarCollapsed ? "px-2" : "px-4"}`}>
+              <div 
+                onClick={() => setActiveTab(profile?.role === "sales_rep" ? "rep_dashboard" : "dashboard")}
+                className="flex items-center gap-3 cursor-pointer active:scale-95 transition-all text-white relative"
+                title="الذهاب للوحة الرئيسية"
+              >
+                <img
+                  src={sysSettings.logoUrl}
+                  alt="خبراء الرسم"
+                  className="w-9 h-9 object-contain rounded-xl shrink-0 transition-all p-0.5 bg-white shadow-[0_0_12px_rgba(255,255,255,0.6)] border border-white/20"
+                />
+                {!isSidebarCollapsed && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex flex-col overflow-hidden"
+                  >
+                    <span 
+                      className={`font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.95)] tracking-tight leading-[1.1] mb-0.5 transition-all ${
+                        (sysSettings.companyName?.length || 0) > 20 ? 'text-[10px]' : 
+                        (sysSettings.companyName?.length || 0) > 15 ? 'text-[11px]' : 
+                        'text-xs md:text-sm'
+                      } line-clamp-2`}
                     >
-                      <span 
-                        className={`font-black text-foreground tracking-tight leading-[1.1] mb-0.5 transition-all ${
-                          (sysSettings.companyName?.length || 0) > 20 ? 'text-[11px]' : 
-                          (sysSettings.companyName?.length || 0) > 15 ? 'text-xs' : 
-                          'text-sm md:text-base'
-                        } line-clamp-2`}
-                      >
-                        {sysSettings.companyName}
-                      </span>
-                      <span className={`uppercase font-bold opacity-50 tracking-widest ${
-                        (sysSettings.companySub?.length || 0) > 30 ? 'text-[7px]' : 
-                        'text-[8px] md:text-[9px]'
-                      } truncate`}>
-                        {sysSettings.companySub}
-                      </span>
-                    </motion.div>
-                  )}
-                </div>
+                      {sysSettings.companyName}
+                    </span>
+                    <span className={`uppercase font-bold text-white/70 drop-shadow-[0_0_4px_rgba(255,255,255,0.5)] tracking-widest ${
+                      (sysSettings.companySub?.length || 0) > 30 ? 'text-[6px]' : 
+                      'text-[7px] md:text-[8px]'
+                    } truncate`}>
+                      {sysSettings.companySub}
+                    </span>
+                  </motion.div>
+                )}
               </div>
             </div>
 
@@ -997,9 +993,8 @@ function AppContent() {
                 return (
                   <div key={group.id} className="mb-4">
                     {showFull && group.title && (
-                      <div className="px-6 mb-2 mt-5 text-[10px] font-extrabold text-muted-foreground/60 tracking-widest select-none flex items-center gap-2">
+                      <div className="px-6 mb-2 mt-5 text-[10px] font-extrabold text-muted-foreground/60 tracking-widest select-none flex items-center">
                         <span>{group.title}</span>
-                        <div className="flex-1 h-[1px] bg-slate-100 dark:bg-zinc-800/50" />
                       </div>
                     )}
 
@@ -1139,7 +1134,7 @@ function AppContent() {
                     </motion.div>
 
                     {!showFull && (
-                      <div className="mx-4 my-2 border-b border-slate-100 dark:border-zinc-800/50" />
+                      <div className="mx-4 my-2 h-[1px] bg-white/5" />
                     )}
                   </div>
                 );
@@ -1147,19 +1142,29 @@ function AppContent() {
             </nav>
 
             <div
-              className={`p-4 border-t border-slate-100 dark:border-zinc-800/50 mt-auto transition-all ${isSidebarCollapsed ? "items-center px-2" : ""}`}
+              className={`p-3 mt-auto transition-all flex flex-col gap-2 ${isSidebarCollapsed ? "items-center px-2" : ""}`}
             >
               {profile?.role === "manager" && (
-                <Button
-                  variant="ghost"
-                  className={`w-full justify-start gap-3 hover:text-foreground hover:bg-secondary/50 rounded-xl py-5 ${isSidebarCollapsed ? "px-0 justify-center" : ""}`}
+                <div
                   onClick={() => setActiveTab("settings")}
+                  className={`flex items-center gap-3 cursor-pointer active:scale-95 text-white transition-all duration-300 ${
+                    activeTab === "settings" ? "opacity-100 scale-102" : "opacity-80 hover:opacity-100"
+                  } ${
+                    isSidebarCollapsed ? "w-9 h-9 justify-center mx-auto" : "px-3 py-2 w-full"
+                  }`}
+                  title="الإعدادات"
                 >
-                  <Settings className="w-5 h-5 shrink-0" />
+                  <Settings className={`w-4 h-4 shrink-0 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.95)] ${
+                    activeTab === "settings" ? "stroke-[2.5px]" : "stroke-[1.8px]"
+                  }`} />
                   {!isSidebarCollapsed && (
-                    <span className="font-bold text-sm">الإعدادات</span>
+                    <span className={`font-black text-xs text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.95)] tracking-tight ${
+                      activeTab === "settings" ? "underline underline-offset-4 decoration-white/30" : ""
+                    }`}>
+                      الإعدادات
+                    </span>
                   )}
-                </Button>
+                </div>
               )}
               <Button
                 variant="ghost"
