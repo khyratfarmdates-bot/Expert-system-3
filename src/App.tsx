@@ -711,7 +711,7 @@ function AppContent() {
         dir="rtl"
         style={{ fontFamily: "'Cairo', sans-serif" }}
       >
-        <div className="w-full">
+        <div className="max-w-5xl mx-auto w-full">
           <WorkerView
             workerId={publicWorkerId}
             onBack={() => setPublicWorkerId(null)}

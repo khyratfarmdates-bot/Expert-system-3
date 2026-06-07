@@ -901,7 +901,7 @@ export default function WorkerView({ workerId, onBack, readOnly = false }: Worke
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-5xl mx-auto px-4">
       {/* Smart Profile Header */}
       <div className="relative group overflow-hidden rounded-3xl bg-white border shadow-sm p-4 md:p-8">
         <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-50 group-hover:bg-accent/10 transition-colors duration-700" />

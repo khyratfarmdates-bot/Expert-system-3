@@ -188,7 +188,7 @@ Rules: qty and price must be numbers. If price unknown set to 0.` }
   // ── Success Screen ─────────────────────────────────────
   if (result) {
     return (
-      <div className="max-w-2xl mx-auto" dir="rtl">
+      <div className="max-w-md mx-auto" dir="rtl">
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-8 text-center text-white">
@@ -258,7 +258,7 @@ Rules: qty and price must be numbers. If price unknown set to 0.` }
 
   // ── Main Form ──────────────────────────────────────────
   return (
-    <div className="w-full space-y-4" dir="rtl">
+    <div className="max-w-5xl mx-auto space-y-4" dir="rtl">
 
       {/* حالة الاتصال */}
       <AliphiaStatusCard />

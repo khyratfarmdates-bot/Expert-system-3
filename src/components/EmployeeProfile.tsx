@@ -414,7 +414,7 @@ export default function EmployeeProfile({ employeeId, onBack }: EmployeeProfileP
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-6xl mx-auto px-4">
       {loggedInProfile?.uid === employeeId && (
         <SmartAttendance />
       )}

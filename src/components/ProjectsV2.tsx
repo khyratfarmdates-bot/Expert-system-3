@@ -735,7 +735,7 @@ export default function ProjectsV2({ viewModeType = 'projects' }: { viewModeType
   }
 
   return (
-    <div className="w-full px-4 md:px-6 py-6 animate-in fade-in duration-700" dir="rtl">
+    <div className="max-w-[1440px] mx-auto w-full px-4 md:px-6 py-6 animate-in fade-in duration-700" dir="rtl">
       {/* 🌌 High-End Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1 md:space-y-2">
