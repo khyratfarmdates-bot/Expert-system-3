@@ -95,6 +95,84 @@ export default function SystemSettings({ initialTab }: { initialTab?: string }) 
     }
   }, [initialTab]);
 
+  // Helper function to get status summary for settings tabs
+  const getTabStatus = (id: string) => {
+    switch (id) {
+      case 'company_profile':
+        return { label: settings.companyName ? 'مكتمل ✅' : 'غير مكتمل ⚠️' };
+      case 'general':
+        return { label: 'مكتمل ✅' };
+      case 'notifications':
+        return { label: 'نشط 📬' };
+      case 'attendance':
+        return { label: `سياج ${settings.attendanceRadius}م 📍` };
+      case 'ai':
+        return { label: settings.geminiApiKey ? 'متصل ⚡' : 'غير متصل 🔌' };
+      case 'locations':
+        return { label: `${offices.length + housing.length} مقرات/سكن` };
+      case 'banks':
+        return { label: `${bankAccounts.length} حسابات/خزائن` };
+      case 'theme':
+        return { label: 'نشط 🎨' };
+      case 'data':
+        return { label: 'مؤمن 🔒' };
+      default:
+        return { label: 'جاهز' };
+    }
+  };
+
+  // Helper function to get color and visual styles for settings tabs
+  const getTabColorInfo = (id: string) => {
+    switch (id) {
+      case 'company_profile':
+        return { gradient: 'from-blue-500 to-indigo-600' };
+      case 'general':
+        return { gradient: 'from-slate-700 to-slate-900' };
+      case 'notifications':
+        return { gradient: 'from-sky-400 to-blue-500' };
+      case 'attendance':
+        return { gradient: 'from-amber-500 to-orange-600' };
+      case 'ai':
+        return { gradient: 'from-purple-500 to-violet-600 animate-[pulse_2s_infinite]' };
+      case 'locations':
+        return { gradient: 'from-emerald-500 to-teal-600' };
+      case 'banks':
+        return { gradient: 'from-green-500 to-emerald-600' };
+      case 'theme':
+        return { gradient: 'from-pink-500 to-rose-600' };
+      case 'data':
+        return { gradient: 'from-red-500 to-rose-700' };
+      default:
+        return { gradient: 'from-primary to-primary-dark' };
+    }
+  };
+
+  // Helper function to get descriptions for settings tabs
+  const getTabDescription = (id: string) => {
+    switch (id) {
+      case 'company_profile':
+        return 'تحديث بيانات السجل التجاري، الأوراق الحكومية، والعنوان الوطني الرسمي.';
+      case 'general':
+        return 'إدارة معلومات المؤسسة الأساسية، العملة الافتراضية، التفضيلات الضريبية والمالية.';
+      case 'notifications':
+        return 'تخصيص قوالب الرسائل البريدية التلقائية وإشعارات الرواتب والوثائق المنتهية.';
+      case 'attendance':
+        return 'تحديد ساعات العمل، أيام الإجازات الأسبوعية، ونطاق السياج الجغرافي للمواقع.';
+      case 'ai':
+        return 'ربط مفتاح ذكاء Gemini، وتخصيص تفضيلات الموجز الصوتي الإداري اليومي.';
+      case 'locations':
+        return 'إضافة وإدارة فروع المنشأة، المعارض، ومواقع السكن الإداري والعمالي.';
+      case 'banks':
+        return 'تسجيل الحسابات البنكية للمؤسسة، وصناديق النقد (الكاش) وإدارتها.';
+      case 'theme':
+        return 'تعديل تفضيلات المظهر (فاتح/داكن)، الألوان المخصصة، وحواف البطاقات.';
+      case 'data':
+        return 'تنظيف قاعدة البيانات من البيانات التجريبية، صيانة الكاش، ورفع مستوى الأمان.';
+      default:
+        return 'تعديل وتخصيص إعدادات هذا القسم.';
+    }
+  };
+
   // Locations State
   const [newOffice, setNewOffice] = useState({
     name: '',

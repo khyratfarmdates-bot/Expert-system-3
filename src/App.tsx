@@ -895,14 +895,12 @@ function AppContent() {
         >
           {/* Pulsing Glowing Logo Container */}
           <div className="relative mb-8">
-            <div className="absolute -inset-4 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-[2.5rem] blur-xl opacity-35 animate-pulse" />
-            <div className="relative w-36 h-36 bg-slate-900/60 backdrop-blur-2xl rounded-[2.5rem] p-6 shadow-2xl border border-slate-800 flex items-center justify-center">
-              <img 
-                src="https://i.imgur.com/yYZDeHZ.jpg" 
-                alt="Logo" 
-                className="w-full h-full object-contain rounded-2xl shadow-inner border border-slate-700 bg-white p-1" 
-              />
-            </div>
+            <div className="absolute -inset-6 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full blur-2xl opacity-65 animate-pulse" />
+            <img 
+              src="https://i.imgur.com/yYZDeHZ.jpg" 
+              alt="Logo" 
+              className="relative w-36 h-36 object-contain rounded-[2.5rem] shadow-2xl border-2 border-white/20 bg-white p-1" 
+            />
           </div>
 
           <motion.h1 
