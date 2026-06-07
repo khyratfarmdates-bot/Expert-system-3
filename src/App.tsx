@@ -946,7 +946,7 @@ function AppContent() {
             className={`fixed inset-y-0 right-0 lg:h-screen bg-sidebar/90 backdrop-blur-md text-sidebar-foreground border-l border-slate-200/50 dark:border-zinc-800/50 z-40 lg:relative lg:translate-x-0 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.08)] lg:shadow-none flex flex-col overflow-hidden rounded-l-[1.5rem] lg:rounded-none lg:top-0 top-16 bottom-[88px] h-auto`}
           >
             <div
-              className={`px-6 py-8 border-b border-slate-100 dark:border-zinc-850/30 mb-2 transition-all duration-300 ${isSidebarCollapsed ? "items-center px-4" : ""}`}
+              className={`px-5 py-6 border-b border-slate-100 dark:border-zinc-800/30 mb-2 transition-all duration-300 ${isSidebarCollapsed ? "items-center px-3" : ""}`}
             >
               <div className="flex items-center justify-between">
                 <div 
@@ -957,7 +957,7 @@ function AppContent() {
                   <img
                     src={sysSettings.logoUrl}
                     alt="خبراء الرسم"
-                    className="w-10 h-10 object-contain rounded-md shrink-0 transition-all"
+                    className="w-10 h-10 object-contain rounded-xl shrink-0 transition-all shadow-xs border border-slate-100/80 p-0.5 bg-white dark:bg-zinc-900 dark:border-zinc-800"
                   />
                   {!isSidebarCollapsed && (
                     <motion.div
@@ -1034,12 +1034,12 @@ function AppContent() {
                                     }
                                   }
                                 }}
-                                className={`w-full flex items-center justify-between transition-all group relative ${
-                                  !showFull ? "justify-center px-0 py-4" : "px-6 py-2"
+                                className={`flex items-center justify-between transition-all group relative rounded-xl ${
+                                  !showFull ? "w-12 h-12 mx-auto justify-center" : "mx-2.5 px-3 py-2"
                                 } ${
                                   isSubActive
-                                    ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground font-black"
-                                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                                    ? "bg-primary/10 text-primary dark:bg-primary/20 font-black shadow-xs"
+                                    : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
                                 }`}
                               >
                                 <div className="flex items-center gap-3">
@@ -1063,7 +1063,7 @@ function AppContent() {
                               </button>
                               
                               {showFull && isExpanded && (
-                                <div className="space-y-0.5 pr-4 border-r border-slate-100 dark:border-zinc-800/60 mr-6 mt-0.5">
+                                <div className="space-y-0.5 pr-3 border-r border-slate-200/50 dark:border-zinc-800/60 mr-7 mt-0.5">
                                   {allowedSubItems.map((sub: any) => (
                                     <button
                                       key={sub.id}
@@ -1072,10 +1072,10 @@ function AppContent() {
                                         if (window.innerWidth < 1024)
                                           setIsSidebarOpen(false);
                                       }}
-                                      className={`w-full flex items-center gap-3 transition-all px-4 py-1.5 rounded-lg text-right relative text-[11px] font-bold ${
+                                      className={`w-full flex items-center gap-2.5 transition-all px-3 py-1.5 rounded-lg text-right relative text-[11px] font-bold ${
                                         activeTab === sub.id
-                                          ? "bg-primary/10 text-primary dark:bg-primary/20 font-black"
-                                          : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+                                          ? "bg-primary/8 text-primary dark:bg-primary/15 font-black"
+                                          : "text-muted-foreground hover:bg-secondary/30 hover:text-foreground"
                                       }`}
                                     >
                                       {activeTab === sub.id && (
@@ -1098,14 +1098,14 @@ function AppContent() {
                               if (window.innerWidth < 1024)
                                 setIsSidebarOpen(false);
                             }}
-                            className={`w-full flex items-center gap-3 transition-all group relative ${
+                            className={`flex items-center gap-3 transition-all group relative rounded-xl ${
                               !showFull
-                                ? "justify-center px-0 py-4"
-                                : "px-6 py-2"
+                                ? "w-12 h-12 mx-auto justify-center"
+                                : "mx-2.5 px-3 py-2"
                             } ${
                               activeTab === item.id
-                                ? "bg-primary/10 text-primary dark:bg-primary/20 font-black"
-                                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                                ? "bg-primary/10 text-primary dark:bg-primary/20 font-black shadow-xs"
+                                : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
                             }`}
                           >
                             {activeTab === item.id && showFull && (
