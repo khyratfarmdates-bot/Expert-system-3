@@ -427,79 +427,114 @@ export default function SystemSettings() {
 
   return (
     <div className="max-w-[1400px] mx-auto pb-24 px-2 md:px-4" dir="rtl">
-      {/* Title Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="space-y-1">
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <span className="p-2.5 bg-primary/10 rounded-2xl text-primary inline-flex">
-              <SettingsIcon className="w-8 h-8 animate-[spin_20s_linear_infinite]" />
-            </span>
-            لوحة الإعدادات والتحكم
-          </h1>
-          <p className="text-slate-500 font-bold text-sm">إدارة هوية الشركة، نظام الأمان، تفضيلات المظهر والذكاء الاصطناعي</p>
-        </div>
-        <div className="flex items-center gap-3 bg-white/80 border border-slate-200/60 backdrop-blur-md rounded-2xl py-2.5 px-4 shadow-sm h-fit">
-          <ShieldCheck className="w-5 h-5 text-emerald-500" />
-          <div>
-            <p className="text-[10px] font-black text-slate-400 leading-none">صلاحية الدخول الحالية</p>
-            <p className="text-xs font-black text-slate-800 mt-1">
-              {profile?.role === 'manager' ? '👑 مدير عام النظام' : profile?.role === 'supervisor' ? '⚡ مشرف النظام' : '💎 موظف'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Dual-Pane Dashboard */}
-      <div className="grid grid-cols-12 gap-8 items-start">
-        
-        {/* RIGHT SIDEBAR TABS */}
-        <div className="col-span-12 lg:col-span-3 lg:sticky lg:top-8 z-10">
-          <div className="bg-white/70 backdrop-blur-xl border border-slate-200/50 shadow-xl rounded-[2rem] p-4 space-y-1.5">
-            <div className="px-3 py-2 pb-4 border-b border-slate-100 mb-2 hidden lg:block">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">أقسام لوحة التحكم</span>
-              <span className="text-xs font-bold text-slate-500 block mt-1">اضغط للتنقل المباشر</span>
+      {showHub ? (
+        <div>
+          {/* Title Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-zinc-150 tracking-tight flex items-center gap-3">
+                <span className="p-2.5 bg-primary/10 rounded-2xl text-primary inline-flex">
+                  <SettingsIcon className="w-8 h-8 animate-[spin_20s_linear_infinite]" />
+                </span>
+                لوحة الإعدادات والتحكم
+              </h1>
+              <p className="text-slate-500 font-bold text-sm">إدارة هوية الشركة، نظام الأمان، تفضيلات المظهر والذكاء الاصطناعي</p>
             </div>
-
-            {/* Mobile Tab List Container (scrolls horizontally) */}
-            <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 -mx-2 lg:mx-0 px-2 lg:px-0 no-scrollbar snap-x">
-              {visibleTabs.map((tab) => {
-                const IsActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-right transition-all font-black text-sm shrink-0 snap-center lg:w-full select-none ${
-                      IsActive 
-                        ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02] border-none' 
-                        : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
-                    }`}
-                  >
-                    <tab.icon className={`w-5 h-5 shrink-0 ${IsActive ? 'text-white' : 'text-slate-400 group-hover:text-primary'}`} />
-                    <span>{tab.label}</span>
-                    {IsActive && (
-                      <motion.div 
-                        layoutId="activeTabIndicator" 
-                        className="w-1.5 h-6 bg-white rounded-full mr-auto hidden lg:block"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-3 bg-white/80 border border-slate-200/60 backdrop-blur-md rounded-2xl py-2.5 px-4 shadow-sm h-fit">
+              <ShieldCheck className="w-5 h-5 text-emerald-500" />
+              <div>
+                <p className="text-[10px] font-black text-slate-400 leading-none">صلاحية الدخول الحالية</p>
+                <p className="text-xs font-black text-slate-800 mt-1">
+                  {profile?.role === 'manager' ? '👑 مدير عام النظام' : profile?.role === 'supervisor' ? '⚡ مشرف النظام' : '💎 موظف'}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* LEFT CONTENT AREA */}
-        <div className="col-span-12 lg:col-span-9">
-          <div className="bg-white/70 backdrop-blur-xl border border-slate-200/50 shadow-xl rounded-[2.5rem] p-5 md:p-8 min-h-[600px] transition-all">
+          {/* Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {visibleTabs.map((tab) => {
+              const status = getTabStatus(tab.id);
+              const colorInfo = getTabColorInfo(tab.id);
+              return (
+                <motion.div
+                  key={tab.id}
+                  whileHover={{ y: -6, scale: 1.01 }}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setShowHub(false);
+                  }}
+                  className="cursor-pointer group relative p-6 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md rounded-[2.5rem] border border-slate-200/50 dark:border-zinc-800/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between min-h-[175px]"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3.5 rounded-2xl bg-gradient-to-br ${colorInfo.gradient} text-white shadow-md group-hover:scale-105 transition-transform duration-300`}>
+                      <tab.icon className="w-5.5 h-5.5" />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="font-black text-slate-800 dark:text-zinc-150 group-hover:text-primary transition-colors text-sm leading-snug">
+                        {tab.label}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-bold leading-normal">
+                        {getTabDescription(tab.id)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-zinc-800/50 pt-3 mt-4">
+                    <span className="text-[9px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
+                      {status.label}
+                    </span>
+                    <span className="text-[10px] font-black text-primary flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      تعديل الإعدادات <span className="text-sm">←</span>
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-4xl mx-auto">
+          {/* Breadcrumbs Header */}
+          <div className="flex flex-col gap-2 mb-6">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-zinc-500">
+              <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => {
+                if (visibleTabs.length > 1) setShowHub(true);
+              }}>لوحة الإعدادات</span>
+              <span>/</span>
+              <span className="text-slate-655 dark:text-zinc-300">{visibleTabs.find(t => t.id === activeTab)?.label}</span>
+            </div>
+            
+            <div className="flex items-center justify-between mt-1 border-b border-slate-100 dark:border-zinc-800/80 pb-4">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-black text-slate-900 dark:text-zinc-100 flex items-center gap-2.5">
+                  {React.createElement(visibleTabs.find(t => t.id === activeTab)?.icon || SettingsIcon, {
+                    className: "w-6 h-6 text-primary"
+                  })}
+                  {visibleTabs.find(t => t.id === activeTab)?.label}
+                </h1>
+              </div>
+
+              {visibleTabs.length > 1 && (
+                <Button
+                  onClick={() => setShowHub(true)}
+                  variant="outline"
+                  className="rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs font-bold transition-all px-4 py-2 flex items-center gap-1.5"
+                >
+                  <span className="text-base leading-none">→</span> العودة للإعدادات
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Page Content Card */}
+          <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-slate-200/50 dark:border-zinc-800/50 shadow-xl rounded-[2.5rem] p-5 md:p-8 min-h-[500px]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.25 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
               >
                 
                 {/* 1. COMPANY PROFILE TAB */}
@@ -1716,8 +1751,7 @@ export default function SystemSettings() {
             </AnimatePresence>
           </div>
         </div>
-
-      </div>
+      )}
     </div>
   );
 }
