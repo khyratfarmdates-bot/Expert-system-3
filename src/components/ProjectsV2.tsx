@@ -58,7 +58,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
-export default function ProjectsV2() {
+export default function ProjectsV2({ viewModeType = 'projects' }: { viewModeType?: 'projects' | 'tasks' }) {
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -66,6 +66,11 @@ export default function ProjectsV2() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
+
+  // Task specific states
+  const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed' | 'review-requested'>('all');
+  const [taskProjectFilter, setTaskProjectFilter] = useState<string>('all');
+  const [taskSearchQuery, setTaskSearchQuery] = useState('');
   const [activeStep, setActiveStep] = useState(1);
   const [aiInputText, setAiInputText] = useState('');
   const [isAiParsing, setIsAiParsing] = useState(false);
@@ -412,12 +417,325 @@ export default function ProjectsV2() {
     return { active, completed, totalBudget };
   }, [projects]);
 
+  // تجميع كافة المهام من كافة المشاريع
+  const allTasks = useMemo(() => {
+    const list: any[] = [];
+    projects.forEach(p => {
+      if (p.milestones) {
+        p.milestones.forEach((m, idx) => {
+          list.push({
+            ...m,
+            projectId: p.id,
+            projectTitle: p.title,
+            milestoneIndex: idx
+          });
+        });
+      }
+    });
+    return list;
+  }, [projects]);
+
+  // تصفية المهام بناءً على شروط البحث والفلاتر
+  const filteredTasks = useMemo(() => {
+    return allTasks.filter(t => {
+      const matchesSearch = t.title.toLowerCase().includes(taskSearchQuery.toLowerCase()) ||
+                           (t.description?.toLowerCase().includes(taskSearchQuery.toLowerCase()) ?? false) ||
+                           t.projectTitle.toLowerCase().includes(taskSearchQuery.toLowerCase());
+      const matchesStatus = taskStatusFilter === 'all' || t.status === taskStatusFilter;
+      const matchesProject = taskProjectFilter === 'all' || t.projectId === taskProjectFilter;
+      return matchesSearch && matchesStatus && matchesProject;
+    });
+  }, [allTasks, taskSearchQuery, taskStatusFilter, taskProjectFilter]);
+
+  // إحصائيات المهام المجمعة
+  const taskStats = useMemo(() => {
+    const total = allTasks.length;
+    const pending = allTasks.filter(t => t.status === 'pending').length;
+    const inProgress = allTasks.filter(t => t.status === 'in-progress').length;
+    const completed = allTasks.filter(t => t.status === 'completed').length;
+    const review = allTasks.filter(t => t.status === 'review-requested').length;
+    return { total, pending, inProgress, completed, review };
+  }, [allTasks]);
+
+  // تغيير حالة المهمة في قاعدة البيانات
+  const handleToggleTaskStatus = async (projectId: string, taskTitle: string, currentStatus: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    
+    // التبديل بين مكتملة وقيد الانتظار
+    const nextStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+    const newMilestones = (project.milestones || []).map(m => {
+      if (m.title === taskTitle) {
+        return {
+          ...m,
+          status: nextStatus as any,
+          date: nextStatus === 'completed' ? new Date().toISOString().split('T')[0] : ''
+        };
+      }
+      return m;
+    });
+
+    try {
+      await setDoc(doc(db, 'projects', projectId), {
+        ...project,
+        milestones: newMilestones,
+        progress: newMilestones.length > 0 ? Math.round((newMilestones.filter(m => m.status === 'completed').length / newMilestones.length) * 100) : 0
+      });
+      toast.success(`تم تحديث حالة المهمة بنجاح إلى: ${nextStatus === 'completed' ? 'مكتملة' : 'قيد الانتظار'}`);
+    } catch (err) {
+      console.error("Failed to toggle task status:", err);
+      toast.error("حدث خطأ أثناء تحديث حالة المهمة");
+    }
+  };
+
+  if (selectedProjectId) {
+    return <ProjectViewV2 projectId={selectedProjectId} onBack={() => setSelectedProjectId(null)} />;
+  }
+
+  if (viewModeType === 'tasks') {
+    return (
+      <div className="w-full px-4 md:px-6 py-6 animate-in fade-in duration-700" dir="rtl">
+        {/* 🌌 High-End Header */}
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1 md:space-y-2">
+            <div className="flex items-center gap-2">
+               <div className="h-5 w-5 md:h-7 md:w-7 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                  <Target className="w-3 h-3 md:w-4 md:h-4 animate-pulse" />
+               </div>
+               <span className="text-[7px] md:text-[9px] font-black text-primary uppercase tracking-[0.2em]">إدارة العمليات والمهام التشغيلية</span>
+            </div>
+            <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight leading-none">
+              المهام <span className="text-primary italic">والمراحل الميدانية</span>
+            </h1>
+            <p className="text-slate-500 font-bold max-w-lg text-[10px] md:text-sm leading-relaxed">
+              متابعة دقيقة لكافة المهام والمراحل الميدانية عبر مشاريع المؤسسة.
+            </p>
+          </div>
+        </div>
+
+        {/* 📊 Bento Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          <Card className="rounded-3xl border-2 border-slate-100 shadow-sm p-6 bg-white opacity-100 relative overflow-hidden group ring-0">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 group-hover:scale-125 transition-transform duration-700" />
+            <div className="relative z-10">
+              <div className="h-10 w-10 bg-primary/10 text-primary rounded-lg flex items-center justify-center mb-4">
+                <Target className="w-5 h-5" />
+              </div>
+              <p className="text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">إجمالي المهام</p>
+              <span className="text-2xl font-black text-slate-900">{taskStats.total}</span>
+            </div>
+          </Card>
+
+          <Card className="rounded-3xl border-2 border-slate-100 shadow-sm p-6 bg-white opacity-100 relative overflow-hidden group ring-0">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-125 transition-transform duration-700" />
+            <div className="relative z-10">
+              <div className="h-10 w-10 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center mb-4">
+                <Clock className="w-5 h-5" />
+              </div>
+              <p className="text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">مهام معلقة ونشطة</p>
+              <span className="text-2xl font-black text-slate-900">{taskStats.pending + taskStats.inProgress}</span>
+            </div>
+          </Card>
+
+          <Card className="rounded-3xl border-2 border-slate-100 shadow-sm p-6 bg-white opacity-100 relative overflow-hidden group ring-0">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-125 transition-transform duration-700" />
+            <div className="relative z-10">
+              <div className="h-10 w-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <p className="text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">مهام منجزة</p>
+              <span className="text-2xl font-black text-slate-900">{taskStats.completed}</span>
+            </div>
+          </Card>
+
+          <Card className="rounded-3xl bg-slate-900 border-none shadow-xl p-6 text-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/20 blur-2xl" />
+            <div className="relative z-10">
+              <div className="h-10 w-10 bg-white/10 text-white rounded-lg flex items-center justify-center mb-4 border border-white/20">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">نسبة الإنجاز الكلية</p>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black">{taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}</span>
+                <span className="text-[9px] font-bold text-slate-500">%</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* 🔍 Search and Filters */}
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mb-8">
+          <div className="relative w-full lg:max-w-md">
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input 
+              value={taskSearchQuery}
+              onChange={(e) => setTaskSearchQuery(e.target.value)}
+              placeholder="البحث عن مهمة أو مشروع..." 
+              className="w-full h-12 pl-4 pr-12 rounded-xl bg-white border border-slate-200 shadow-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+            {/* تصفية حسب المشروع */}
+            <select
+              value={taskProjectFilter}
+              onChange={(e) => setTaskProjectFilter(e.target.value)}
+              className="w-full sm:w-64 h-12 rounded-xl bg-white border border-slate-200 shadow-sm font-bold text-sm text-slate-700 pr-4 pl-8 focus:border-primary focus:ring-0"
+            >
+              <option value="all">كل المشاريع</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.title}</option>
+              ))}
+            </select>
+
+            {/* تصفية حسب حالة المهمة */}
+            <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 no-scrollbar">
+              <button 
+                type="button"
+                onClick={() => setTaskStatusFilter('all')}
+                className={`px-4 py-2 rounded-xl font-black text-xs transition-all whitespace-nowrap ${taskStatusFilter === 'all' ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 border border-slate-100 hover:border-primary/50'}`}
+              >
+                الكل
+              </button>
+              <button 
+                type="button"
+                onClick={() => setTaskStatusFilter('pending')}
+                className={`px-4 py-2 rounded-xl font-black text-xs transition-all whitespace-nowrap ${taskStatusFilter === 'pending' ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 border border-slate-100 hover:border-primary/50'}`}
+              >
+                معلقة
+              </button>
+              <button 
+                type="button"
+                onClick={() => setTaskStatusFilter('in-progress')}
+                className={`px-4 py-2 rounded-xl font-black text-xs transition-all whitespace-nowrap ${taskStatusFilter === 'in-progress' ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 border border-slate-100 hover:border-primary/50'}`}
+              >
+                قيد العمل
+              </button>
+              <button 
+                type="button"
+                onClick={() => setTaskStatusFilter('review-requested')}
+                className={`px-4 py-2 rounded-xl font-black text-xs transition-all whitespace-nowrap ${taskStatusFilter === 'review-requested' ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 border border-slate-100 hover:border-primary/50'}`}
+              >
+                بانتظار المراجعة
+              </button>
+              <button 
+                type="button"
+                onClick={() => setTaskStatusFilter('completed')}
+                className={`px-4 py-2 rounded-xl font-black text-xs transition-all whitespace-nowrap ${taskStatusFilter === 'completed' ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 border border-slate-100 hover:border-primary/50'}`}
+              >
+                منجزة
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 🖼/ Tasks Grid Card Listing */}
+        <AnimatePresence mode="popLayout">
+          {filteredTasks.length > 0 ? (
+            <motion.div 
+              layout
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
+              {filteredTasks.map((task) => {
+                const isCompleted = task.status === 'completed';
+                const isPending = task.status === 'pending';
+                const isInProgress = task.status === 'in-progress';
+                const isReview = task.status === 'review-requested';
+
+                return (
+                  <motion.div
+                    key={`${task.projectId}-${task.title}`}
+                    layout
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ y: -5, scale: 1.01 }}
+                    transition={{ duration: 0.3 }}
+                    className="group"
+                  >
+                    <Card className="rounded-[2rem] border-none bg-white overflow-hidden shadow-md shadow-slate-200/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 p-5 flex flex-col justify-between h-full min-h-[180px] ring-0 relative">
+                      <div className="absolute top-0 left-0 w-20 h-20 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+                      
+                      <div className="space-y-3">
+                        {/* Task Header */}
+                        <div className="flex justify-between items-start gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedProjectId(task.projectId)}
+                            className="text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-lg text-right hover:bg-indigo-100 transition-colors truncate max-w-[150px]"
+                          >
+                            📁 {task.projectTitle}
+                          </button>
+                          
+                          <Badge className={`border-none rounded-xl text-[9px] font-black ${
+                            isCompleted ? 'bg-emerald-50 text-emerald-700' :
+                            isReview ? 'bg-amber-50 text-amber-700 animate-pulse' :
+                            isInProgress ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {isCompleted ? 'منجزة ✓' :
+                             isReview ? 'مراجعة معلقة ⏳' :
+                             isInProgress ? 'نشطة ⚡' : 'معلقة ⏱️'}
+                          </Badge>
+                        </div>
+
+                        {/* Task Body */}
+                        <div className="text-right">
+                          <h4 className="font-extrabold text-sm text-slate-800 leading-snug group-hover:text-primary transition-colors">{task.title}</h4>
+                          {task.description && (
+                            <p className="text-[11px] text-slate-400 font-bold leading-relaxed mt-1 line-clamp-2">{task.description}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Task Footer */}
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <div className="text-right">
+                          <p className="text-[9px] font-bold text-slate-400">تأثير الإنجاز</p>
+                          <p className="text-xs font-black text-slate-700">{task.weight || 0}%</p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          onClick={() => handleToggleTaskStatus(task.projectId, task.title, task.status)}
+                          className={`h-9 px-4 rounded-xl font-black text-xs transition-all flex items-center gap-1 shadow-sm ${
+                            isCompleted 
+                              ? 'bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 border-none' 
+                              : 'bg-slate-900 hover:bg-emerald-600 text-white border-none'
+                          }`}
+                        >
+                          {isCompleted ? 'إعادة فتح' : 'إكمال المهمة'}
+                        </Button>
+                      </div>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          ) : (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center py-32 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 text-center"
+            >
+              <div className="w-24 h-24 bg-white rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-center mb-8 text-slate-300">
+                 <Target className="w-12 h-12" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 mb-2">لا توجد مهام</h3>
+              <p className="text-slate-500 font-bold max-w-sm px-6">
+                لم يتم العثور على أي مهام تطابق شروط التصفية والبحث الحالية.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
   if (selectedProjectId) {
     return <ProjectViewV2 projectId={selectedProjectId} onBack={() => setSelectedProjectId(null)} />;
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 animate-in fade-in duration-700" dir="rtl">
+    <div className="w-full px-4 md:px-6 py-6 animate-in fade-in duration-700" dir="rtl">
       {/* 🌌 High-End Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1 md:space-y-2">

@@ -711,7 +711,7 @@ function AppContent() {
         dir="rtl"
         style={{ fontFamily: "'Cairo', sans-serif" }}
       >
-        <div className="max-w-5xl mx-auto">
+        <div className="w-full">
           <WorkerView
             workerId={publicWorkerId}
             onBack={() => setPublicWorkerId(null)}
@@ -1368,7 +1368,8 @@ function AppContent() {
                   </>
                 )}
                 {activeTab === "workers_management" && <WorkersManagement />}
-                {(activeTab === "projects" || activeTab === "tasks") && <ProjectsV2 />}
+                {activeTab === "projects" && <ProjectsV2 viewModeType="projects" />}
+                {activeTab === "tasks" && <ProjectsV2 viewModeType="tasks" />}
                 {activeTab === "payrolls" && <Payrolls />}
                 {activeTab === "approvals" && <ApprovalCenter />}
                 {activeTab === "evaluation" && <PerformanceEvaluation />}

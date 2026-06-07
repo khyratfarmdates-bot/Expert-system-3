@@ -37,7 +37,9 @@ import {
   fetchAliphiaClients, 
   createAliphiaDocument,
   fetchAliphiaInvoiceDetails,
-  fetchAliphiaQuotationDetails
+  fetchAliphiaQuotationDetails,
+  normalizeAliphiaPdfUrl,
+  getProxiedAliphiaPdfUrl
 } from "../lib/aliphia";
 
 export default function Sales() {
@@ -74,6 +76,43 @@ export default function Sales() {
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [quoteSearch, setQuoteSearch] = useState('');
   const [clientSearch, setClientSearch] = useState('');
+
+  // Arabic search helper functions
+  const normalizeArabicText = (text: string): string => {
+    if (!text) return '';
+    return text
+      .toLowerCase()
+      .replace(/[أإآا]/g, 'ا')
+      .replace(/[ةه]/g, 'ه')
+      .replace(/[ىي]/g, 'ي')
+      .replace(/[\u064B-\u065F]/g, '') // Remove Arabic diacritics
+      .trim();
+  };
+
+  const matchSearchQuery = (textToSearch: string, query: string): boolean => {
+    if (!query) return true;
+    const normalizedText = normalizeArabicText(textToSearch);
+    const normalizedQuery = normalizeArabicText(query);
+    const keywords = normalizedQuery.split(/\s+/).filter(Boolean);
+    return keywords.every(keyword => normalizedText.includes(keyword));
+  };
+
+  // Local Sales filters states
+  const [localCategoryFilter, setLocalCategoryFilter] = useState('all');
+  const [localPaymentMethodFilter, setLocalPaymentMethodFilter] = useState('all');
+  const [localSyncFilter, setLocalSyncFilter] = useState('all');
+  const [localSort, setLocalSort] = useState('date-desc');
+
+  // Aliphia Invoices filters states
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
+  const [invoiceSort, setInvoiceSort] = useState('date-desc');
+
+  // Aliphia Quotes filters states
+  const [quoteStatusFilter, setQuoteStatusFilter] = useState('all');
+  const [quoteSort, setQuoteSort] = useState('date-desc');
+
+  // Aliphia Clients filters states
+  const [clientContactFilter, setClientContactFilter] = useState('all');
 
   // Sync Dialog state
   const [selectedSyncRevenue, setSelectedSyncRevenue] = useState<any | null>(null);
@@ -449,7 +488,9 @@ export default function Sales() {
     setLoadingDetails(true);
     setAliphiaDocDetails(null);
     try {
-      const docId = doc.id || doc.invoice_id || doc.quote_id;
+      const docId = type === 'invoice'
+        ? (doc.invoice_id && doc.invoice_id !== '0' ? doc.invoice_id : (doc.aliphiaInvoiceId || doc.id))
+        : (doc.quote_id && doc.quote_id !== '0' ? doc.quote_id : (doc.aliphiaQuoteId || doc.id));
       if (!docId) {
         throw new Error("معرّف المستند غير موجود");
       }
@@ -830,10 +871,13 @@ export default function Sales() {
 
   // WhatsApp share helper
   const handleShareWhatsApp = (type: 'invoice' | 'quote', doc: any) => {
-    const docNum = doc.invoice_number || doc.quote_number || doc.number || doc.id || doc.invoice_id || doc.quote_id;
+    const docNum = doc.invoice_number || doc.quote_number || doc.number || 
+      (type === 'invoice' 
+        ? (doc.invoice_id && doc.invoice_id !== '0' ? doc.invoice_id : doc.id)
+        : (doc.quote_id && doc.quote_id !== '0' ? doc.quote_id : doc.id));
     const clientName = doc.client_name || doc.client || 'العميل الكريم';
     const total = parseFloat(doc.invoice_total || doc.quote_total || doc.total || doc.amount || 0).toLocaleString();
-    const pdfUrl = doc.pdf_url || '';
+    const pdfUrl = normalizeAliphiaPdfUrl(doc.pdf_url || '');
 
     let text = `السلام عليكم ورحمة الله وبركاته،\nأهلاً بك أخي ${clientName}.\n\nمرفق لكم ${type === 'invoice' ? 'الفاتورة' : 'عرض السعر'} رقم *${docNum}* بقيمة *${total} ر.س*.\n`;
     if (pdfUrl) {
@@ -918,35 +962,129 @@ export default function Sales() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
-  // Filters logic
+  // Get all unique categories from local sales for filtering
+  const localCategories = React.useMemo(() => {
+    const cats = sales.map(s => s.category).filter(Boolean);
+    return Array.from(new Set(cats));
+  }, [sales]);
+
+  // Filters and Sorting logic
   const filteredInvoices = aliphiaInvoices.filter(inv => {
-    const num = String(inv.invoice_number || inv.number || inv.id || inv.invoice_id || '').toLowerCase();
-    const client = String(inv.client_name || inv.client || inv.client_id || '').toLowerCase();
-    const query = invoiceSearch.toLowerCase();
-    return num.includes(query) || client.includes(query);
+    const num = String(inv.invoice_number || inv.number || inv.id || inv.invoice_id || '');
+    const client = String(inv.client_name || inv.client || inv.client_id || '');
+    
+    // Arabic-normalized multi-keyword search
+    const matchesSearch = matchSearchQuery(`${num} ${client}`, invoiceSearch);
+    if (!matchesSearch) return false;
+
+    // Status filter
+    if (invoiceStatusFilter === 'all') return true;
+    const s = String(inv.invoice_status_id || inv.status).toLowerCase();
+    if (invoiceStatusFilter === 'paid') {
+      return s === '4' || s === 'paid' || s === 'مدفوع' || s === 'مدفوعة';
+    } else if (invoiceStatusFilter === 'draft') {
+      return s === '1' || s === 'draft' || s === 'مسودة';
+    } else if (invoiceStatusFilter === 'overdue') {
+      return s === '3' || s === 'overdue' || s === 'متأخرة';
+    } else if (invoiceStatusFilter === 'unpaid') {
+      return s === '2' || (!['4', 'paid', 'مدفوع', 'مدفوعة', '1', 'draft', 'مسودة', '3', 'overdue', 'متأخرة'].includes(s));
+    }
+    return true;
+  }).sort((a, b) => {
+    const dateA = new Date(a.invoice_date_created || a.date || 0).getTime();
+    const dateB = new Date(b.invoice_date_created || b.date || 0).getTime();
+    const totalA = parseFloat(a.invoice_total || a.total || a.amount || 0);
+    const totalB = parseFloat(b.invoice_total || b.total || b.amount || 0);
+
+    if (invoiceSort === 'date-asc') return dateA - dateB;
+    if (invoiceSort === 'date-desc') return dateB - dateA;
+    if (invoiceSort === 'amount-asc') return totalA - totalB;
+    if (invoiceSort === 'amount-desc') return totalB - totalA;
+    return dateB - dateA;
   });
 
   const filteredQuotes = aliphiaQuotes.filter(q => {
-    const num = String(q.quote_number || q.number || q.id || q.quote_id || '').toLowerCase();
-    const client = String(q.client_name || q.client || q.client_id || '').toLowerCase();
-    const query = quoteSearch.toLowerCase();
-    return num.includes(query) || client.includes(query);
+    const num = String(q.quote_number || q.number || q.id || q.quote_id || '');
+    const client = String(q.client_name || q.client || q.client_id || '');
+    
+    // Arabic-normalized multi-keyword search
+    const matchesSearch = matchSearchQuery(`${num} ${client}`, quoteSearch);
+    if (!matchesSearch) return false;
+
+    // Status filter
+    if (quoteStatusFilter === 'all') return true;
+    const s = String(q.quote_status_id || q.status).toLowerCase();
+    if (quoteStatusFilter === 'accepted') {
+      return s === '4' || s === 'accepted' || s === 'approved' || s === 'مقبول';
+    } else if (quoteStatusFilter === 'rejected') {
+      return s === '3' || s === 'rejected' || s === 'declined' || s === 'مرفوض';
+    } else if (quoteStatusFilter === 'draft') {
+      return s === '0' || s === 'draft' || s === 'مسودة';
+    } else if (quoteStatusFilter === 'sent') {
+      return s === '1' || (!['4', 'accepted', 'approved', 'مقبول', '3', 'rejected', 'declined', 'مرفوض', '0', 'draft', 'مسودة'].includes(s));
+    }
+    return true;
+  }).sort((a, b) => {
+    const dateA = new Date(a.quote_date_created || a.date || 0).getTime();
+    const dateB = new Date(b.quote_date_created || b.date || 0).getTime();
+    const totalA = parseFloat(a.quote_total || a.total || a.amount || 0);
+    const totalB = parseFloat(b.quote_total || b.total || b.amount || 0);
+
+    if (quoteSort === 'date-asc') return dateA - dateB;
+    if (quoteSort === 'date-desc') return dateB - dateA;
+    if (quoteSort === 'amount-asc') return totalA - totalB;
+    if (quoteSort === 'amount-desc') return totalB - totalA;
+    return dateB - dateA;
   });
 
   const filteredClients = aliphiaClients.filter(c => {
-    const name = String(c.name || '').toLowerCase();
-    const phone = String(c.phone || '').toLowerCase();
-    const email = String(c.email || '').toLowerCase();
-    const query = clientSearch.toLowerCase();
-    return name.includes(query) || phone.includes(query) || email.includes(query);
+    const name = String(c.name || '');
+    const phone = String(c.phone || '');
+    const email = String(c.email || '');
+    
+    // Arabic-normalized multi-keyword search
+    const matchesSearch = matchSearchQuery(`${name} ${phone} ${email}`, clientSearch);
+    if (!matchesSearch) return false;
+
+    // Contact info filter
+    if (clientContactFilter === 'all') return true;
+    if (clientContactFilter === 'has_phone') return !!c.phone;
+    if (clientContactFilter === 'has_email') return !!c.email;
+    if (clientContactFilter === 'no_contact') return !c.phone && !c.email;
+    return true;
   });
 
   const filteredLocalSales = sales.filter(s => {
-    const query = localSearchTerm.toLowerCase();
-    const customer = (s.customerName || "").toLowerCase();
-    const desc = (s.description || "").toLowerCase();
-    const cat = (s.category || "").toLowerCase();
-    return customer.includes(query) || desc.includes(query) || cat.includes(query);
+    const customer = String(s.customerName || "");
+    const desc = String(s.description || "");
+    const cat = String(s.category || "");
+    
+    // Arabic-normalized multi-keyword search
+    const matchesSearch = matchSearchQuery(`${customer} ${desc} ${cat}`, localSearchTerm);
+    if (!matchesSearch) return false;
+
+    // Category filter
+    if (localCategoryFilter !== 'all' && s.category !== localCategoryFilter) return false;
+
+    // Payment method filter
+    if (localPaymentMethodFilter !== 'all' && s.paymentMethod !== localPaymentMethodFilter) return false;
+
+    // Sync filter
+    if (localSyncFilter === 'synced' && !s.aliphiaInvoiceId) return false;
+    if (localSyncFilter === 'unsynced' && s.aliphiaInvoiceId) return false;
+
+    return true;
+  }).sort((a, b) => {
+    const dateA = new Date(a.date?.toDate?.() || a.date || 0).getTime();
+    const dateB = new Date(b.date?.toDate?.() || b.date || 0).getTime();
+    const totalA = parseFloat(a.amount || 0);
+    const totalB = parseFloat(b.amount || 0);
+
+    if (localSort === 'date-asc') return dateA - dateB;
+    if (localSort === 'date-desc') return dateB - dateA;
+    if (localSort === 'amount-asc') return totalA - totalB;
+    if (localSort === 'amount-desc') return totalB - totalA;
+    return dateB - dateA;
   });
 
   const chartData = React.useMemo(() => {
@@ -1057,6 +1195,59 @@ export default function Sales() {
       setIsSyncingLedger(false);
     }
   };
+
+  // Local Sales stats
+  const localRevenuesCount = sales.length;
+  const localRevenuesTotal = sales.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
+  const cashSalesList = sales.filter(s => s.paymentMethod === 'cash');
+  const cashCount = cashSalesList.length;
+  const cashTotal = cashSalesList.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
+  const transferSalesList = sales.filter(s => s.paymentMethod === 'transfer');
+  const transferCount = transferSalesList.length;
+  const transferTotal = transferSalesList.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
+  const syncedCountLocal = sales.filter(s => s.aliphiaInvoiceId).length;
+  const unsyncedCountLocal = sales.filter(s => !s.aliphiaInvoiceId).length;
+
+  // Invoices stats
+  const totalInvoicesCount = aliphiaInvoices.length;
+  const paidInvoicesCount = aliphiaInvoices.filter(inv => {
+    const s = String(inv.invoice_status_id || inv.status).toLowerCase();
+    return s === '4' || s === 'paid' || s === 'مدفوع' || s === 'مدفوعة';
+  }).length;
+  const overdueInvoicesCount = aliphiaInvoices.filter(inv => {
+    const s = String(inv.invoice_status_id || inv.status).toLowerCase();
+    return s === '3' || s === 'overdue' || s === 'متأخرة';
+  }).length;
+  const draftInvoicesCount = aliphiaInvoices.filter(inv => {
+    const s = String(inv.invoice_status_id || inv.status).toLowerCase();
+    return s === '1' || s === 'draft' || s === 'مسودة';
+  }).length;
+  const pendingInvoicesCount = totalInvoicesCount - paidInvoicesCount - draftInvoicesCount;
+
+  // Quotes stats
+  const totalQuotesCount = aliphiaQuotes.length;
+  const acceptedQuotesCount = aliphiaQuotes.filter(q => {
+    const s = String(q.quote_status_id || q.status).toLowerCase();
+    return s === '4' || s === 'accepted' || s === 'approved' || s === 'مقبول';
+  }).length;
+  const sentQuotesCount = aliphiaQuotes.filter(q => {
+    const s = String(q.quote_status_id || q.status).toLowerCase();
+    return s === '1' || s === 'sent' || s === 'مرسل';
+  }).length;
+  const draftQuotesCount = aliphiaQuotes.filter(q => {
+    const s = String(q.quote_status_id || q.status).toLowerCase();
+    return s === '0' || s === 'draft' || s === 'مسودة';
+  }).length;
+  const rejectedQuotesCount = aliphiaQuotes.filter(q => {
+    const s = String(q.quote_status_id || q.status).toLowerCase();
+    return s === '3' || s === 'rejected' || s === 'declined' || s === 'مرفوض';
+  }).length;
+
+  // Clients stats
+  const totalClientsCount = aliphiaClients.length;
+  const clientsWithPhoneCount = aliphiaClients.filter(c => c.phone).length;
+  const clientsWithEmailCount = aliphiaClients.filter(c => c.email).length;
+  const clientsNoContactCount = aliphiaClients.filter(c => !c.phone && !c.email).length;
 
   const subtotal = docItems.reduce((sum, item) => {
     const p = parseFloat(item.price) || 0;
@@ -1353,6 +1544,130 @@ export default function Sales() {
             </div>
           </div>
 
+          {/* Local Sales Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6" dir="rtl">
+            <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 font-bold block mb-1">إجمالي الحركات</span>
+                <span className="text-sm font-black text-slate-700 block">{localRevenuesCount} عملية</span>
+                <span className="text-[10px] text-emerald-600 font-bold font-mono">{localRevenuesTotal.toLocaleString()} ر.س</span>
+              </div>
+              <div className="p-2 bg-slate-100 text-slate-600 rounded-xl">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+            </div>
+            
+            <div className="bg-emerald-50/20 border border-emerald-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+              <div className="text-right">
+                <span className="text-[10px] text-emerald-600/70 font-bold block mb-1">نقدي (كاش)</span>
+                <span className="text-sm font-black text-emerald-700 block">{cashCount} عملية</span>
+                <span className="text-[10px] text-emerald-600 font-bold font-mono">{cashTotal.toLocaleString()} ر.س</span>
+              </div>
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                <Wallet className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div className="bg-blue-50/20 border border-blue-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+              <div className="text-right">
+                <span className="text-[10px] text-blue-600/70 font-bold block mb-1">تحويل بنكي</span>
+                <span className="text-sm font-black text-blue-700 block">{transferCount} عملية</span>
+                <span className="text-[10px] text-blue-600 font-bold font-mono">{transferTotal.toLocaleString()} ر.س</span>
+              </div>
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                <Building className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div className="bg-amber-50/20 border border-amber-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+              <div className="text-right">
+                <span className="text-[10px] text-amber-600/70 font-bold block mb-1">مزامنة ألف ياء</span>
+                <span className="text-sm font-black text-amber-700 block">{syncedCountLocal} عملية تمت</span>
+                <span className="text-[10px] text-amber-600 font-bold">{unsyncedCountLocal} بانتظار المزامنة</span>
+              </div>
+              <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                <ReceiptText className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Local Sales Filter Bar */}
+          <div className="flex flex-wrap items-center gap-3 bg-slate-50/50 p-3 rounded-2xl border border-slate-100 mb-6" dir="rtl">
+            <div className="flex flex-col gap-1 text-right">
+              <span className="text-[10px] text-slate-400 font-bold">التصنيف</span>
+              <Select value={localCategoryFilter} onValueChange={setLocalCategoryFilter}>
+                <SelectTrigger className="h-9 px-3 rounded-xl text-xs font-bold bg-white border-slate-200 min-w-[120px] text-right">
+                  <SelectValue placeholder="اختر التصنيف" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل التصنيفات</SelectItem>
+                  {localCategories.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1 text-right">
+              <span className="text-[10px] text-slate-400 font-bold">طريقة الدفع</span>
+              <Select value={localPaymentMethodFilter} onValueChange={setLocalPaymentMethodFilter}>
+                <SelectTrigger className="h-9 px-3 rounded-xl text-xs font-bold bg-white border-slate-200 min-w-[110px] text-right">
+                  <SelectValue placeholder="طريقة الدفع" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل الطرق</SelectItem>
+                  <SelectItem value="cash">كاش 💵</SelectItem>
+                  <SelectItem value="transfer">تحويل بنكي 🏦</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1 text-right">
+              <span className="text-[10px] text-slate-400 font-bold">حالة المزامنة</span>
+              <Select value={localSyncFilter} onValueChange={setLocalSyncFilter}>
+                <SelectTrigger className="h-9 px-3 rounded-xl text-xs font-bold bg-white border-slate-200 min-w-[110px] text-right">
+                  <SelectValue placeholder="حالة المزامنة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل الحركات</SelectItem>
+                  <SelectItem value="synced">تمت المزامنة</SelectItem>
+                  <SelectItem value="unsynced">لم تتم المزامنة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1 text-right">
+              <span className="text-[10px] text-slate-400 font-bold">الترتيب</span>
+              <Select value={localSort} onValueChange={setLocalSort}>
+                <SelectTrigger className="h-9 px-3 rounded-xl text-xs font-bold bg-white border-slate-200 min-w-[140px] text-right">
+                  <SelectValue placeholder="اختر الترتيب" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date-desc">التاريخ (الأحدث أولاً)</SelectItem>
+                  <SelectItem value="date-asc">التاريخ (الأقدم أولاً)</SelectItem>
+                  <SelectItem value="amount-desc">المبلغ (الأعلى أولاً)</SelectItem>
+                  <SelectItem value="amount-asc">المبلغ (الأقل أولاً)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(localCategoryFilter !== 'all' || localPaymentMethodFilter !== 'all' || localSyncFilter !== 'all' || localSearchTerm !== '') && (
+              <Button
+                onClick={() => {
+                  setLocalCategoryFilter('all');
+                  setLocalPaymentMethodFilter('all');
+                  setLocalSyncFilter('all');
+                  setLocalSearchTerm('');
+                }}
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2.5 rounded-lg text-slate-400 hover:text-slate-600 mt-auto text-[10px] font-bold"
+              >
+                إعادة تعيين الفلاتر
+              </Button>
+            )}
+          </div>
+
           {filteredLocalSales.length === 0 ? (
             <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 animate-in fade-in duration-300">
               <TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -1497,7 +1812,7 @@ export default function Sales() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
               {creatorSuccessData.pdf_url && (
                 <Button
-                  onClick={() => window.open(creatorSuccessData.pdf_url, '_blank')}
+                  onClick={() => window.open(getProxiedAliphiaPdfUrl(creatorSuccessData.pdf_url), '_blank')}
                   className="rounded-xl h-11 bg-primary text-white font-bold gap-2 px-6"
                 >
                   <ExternalLink className="w-4 h-4" /> تحميل واستعراض PDF
@@ -1508,7 +1823,7 @@ export default function Sales() {
                   const docNum = creatorSuccessData.number;
                   const clientName = creatorSuccessData.clientName;
                   const total = creatorSuccessData.total.toLocaleString(undefined, {minimumFractionDigits: 2});
-                  const pdfUrl = creatorSuccessData.pdf_url || '';
+                  const pdfUrl = normalizeAliphiaPdfUrl(creatorSuccessData.pdf_url || '');
                   let text = `السلام عليكم ورحمة الله وبركاته،\nأهلاً بك أخي ${clientName}.\n\nمرفق لكم ${docType === 'invoice' ? 'الفاتورة' : 'عرض السعر'} رقم *${docNum}* بقيمة *${total} ر.س* شامل الضريبة.\n`;
                   if (pdfUrl) {
                     text += `يمكنك استعراض وتحميل الملف من الرابط التالي:\n${pdfUrl}\n\n`;
@@ -1851,15 +2166,108 @@ export default function Sales() {
 
             {/* Sub-Tab Content: INVOICES */}
             <TabsContent value="aliphia_invoices" className="space-y-4">
-              <div className="flex gap-2 max-w-sm relative" dir="rtl">
-                <Input
-                  type="text"
-                  placeholder="ابحث باسم العميل أو رقم الفاتورة..."
-                  value={invoiceSearch}
-                  onChange={(e) => setInvoiceSearch(e.target.value)}
-                  className="h-10 pr-9 rounded-xl font-bold border-slate-200 text-sm text-right"
-                />
-                <Search className="absolute right-3 top-3 w-4 h-4 text-slate-400" />
+              {/* Invoices Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" dir="rtl">
+                <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-bold block mb-1">إجمالي الفواتير</span>
+                    <span className="text-sm font-black text-slate-700 block">{totalInvoicesCount} فاتورة</span>
+                  </div>
+                  <div className="p-2 bg-slate-100 text-slate-600 rounded-xl">
+                    <Receipt className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50/20 border border-emerald-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="text-right">
+                    <span className="text-[10px] text-emerald-600/70 font-bold block mb-1">فواتير مدفوعة</span>
+                    <span className="text-sm font-black text-emerald-700 block">{paidInvoicesCount} فاتورة</span>
+                  </div>
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="bg-amber-50/20 border border-amber-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="text-right">
+                    <span className="text-[10px] text-amber-600/70 font-bold block mb-1">غير مدفوعة / معلقة</span>
+                    <span className="text-sm font-black text-amber-700 block">{pendingInvoicesCount} فاتورة</span>
+                  </div>
+                  <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="bg-rose-50/20 border border-rose-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="text-right">
+                    <span className="text-[10px] text-rose-600/70 font-bold block mb-1">متأخرة</span>
+                    <span className="text-sm font-black text-rose-700 block">{overdueInvoicesCount} فاتورة</span>
+                  </div>
+                  <div className="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoices Search and Filter Bar */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/30 p-3 rounded-2xl border border-slate-100" dir="rtl">
+                <div className="w-full sm:w-72 relative">
+                  <Input
+                    type="text"
+                    placeholder="ابحث باسم العميل أو رقم الفاتورة..."
+                    value={invoiceSearch}
+                    onChange={(e) => setInvoiceSearch(e.target.value)}
+                    className="h-10 pr-9 rounded-xl font-bold border-slate-200 text-xs text-right bg-white"
+                  />
+                  <Search className="absolute right-3 top-3 w-4 h-4 text-slate-400" />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap">الحالة:</span>
+                    <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+                      <SelectTrigger className="h-9 px-3 rounded-xl text-xs font-bold bg-white border-slate-200 min-w-[120px] text-right">
+                        <SelectValue placeholder="اختر الحالة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">كل الفواتير</SelectItem>
+                        <SelectItem value="paid">مدفوعة</SelectItem>
+                        <SelectItem value="unpaid">غير مدفوعة</SelectItem>
+                        <SelectItem value="draft">مسودة</SelectItem>
+                        <SelectItem value="overdue">متأخرة</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap">الترتيب:</span>
+                    <Select value={invoiceSort} onValueChange={setInvoiceSort}>
+                      <SelectTrigger className="h-9 px-3 rounded-xl text-xs font-bold bg-white border-slate-200 min-w-[140px] text-right">
+                        <SelectValue placeholder="اختر الترتيب" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="date-desc">التاريخ (الأحدث أولاً)</SelectItem>
+                        <SelectItem value="date-asc">التاريخ (الأقدم أولاً)</SelectItem>
+                        <SelectItem value="amount-desc">المبلغ (الأعلى أولاً)</SelectItem>
+                        <SelectItem value="amount-asc">المبلغ (الأقل أولاً)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {(invoiceStatusFilter !== 'all' || invoiceSearch !== '') && (
+                    <Button
+                      onClick={() => {
+                        setInvoiceStatusFilter('all');
+                        setInvoiceSearch('');
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 rounded-lg text-slate-400 hover:text-slate-600 text-[10px] font-bold"
+                    >
+                      إعادة تعيين
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {loadingAliphia ? (
@@ -1911,7 +2319,7 @@ export default function Sales() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(inv.pdf_url, '_blank')}
+                                    onClick={() => window.open(getProxiedAliphiaPdfUrl(inv.pdf_url), '_blank')}
                                     className="h-8 rounded-lg text-xs font-bold gap-1 px-2 text-slate-600 hover:bg-slate-50"
                                   >
                                     <ExternalLink className="w-3 h-3" /> ملف PDF
@@ -1938,15 +2346,108 @@ export default function Sales() {
 
             {/* Sub-Tab Content: QUOTATIONS */}
             <TabsContent value="aliphia_quotes" className="space-y-4">
-              <div className="flex gap-2 max-w-sm relative" dir="rtl">
-                <Input
-                  type="text"
-                  placeholder="ابحث باسم العميل أو رقم العرض..."
-                  value={quoteSearch}
-                  onChange={(e) => setQuoteSearch(e.target.value)}
-                  className="h-10 pr-9 rounded-xl font-bold border-slate-200 text-sm text-right"
-                />
-                <Search className="absolute right-3 top-3 w-4 h-4 text-slate-400" />
+              {/* Quotes Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" dir="rtl">
+                <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-bold block mb-1">إجمالي العروض</span>
+                    <span className="text-sm font-black text-slate-700 block">{totalQuotesCount} عرض سعر</span>
+                  </div>
+                  <div className="p-2 bg-slate-100 text-slate-600 rounded-xl">
+                    <FileSpreadsheet className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50/20 border border-emerald-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="text-right">
+                    <span className="text-[10px] text-emerald-600/70 font-bold block mb-1">عروض مقبولة</span>
+                    <span className="text-sm font-black text-emerald-700 block">{acceptedQuotesCount} عرض مقبول</span>
+                  </div>
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="bg-blue-50/20 border border-blue-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="text-right">
+                    <span className="text-[10px] text-blue-600/70 font-bold block mb-1">عروض مرسلة</span>
+                    <span className="text-sm font-black text-blue-700 block">{sentQuotesCount} عرض مرسل</span>
+                  </div>
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                    <Send className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="bg-slate-100/50 border border-slate-200/50 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-bold block mb-1">مسودات</span>
+                    <span className="text-sm font-black text-slate-600 block">{draftQuotesCount} مسودة</span>
+                  </div>
+                  <div className="p-2 bg-slate-100 text-slate-500 rounded-xl">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quotes Search and Filter Bar */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/30 p-3 rounded-2xl border border-slate-100" dir="rtl">
+                <div className="w-full sm:w-72 relative">
+                  <Input
+                    type="text"
+                    placeholder="ابحث باسم العميل أو رقم العرض..."
+                    value={quoteSearch}
+                    onChange={(e) => setQuoteSearch(e.target.value)}
+                    className="h-10 pr-9 rounded-xl font-bold border-slate-200 text-xs text-right bg-white"
+                  />
+                  <Search className="absolute right-3 top-3 w-4 h-4 text-slate-400" />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap">الحالة:</span>
+                    <Select value={quoteStatusFilter} onValueChange={setQuoteStatusFilter}>
+                      <SelectTrigger className="h-9 px-3 rounded-xl text-xs font-bold bg-white border-slate-200 min-w-[120px] text-right">
+                        <SelectValue placeholder="اختر الحالة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">كل العروض</SelectItem>
+                        <SelectItem value="accepted">مقبول</SelectItem>
+                        <SelectItem value="sent">مرسل</SelectItem>
+                        <SelectItem value="draft">مسودة</SelectItem>
+                        <SelectItem value="rejected">مرفوض</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap">الترتيب:</span>
+                    <Select value={quoteSort} onValueChange={setQuoteSort}>
+                      <SelectTrigger className="h-9 px-3 rounded-xl text-xs font-bold bg-white border-slate-200 min-w-[140px] text-right">
+                        <SelectValue placeholder="اختر الترتيب" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="date-desc">التاريخ (الأحدث أولاً)</SelectItem>
+                        <SelectItem value="date-asc">التاريخ (الأقدم أولاً)</SelectItem>
+                        <SelectItem value="amount-desc">المبلغ (الأعلى أولاً)</SelectItem>
+                        <SelectItem value="amount-asc">المبلغ (الأقل أولاً)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {(quoteStatusFilter !== 'all' || quoteSearch !== '') && (
+                    <Button
+                      onClick={() => {
+                        setQuoteStatusFilter('all');
+                        setQuoteSearch('');
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 rounded-lg text-slate-400 hover:text-slate-600 text-[10px] font-bold"
+                    >
+                      إعادة تعيين
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {loadingAliphia ? (
@@ -2009,7 +2510,7 @@ export default function Sales() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(quote.pdf_url, '_blank')}
+                                    onClick={() => window.open(getProxiedAliphiaPdfUrl(quote.pdf_url), '_blank')}
                                     className="h-8 rounded-lg text-xs font-bold gap-1 px-2 text-slate-600 hover:bg-slate-50"
                                   >
                                     <ExternalLink className="w-3 h-3" /> ملف PDF
@@ -2036,44 +2537,119 @@ export default function Sales() {
 
             {/* Sub-Tab Content: CLIENTS */}
             <TabsContent value="aliphia_clients" className="space-y-4">
-              <div className="flex justify-between items-center" dir="rtl">
-                <div className="flex gap-2 max-w-sm relative w-full">
+
+              {/* Clients Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" dir="rtl">
+                <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-bold block mb-1">إجمالي العملاء</span>
+                    <span className="text-sm font-black text-slate-700 block">{totalClientsCount} عميل</span>
+                  </div>
+                  <div className="p-2 bg-slate-100 text-slate-600 rounded-xl">
+                    <Users className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50/20 border border-emerald-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                  <div className="text-right">
+                    <span className="text-[10px] text-emerald-600/70 font-bold block mb-1">لديهم هاتف</span>
+                    <span className="text-sm font-black text-emerald-700 block">{clientsWithPhoneCount} عميل</span>
+                  </div>
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <span className="text-sm">📞</span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50/20 border border-blue-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                  <div className="text-right">
+                    <span className="text-[10px] text-blue-600/70 font-bold block mb-1">لديهم بريد</span>
+                    <span className="text-sm font-black text-blue-700 block">{clientsWithEmailCount} عميل</span>
+                  </div>
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                    <span className="text-sm">✉️</span>
+                  </div>
+                </div>
+
+                <div className="bg-rose-50/20 border border-rose-100/30 rounded-2xl p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                  <div className="text-right">
+                    <span className="text-[10px] text-rose-600/70 font-bold block mb-1">بدون بيانات تواصل</span>
+                    <span className="text-sm font-black text-rose-700 block">{clientsNoContactCount} عميل</span>
+                  </div>
+                  <div className="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                    <Ban className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Clients Search and Filter Bar */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/30 p-3 rounded-2xl border border-slate-100" dir="rtl">
+                <div className="w-full sm:w-72 relative">
                   <Input
                     type="text"
                     placeholder="ابحث باسم العميل، الهاتف، أو البريد..."
                     value={clientSearch}
                     onChange={(e) => setClientSearch(e.target.value)}
-                    className="h-10 pr-9 rounded-xl font-bold border-slate-200 text-sm text-right"
+                    className="h-10 pr-9 rounded-xl font-bold border-slate-200 text-xs text-right bg-white"
                   />
                   <Search className="absolute right-3 top-3 w-4 h-4 text-slate-400" />
                 </div>
-                
-                {/* Embedded customer dialog trigger */}
-                <Dialog>
-                  <DialogTrigger render={
-                    <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 font-bold h-10 text-xs">
-                      <Plus className="w-4 h-4" /> إضافة عميل جديد
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap">التواصل:</span>
+                    <Select value={clientContactFilter} onValueChange={setClientContactFilter}>
+                      <SelectTrigger className="h-9 px-3 rounded-xl text-xs font-bold bg-white border-slate-200 min-w-[130px] text-right">
+                        <SelectValue placeholder="تصفية التواصل" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">كل العملاء</SelectItem>
+                        <SelectItem value="has_phone">لديهم هاتف 📞</SelectItem>
+                        <SelectItem value="has_email">لديهم بريد ✉️</SelectItem>
+                        <SelectItem value="no_contact">بدون بيانات تواصل</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {(clientContactFilter !== 'all' || clientSearch !== '') && (
+                    <Button
+                      onClick={() => {
+                        setClientContactFilter('all');
+                        setClientSearch('');
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 rounded-lg text-slate-400 hover:text-slate-600 text-[10px] font-bold"
+                    >
+                      إعادة تعيين
                     </Button>
-                  } />
-                  <DialogContent className="sm:max-w-md rounded-3xl p-6 text-right" dir="rtl">
-                    <DialogHeader>
-                      <DialogTitle className="text-xl font-black text-slate-800">إضافة عميل جديد في منصة ألف ياء</DialogTitle>
-                      <DialogDescription className="font-bold text-slate-500">
-                        قم بتعبئة بيانات العميل لإنشاء حسابه فوراً في ألف ياء
-                      </DialogDescription>
-                    </DialogHeader>
-                    {/* Add client modal is embedded inside the selector */}
-                    <div className="pt-2">
-                      <AliphiaClientSelector 
-                        onSelect={(newClient) => {
-                          if (newClient) {
-                            fetchAliphiaData(); // Refresh Aliphia list
-                          }
-                        }} 
-                      />
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                  )}
+
+                  {/* Add New Client Button */}
+                  <Dialog>
+                    <DialogTrigger render={
+                      <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 font-bold h-9 text-xs">
+                        <Plus className="w-4 h-4" /> إضافة عميل
+                      </Button>
+                    } />
+                    <DialogContent className="sm:max-w-md rounded-3xl p-6 text-right" dir="rtl">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-black text-slate-800">إضافة عميل جديد في منصة ألف ياء</DialogTitle>
+                        <DialogDescription className="font-bold text-slate-500">
+                          قم بتعبئة بيانات العميل لإنشاء حسابه فوراً في ألف ياء
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="pt-2">
+                        <AliphiaClientSelector 
+                          onSelect={(newClient) => {
+                            if (newClient) {
+                              fetchAliphiaData();
+                            }
+                          }} 
+                        />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
 
               {loadingAliphia ? (
@@ -2366,7 +2942,7 @@ export default function Sales() {
               <div className="space-y-6">
                 {/* Segmented Web View Mode Selector */}
                 {(() => {
-                  const pdfUrl = aliphiaDocDetails?.pdf_url || aliphiaDocDetails?.pdf_link || aliphiaDocDetails?.response?.pdf_url || selectedAliphiaDoc?.pdf_url || selectedAliphiaDoc?.pdf_link;
+                  const pdfUrl = getProxiedAliphiaPdfUrl(aliphiaDocDetails?.pdf_url || aliphiaDocDetails?.pdf_link || aliphiaDocDetails?.response?.pdf_url || selectedAliphiaDoc?.pdf_url || selectedAliphiaDoc?.pdf_link);
                   if (!pdfUrl) return null;
                   return (
                     <div className="flex justify-center mb-6">
@@ -2403,7 +2979,7 @@ export default function Sales() {
                 {viewMode === 'pdf' ? (
                   <div className="w-full h-[60vh] rounded-3xl overflow-hidden border border-slate-200 shadow-md bg-slate-50 flex flex-col relative">
                     {(() => {
-                      const pdfUrl = aliphiaDocDetails?.pdf_url || aliphiaDocDetails?.pdf_link || aliphiaDocDetails?.response?.pdf_url || selectedAliphiaDoc?.pdf_url || selectedAliphiaDoc?.pdf_link;
+                      const pdfUrl = getProxiedAliphiaPdfUrl(aliphiaDocDetails?.pdf_url || aliphiaDocDetails?.pdf_link || aliphiaDocDetails?.response?.pdf_url || selectedAliphiaDoc?.pdf_url || selectedAliphiaDoc?.pdf_link);
                       return (
                         <iframe
                           src={pdfUrl}
@@ -2565,7 +3141,7 @@ export default function Sales() {
               
               <div className="flex flex-1 flex-wrap gap-2 w-full sm:w-auto">
                 {(() => {
-                  const pdfUrl = aliphiaDocDetails?.pdf_url || aliphiaDocDetails?.pdf_link || aliphiaDocDetails?.response?.pdf_url || selectedAliphiaDoc?.pdf_url || selectedAliphiaDoc?.pdf_link;
+                  const pdfUrl = getProxiedAliphiaPdfUrl(aliphiaDocDetails?.pdf_url || aliphiaDocDetails?.pdf_link || aliphiaDocDetails?.response?.pdf_url || selectedAliphiaDoc?.pdf_url || selectedAliphiaDoc?.pdf_link);
                   if (!pdfUrl) return null;
                   return (
                     <Button

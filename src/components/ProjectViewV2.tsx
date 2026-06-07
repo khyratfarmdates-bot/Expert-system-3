@@ -577,7 +577,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
   ];
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-4 flex flex-col gap-6" dir="rtl">
+    <div className="w-full px-4 py-4 flex flex-col gap-6" dir="rtl">
       
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between w-full">

@@ -372,7 +372,7 @@ export default function Financials() {
     currentView !== 'dashboard' ? (
       <div className="space-y-6">
         {currentView === 'revenue' && (
-          <div className="max-w-6xl mx-auto space-y-8 pb-32">
+          <div className="w-full space-y-8 pb-32">
             <DetailHeader title="تفاصيل الإيرادات" icon={ArrowUpRight} onBack={() => setCurrentView('dashboard')} />
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -428,7 +428,7 @@ export default function Financials() {
         )}
 
         {currentView === 'expenses' && (
-          <div className="max-w-6xl mx-auto space-y-8 pb-32">
+          <div className="w-full space-y-8 pb-32">
             <DetailHeader title="تفاصيل المصروفات" icon={ArrowDownLeft} onBack={() => setCurrentView('dashboard')} />
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -485,7 +485,7 @@ export default function Financials() {
         )}
 
         {currentView === 'profit' && (
-          <div className="max-w-6xl mx-auto space-y-8 pb-32">
+          <div className="w-full space-y-8 pb-32">
             <DetailHeader title="تحليل صافي الربح" icon={Wallet} onBack={() => setCurrentView('dashboard')} />
             
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -552,7 +552,7 @@ export default function Financials() {
         )}
 
         {currentView === 'account' && viewedAccountId && (
-          <div className="max-w-6xl mx-auto space-y-8 pb-32">
+          <div className="w-full space-y-8 pb-32">
             <DetailHeader 
               title={`كشف حساب: ${accountBalances.find(a => a.id === viewedAccountId)?.name}`} 
               icon={accountBalances.find(a => a.id === viewedAccountId)?.type === 'bank' ? CreditCard : Wallet} 

@@ -382,7 +382,7 @@ export default function PrivateJobsWorkspace({ onNavigate }: PrivateJobsWorkspac
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+    <div className="p-4 md:p-6 w-full space-y-6" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
       
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-l from-slate-900 via-slate-800 to-amber-950 p-6 rounded-[2rem] text-white shadow-xl relative overflow-hidden">

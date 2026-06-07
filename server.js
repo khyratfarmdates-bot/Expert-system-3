@@ -36,6 +36,9 @@ let lastReceivedCreds = null;
 // يعمل على /api_public/* ويعيد التوجيه لخوادم ألف ياء
 // ======================================================
 app.all('/api_public/*splat', async (req, res) => {
+  let aliphiaPath = req.originalUrl.substring('/api_public'.length);
+  const isGuestPath = aliphiaPath.startsWith('/guest/') || aliphiaPath.startsWith('guest/');
+
   // محاولة القراءة أولاً من الترويسات المرسلة من العميل (الواجهة الأمامية)
   let authHeader = req.headers['authorization'];
   let apiKey = req.headers['x-keyali-api'];
@@ -65,20 +68,23 @@ app.all('/api_public/*splat', async (req, res) => {
       : 'N/A'
   };
 
-  if (!authHeader || !apiKey) {
+  if (!isGuestPath && (!authHeader || !apiKey)) {
     return res.status(401).json({ error: 'Aliphia credentials not configured on client or server' });
   }
 
   // بناء الرابط الكامل بطريقة مضمونة ومباشرة مع معلمات الاستعلام
-  const aliphiaUrl = 'https://aliphia.com/v1/api_public' + req.originalUrl.substring('/api_public'.length);
+  const aliphiaUrl = isGuestPath 
+    ? 'https://aliphia.com/v1' + (aliphiaPath.startsWith('/') ? aliphiaPath : '/' + aliphiaPath)
+    : 'https://aliphia.com/v1/api_public' + (aliphiaPath.startsWith('/') ? aliphiaPath : '/' + aliphiaPath);
 
   const clientContentType = req.headers['content-type'] || '';
   const headers = {
-    'Authorization': authHeader,
-    'X-KEYALI-API': apiKey,
-    'Accept': 'application/json',
+    'Accept': 'application/json, application/pdf, */*',
     'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   };
+
+  if (authHeader) headers['Authorization'] = authHeader;
+  if (apiKey) headers['X-KEYALI-API'] = apiKey;
 
   let requestBody;
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
@@ -105,12 +111,28 @@ app.all('/api_public/*splat', async (req, res) => {
     console.log(`📡 [Aliphia Proxy] ${req.method} ${aliphiaUrl} -> Status: ${aliphiaRes.status}`);
 
     const contentType = aliphiaRes.headers.get('content-type') || '';
+    
+    // Copy all headers from Aliphia response, rewriting Content-Disposition for guest paths
+    for (const [key, value] of aliphiaRes.headers.entries()) {
+      const lowerKey = key.toLowerCase();
+      if (lowerKey === 'content-disposition' && req.originalUrl.includes('/guest/')) {
+        res.setHeader('Content-Disposition', 'inline');
+      } else if (lowerKey === 'transfer-encoding' || lowerKey === 'content-encoding') {
+        // Skip these to let Express handle them
+      } else if (lowerKey === 'www-authenticate') {
+        // Skip WWW-Authenticate header to prevent browser login dialog
+      } else {
+        res.setHeader(key, value);
+      }
+    }
+
     res.status(aliphiaRes.status);
 
     if (contentType.includes('application/json')) {
       res.json(await aliphiaRes.json());
     } else {
-      res.send(await aliphiaRes.text());
+      const buffer = await aliphiaRes.arrayBuffer();
+      res.send(Buffer.from(buffer));
     }
   } catch (error) {
     console.error('Aliphia proxy error:', error);

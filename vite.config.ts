@@ -21,6 +21,18 @@ export default defineConfig(({mode}) => {
           target: 'https://aliphia.com/v1',
           changeOrigin: true,
           secure: false,
+          rewrite: (path) => path.startsWith('/api_public/guest/') 
+            ? path.replace(/^\/api_public/, '') 
+            : path,
+          configure: (proxy, options) => {
+            proxy.on('proxyRes', (proxyRes, req, res) => {
+              delete proxyRes.headers['www-authenticate'];
+              if (req.url && req.url.includes('/guest/')) {
+                delete proxyRes.headers['content-disposition'];
+                proxyRes.headers['content-disposition'] = 'inline';
+              }
+            });
+          }
         }
       }
     },

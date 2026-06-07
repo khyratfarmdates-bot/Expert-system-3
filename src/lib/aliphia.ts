@@ -2,6 +2,67 @@
 
 const ALIPHIA_API_URL = '/api_public';
 
+export const forceArabicInAliphiaPdfUrl = (url: string): string => {
+  try {
+    const match = url.match(/\/view\/(api_pdf|pdf)\/([^?\/&]+)/);
+    if (!match) return url;
+    
+    const prefix = match[1];
+    const base64Token = match[2];
+    
+    // Decode base64 browser-compatibly
+    let decodedText = '';
+    try {
+      decodedText = decodeURIComponent(escape(atob(base64Token)));
+    } catch (e) {
+      decodedText = atob(base64Token);
+    }
+    
+    // Parse JSON
+    const parsed = JSON.parse(decodedText);
+    if (parsed.lng) {
+      parsed.lng = 'ar';
+    }
+    
+    // Encode back to base64 browser-compatibly
+    const newJsonString = JSON.stringify(parsed);
+    const newBase64Token = btoa(unescape(encodeURIComponent(newJsonString))).replace(/=/g, '');
+    
+    // Reconstruct URL
+    return url.replace(base64Token, newBase64Token);
+  } catch (e) {
+    console.warn("Could not force Arabic in Aliphia PDF URL:", e);
+    return url;
+  }
+};
+
+export const normalizeAliphiaPdfUrl = (url: string | null | undefined): string => {
+  if (!url) return '';
+  let finalUrl = '';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.includes('aliphia.com/guest/view/')) {
+      finalUrl = url.replace('aliphia.com/guest/view/', 'aliphia.com/v1/guest/view/');
+    } else {
+      finalUrl = url;
+    }
+  } else {
+    let cleanPath = url;
+    if (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
+    }
+    if (cleanPath.startsWith('v1/')) {
+      cleanPath = cleanPath.substring(3);
+    }
+    finalUrl = `https://aliphia.com/v1/${cleanPath}`;
+  }
+  
+  return forceArabicInAliphiaPdfUrl(finalUrl);
+};
+
+export const getProxiedAliphiaPdfUrl = (url: string | null | undefined): string => {
+  return normalizeAliphiaPdfUrl(url).replace('https://aliphia.com/v1', '/api_public');
+};
+
 export interface AliphiaCredentials {
   username?: string;
   password?: string;
@@ -280,10 +341,13 @@ export const createAliphiaDocument = async (
       
       if (detailData.response?.[docKey]) {
         const docDetail = detailData.response?.[docKey] || {};
+        const normalizedPdf = normalizeAliphiaPdfUrl(docDetail.pdf_url);
+        docDetail.pdf_url = normalizedPdf;
+        if (docDetail.pdf_link) docDetail.pdf_link = normalizeAliphiaPdfUrl(docDetail.pdf_link);
         return {
           ...docDetail,
           id: docDetail[`${docKey}_id`] || docId,
-          pdf_url: docDetail.pdf_url || '',
+          pdf_url: normalizedPdf,
           response: docDetail,
           status: "success"
         };
@@ -438,7 +502,13 @@ export const fetchAliphiaInvoices = async () => {
       (data.response && typeof data.response === 'object' ? Object.values(data.response) :
       (data.data || []))));
       
-    return list;
+    return list.map((item: any) => {
+      if (item) {
+        if (item.pdf_url) item.pdf_url = normalizeAliphiaPdfUrl(item.pdf_url);
+        if (item.pdf_link) item.pdf_link = normalizeAliphiaPdfUrl(item.pdf_link);
+      }
+      return item;
+    });
   } catch (error) {
     console.error('Aliphia invoices fetch error:', error);
     return [];
@@ -474,7 +544,13 @@ export const fetchAliphiaQuotations = async () => {
       (data.response && typeof data.response === 'object' ? Object.values(data.response) :
       (data.data || []))));
       
-    return list;
+    return list.map((item: any) => {
+      if (item) {
+        if (item.pdf_url) item.pdf_url = normalizeAliphiaPdfUrl(item.pdf_url);
+        if (item.pdf_link) item.pdf_link = normalizeAliphiaPdfUrl(item.pdf_link);
+      }
+      return item;
+    });
   } catch (error) {
     console.error('Aliphia quotes fetch error:', error);
     return [];
@@ -506,7 +582,12 @@ export const fetchAliphiaInvoiceDetails = async (invoiceId: string) => {
       throw new Error(`فشل جلب تفاصيل الفاتورة من ألف ياء: ${cleanMsg}`);
     }
     const data = await response.json();
-    return data.response?.invoice || data.invoice || data.response || data;
+    const invoice = data.response?.invoice || data.invoice || data.response || data;
+    if (invoice) {
+      if (invoice.pdf_url) invoice.pdf_url = normalizeAliphiaPdfUrl(invoice.pdf_url);
+      if (invoice.pdf_link) invoice.pdf_link = normalizeAliphiaPdfUrl(invoice.pdf_link);
+    }
+    return invoice;
   } catch (error) {
     console.error('Aliphia invoice detail fetch error:', error);
     throw error;
@@ -538,7 +619,12 @@ export const fetchAliphiaQuotationDetails = async (quoteId: string) => {
       throw new Error(`فشل جلب تفاصيل عرض السعر من ألف ياء: ${cleanMsg}`);
     }
     const data = await response.json();
-    return data.response?.quote || data.quote || data.response || data;
+    const quote = data.response?.quote || data.quote || data.response || data;
+    if (quote) {
+      if (quote.pdf_url) quote.pdf_url = normalizeAliphiaPdfUrl(quote.pdf_url);
+      if (quote.pdf_link) quote.pdf_link = normalizeAliphiaPdfUrl(quote.pdf_link);
+    }
+    return quote;
   } catch (error) {
     console.error('Aliphia quote detail fetch error:', error);
     throw error;
