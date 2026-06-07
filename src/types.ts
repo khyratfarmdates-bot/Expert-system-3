@@ -29,6 +29,15 @@ export interface ProjectMilestone {
   weight?: number; // Weight percentage for progress calculation
   status: 'pending' | 'in-progress' | 'completed' | 'review-requested';
   date: string;
+  verification?: {
+    status: 'pending' | 'approved' | 'rejected';
+    verifiedBy?: string;
+    verifiedAt?: string;
+    complianceScore?: number;
+    qcNotes?: string;
+    materialsApproved?: boolean;
+    dimensionsChecked?: boolean;
+  };
 }
 
 export interface ProjectUpdate {

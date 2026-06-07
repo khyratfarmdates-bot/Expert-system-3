@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { ModuleHelp } from '@/components/ui/HelpTooltip';
+import { Wallet, TrendingUp, TrendingDown, CreditCard, BarChart2, PlusCircle } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -633,6 +635,24 @@ export default function Financials() {
       </div>
     ) : (
       <div className="space-y-6 animate-in fade-in duration-500">
+      <ModuleHelp
+        title="الوحدة المالية"
+        description="إدارة شاملة لجميع العمليات المالية: إيرادات، مصروفات، حسابات بنكية، وتحليلات مالية متقدمة."
+        steps={[
+          { icon: PlusCircle, title: 'إضافة عملية مالية', desc: 'اضغط زر "إضافة عملية" لتسجيل إيراد أو مصروف جديد مع تحديد الفئة والمشروع المرتبط وطريقة الدفع.', color: 'bg-emerald-100 text-emerald-600' },
+          { icon: TrendingUp, title: 'بطاقة الإيرادات', desc: 'اضغط عليها لعرض تفاصيل كامل مصادر الدخل مع رسم بياني تحليلي لكل فئة.', color: 'bg-blue-100 text-blue-600' },
+          { icon: TrendingDown, title: 'بطاقة المصروفات', desc: 'اضغط عليها لعرض توزيع المصروفات حسب الفئة مع كشف تفصيلي لجميع المدفوعات.', color: 'bg-red-100 text-red-600' },
+          { icon: Wallet, title: 'صافي الربح', desc: 'اضغط عليها لعرض تطور الربح الصافي شهرياً ومقارنة أداء المشاريع ربحياً.', color: 'bg-purple-100 text-purple-600' },
+          { icon: CreditCard, title: 'الحسابات البنكية', desc: 'عرض أرصدة الحسابات البنكية والخزائن. اضغط على أي حساب لعرض كشف حركاته التفصيلي.', color: 'bg-cyan-100 text-cyan-600' },
+          { icon: BarChart2, title: 'التصدير والتقارير', desc: 'استخدم أزرار CSV أو PDF لتصدير تقارير مالية مخصصة بنطاق تاريخي محدد.', color: 'bg-amber-100 text-amber-600' },
+        ]}
+        tips={[
+          'صنّف كل عملية بدقة (مواد / عمالة / مواصلات) لتحسين دقة التقارير.',
+          'اربط كل عملية بمشروع محدد لمتابعة ربحية كل مشروع بشكل مستقل.',
+          'استخدم فلتر البحث للعثور على أي عملية سريعاً بالاسم أو رقم المشروع.',
+          'العمليات المحذوفة تُنقل للأرشيف وليس حذفاً نهائياً.',
+        ]}
+      />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-lg md:text-2xl font-bold text-primary tracking-tight">المالية والمصروفات</h1>

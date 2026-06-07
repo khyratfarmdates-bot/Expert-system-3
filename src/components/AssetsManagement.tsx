@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { ModuleHelp } from '@/components/ui/HelpTooltip';
+import { Package, Plus, User, History, ShieldCheck, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -230,6 +232,23 @@ export default function AssetsManagement() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelp
+        title="إدارة الأصول والعهدة"
+        description="تتبع شامل لممتلكات الشركة — أجهزة، مركبات، أدوات، أثاث — مع نظام عهدة وتاريخ صيانة لكل أصل."
+        steps={[
+          { icon: Plus, title: 'إضافة أصل جديد', desc: 'اضغط "إضافة أصل جديد" وأدخل: الاسم، الرقم التسلسلي، التصنيف، الحالة الفنية، القيمة، وتاريخ الشراء. يمكن إضافة حقول مخصصة.', color: 'bg-blue-100 text-blue-600' },
+          { icon: User, title: 'تسليم العهدة', desc: 'من قائمة كل أصل اختر الموظف المستلم ثم اضغط تأكيد. سيتغير حالة الأصل تلقائياً إلى "عهدة".', color: 'bg-emerald-100 text-emerald-600' },
+          { icon: ShieldCheck, title: 'استعادة الأصل', desc: 'اضغط أيقونة QR على الأصل المُسلَّم لاستعادته وإعادة حالته إلى "متاح".', color: 'bg-amber-100 text-amber-600' },
+          { icon: History, title: 'سجل الحركات', desc: 'كل أصل لديه تاريخ كامل: من أخذه، متى أُعيد، أي صيانة جُرت. يوثّق كل تغيير تلقائياً.', color: 'bg-purple-100 text-purple-600' },
+          { icon: AlertCircle, title: 'حالة الأصل', desc: 'الشارة الخضراء = متاح، الزرقاء = عهدة، الحمراء = تحت الصيانة. يمكن تصفية العرض بالتصنيف.', color: 'bg-red-100 text-red-600' },
+        ]}
+        tips={[
+          'أضف الرقم التسلسلي بدقة — هو الهوية الفريدة لكل أصل في النظام.',
+          'استخدم الحقول المخصصة لحفظ بيانات إضافية كرقم اللوحة للمركبات.',
+          'تحديث حالة الأصل فوراً عند إرساله للصيانة يحافظ على دقة السجلات.',
+          'يمكن البحث باسم الأصل أو اسم الموظف الحامل للعهدة.',
+        ]}
+      />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

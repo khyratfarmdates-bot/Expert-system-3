@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { ModuleHelp } from '@/components/ui/HelpTooltip';
+import { LayoutDashboard, Wallet, Users, Briefcase, ShoppingCart, BarChart2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
@@ -275,6 +277,24 @@ export default function Dashboard({ goToTab }: { goToTab: (tabId: string) => voi
   /* ═══════ RENDER ═══════ */
   return (
     <div className="min-h-screen bg-slate-50 pb-28" dir="rtl">
+      <ModuleHelp
+        title="لوحة التحكم الرئيسية"
+        description="نقطة انطلاقك اليومية لمتابعة أداء الشركة من مكان واحد — ماليات، مشاريع، فريق عمل، وتنبيهات ذكية."
+        steps={[
+          { icon: LayoutDashboard, title: 'بطاقات المؤشرات (KPIs)', desc: 'تعرض الدخل الإجمالي والمصروفات وصافي الربح وعدد الموظفين والمشاريع النشطة في الـ 90 يوم الأخيرة.', color: 'bg-blue-100 text-blue-600' },
+          { icon: Wallet, title: 'الحركات المالية الأخيرة', desc: 'قائمة بأحدث العمليات المالية (إيرادات/مصروفات). اضغط على أي عملية للذهاب لوحدة الماليات.', color: 'bg-emerald-100 text-emerald-600' },
+          { icon: ShoppingCart, title: 'الوصول السريع', desc: 'أزرار اختصار للوصول الفوري لأهم وحدات النظام: العمالة، الحضور، المشتريات، المشاريع وغيرها.', color: 'bg-amber-100 text-amber-600' },
+          { icon: Briefcase, title: 'الذكاء الميداني (AI)', desc: 'تحليل ذكي لبيانات المشاريع يظهر للمدير فقط — يوفر توصيات فورية بناءً على آخر بيانات المشاريع والمعاملات.', color: 'bg-purple-100 text-purple-600' },
+          { icon: Users, title: 'عمال اليومية', desc: 'نظرة سريعة على العمال المسجلين في النظام وأجورهم اليومية. اضغط على أي عامل للذهاب لإدارة العمالة.', color: 'bg-slate-100 text-slate-600' },
+          { icon: BarChart2, title: 'مؤشر الإنتاجية الأسبوعي', desc: 'رسم بياني يعكس التوزيع التشغيلي خلال أيام الأسبوع لمتابعة أداء الفريق.', color: 'bg-teal-100 text-teal-600' },
+        ]}
+        tips={[
+          'ابدأ يومك بمراجعة التنبيهات (باللون الأحمر والبرتقالي) في أعلى الصفحة.',
+          'اضغط على أي بطاقة KPI لتنتقل مباشرة للوحدة المقابلة.',
+          'الموجز التنفيذي (AI) يتحدث تلقائياً عند كل تحميل للصفحة.',
+          'موجز اليوم يذكرك بأهم المهام التشغيلية المعلقة.',
+        ]}
+      />
       <div className="w-full px-3 sm:px-5 py-5 space-y-5">
 
         {/* ══ HEADER ══ */}

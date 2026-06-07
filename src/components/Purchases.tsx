@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { ModuleHelp } from '@/components/ui/HelpTooltip';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -505,6 +506,23 @@ export default function Purchases() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      <ModuleHelp
+        title="إدارة الفواتير والمشتريات"
+        description="تتبع طلبات الشراء، فواتير الموردين، واستخدام الذكاء الاصطناعي لتفريغ بيانات الفاتورة تلقائياً."
+        steps={[
+          { icon: Scan, title: 'مسح فاتورة ذكي', desc: 'اضغط "مسح فاتورة ذكي" والتقط صورة الفاتورة. سيستخرج الذكاء الاصطناعي اسم المورد والمبلغ تلقائياً.', color: 'bg-blue-100 text-blue-600' },
+          { icon: Plus, title: 'فاتورة يدوية', desc: 'إضافة فاتورة يدوية: المورد، المبلغ، التصنيف، وربط المشروع. تذهب للاعتماد من المدير.', color: 'bg-emerald-100 text-emerald-600' },
+          { icon: ShieldCheck, title: 'اعتماد الطلب (مدير)', desc: 'الطلبات تنتظر اعتماد المدير. بعد الاعتماد يجب تحديد الحساب البنكي أو الخزينة للصرف.', color: 'bg-amber-100 text-amber-600' },
+          { icon: Package, title: 'تتبع المستوديات', desc: 'كل فاتورة مواد تُحدث المخزون تلقائياً عند اعتمادها إذا كانت المادة مسجلة في المخزون.', color: 'bg-purple-100 text-purple-600' },
+          { icon: Download, title: 'تصدير التقارير', desc: 'أزرار تصدير CSV و PDF لتقارير المشتريات بنطاق تاريخي مخصص.', color: 'bg-slate-100 text-slate-600' },
+        ]}
+        tips={[
+          'استخدم مسح الفاتورة الذكي لتوفير وقت إدخال بيانات الفاتورة يدوياً.',
+          'ربط كل فاتورة بمشروع يتيح تتبع تكلفة كل مشروع بشكل مستقل.',
+          'النظام يتعرف تلقائياً على الموردين المتكررين ويعتمد تصنيفهم تلقائياً.',
+          'الطلبات المحذوفة تنتقل للأرشيف — يمكن استعادتها لاحقاً.',
+        ]}
+      />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-primary tracking-tight">إدارة الفاتورة والمشتريات</h1>

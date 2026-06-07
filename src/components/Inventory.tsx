@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { ModuleHelp } from '@/components/ui/HelpTooltip';
+import { Package, Plus, ArrowUpDown, Bell, Layers } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,6 +184,23 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+      <ModuleHelp
+        title="إدارة المخازن والمواد"
+        description="مراقبة مستويات المواد الخام في الوقت الفعلي مع نظام تنبيه ذكي عند نفاد المخزون."
+        steps={[
+          { icon: Package, title: 'عرض المخزون', desc: 'تظهر جميع المواد في شبكة بطاقات — الرقم الكبير هو الكمية المتاحة حالياً بوحدتها (متر/لفة/عبوة).', color: 'bg-blue-100 text-blue-600' },
+          { icon: Bell, title: 'تنبيه النقص', desc: 'البطاقات ذات الخلفية البرتقالية/الصفراء تعني أن الكمية وصلت للحد الأدنى الحرج. يُرسل إشعار تلقائي للمدير.', color: 'bg-amber-100 text-amber-600' },
+          { icon: Plus, title: 'إضافة مادة جديدة', desc: 'اضغط "إضافة مادة جديدة" وحدد: الاسم، التصنيف، الوحدة، الكمية الأولية، ومستوى التنبيه.', color: 'bg-emerald-100 text-emerald-600' },
+          { icon: ArrowUpDown, title: 'تعديل الكمية', desc: 'اضغط + أو − على أي بطاقة لإضافة كمية جديدة أو خصم استهلاك مشروع مع تحديد السبب.', color: 'bg-purple-100 text-purple-600' },
+          { icon: Layers, title: 'سجل الحركات', desc: 'في أسفل الصفحة يمكن متابعة كل حركة دخول/خروج مع اسم الموظف وسبب التغيير والتاريخ.', color: 'bg-slate-100 text-slate-600' },
+        ]}
+        tips={[
+          'حدد مستوى التنبيه بدقة لتجنب توقف الإنتاج بسبب نقص المواد.',
+          'دائماً أدخل سبب التعديل (مثل: مشروع X / شراء جديد) لضمان دقة السجلات.',
+          'الفئات تساعد في تصنيف المواد — مثلاً: بنر، فينيل، أحبار، مواد هيكلية.',
+          'استخدم البحث للعثور على مادة محددة بسرعة عند كثرة الأصناف.',
+        ]}
+      />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-primary tracking-tight">إدارة المخازن والمواد</h1>

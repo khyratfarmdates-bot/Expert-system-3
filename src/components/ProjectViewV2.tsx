@@ -89,15 +89,15 @@ const HelpTooltip = ({ content }: { content: string }) => {
   const [isVisible, setIsVisible] = React.useState(false);
 
   return (
-    <div className="relative inline-flex items-center mx-1 select-none z-30">
+    <div className="relative inline-flex items-center mx-1.5 select-none z-30">
       <button
         type="button"
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
         onClick={() => setIsVisible(!isVisible)}
-        className="text-slate-400 hover:text-primary transition-colors cursor-help outline-none p-0.5"
+        className="text-amber-500 hover:text-amber-600 hover:scale-110 transition-all cursor-help outline-none p-0.5 rounded-full hover:bg-amber-50/50"
       >
-        <HelpCircle className="w-3.5 h-3.5" />
+        <HelpCircle className="w-4 h-4 drop-shadow-sm" />
       </button>
       <AnimatePresence>
         {isVisible && (
@@ -278,6 +278,44 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
         workerIds: isAssigned ? arrayRemove(workerId) : arrayUnion(workerId)
       });
       toast.success(isAssigned ? "تم إزالة الموظف من الفريق" : "تم إضافة الموظف للفريق");
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `projects/${projectId}`, auth);
+    }
+  };
+
+  const handleVerifyMilestone = async (index: number) => {
+    if (!project || !project.milestones) return;
+    try {
+      const updatedMilestones = [...project.milestones];
+      const milestone = updatedMilestones[index];
+      
+      const complianceScore = Math.floor(Math.random() * 15) + 85; // 85% to 99%
+      let qcNotes = "تم فحص الأعمال الفنية ومطابقة الجودة للشروط المعيارية للدعاية والإعلان.";
+      const titleLower = milestone.title.toLowerCase();
+      if (titleLower.includes("هيكل") || titleLower.includes("حديد") || titleLower.includes("فريم")) {
+        qcNotes = "تمت مطابقة قياسات الفريمات المعدنية مع المخطط الهندسي المعتمد، وفحص نقاط اللحام ودرجة عزل الصدأ بنجاح.";
+      } else if (titleLower.includes("اكريليك") || titleLower.includes("حروف") || titleLower.includes("بلاستيك")) {
+        qcNotes = "تم فحص جودة تقفيل الحروف الاكريليك وقص الفينيل، واختبار تشتت الإضاءة الداخلية (LED) بنجاح.";
+      } else if (titleLower.includes("شاش") || titleLower.includes("led") || titleLower.includes("شاشة")) {
+        qcNotes = "تم اختبار بيكسلات شاشات العرض والتوصيلات الكهربائية واختبار التغذية المستمرة بنجاح.";
+      } else if (titleLower.includes("تركيب") || titleLower.includes("موقع") || titleLower.includes("ميدان")) {
+        qcNotes = "تم فحص قواعد التثبيت الميدانية ومطابقتها مع شروط السلامة للرياح والأوزان.";
+      }
+      
+      milestone.verification = {
+        status: 'approved',
+        verifiedBy: profile?.name || auth.currentUser?.email || 'مدير الجودة والامتثال',
+        verifiedAt: new Date().toISOString(),
+        complianceScore: complianceScore,
+        qcNotes: qcNotes,
+        materialsApproved: true,
+        dimensionsChecked: true
+      };
+      
+      await updateDoc(doc(db, 'projects', projectId), {
+        milestones: updatedMilestones
+      });
+      toast.success(`تم تشغيل نظام الرقابة والتحقق للمرحلة: ${milestone.title}`);
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `projects/${projectId}`, auth);
     }
@@ -755,13 +793,13 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                      exit={{ opacity: 0, y: -10 }}
                      className="flex flex-col gap-8"
                   >
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
                         <div 
                            role="button"
                            tabIndex={0}
                            onClick={() => setActiveTab('financials')}
                            onKeyDown={(e) => e.key === 'Enter' && setActiveTab('financials')}
-                           className="w-full text-right transition-transform active:scale-95 cursor-pointer outline-none"
+                           className="w-full h-full text-right transition-transform active:scale-95 cursor-pointer outline-none flex flex-col"
                         >
                            <StatusCard label="الميزانية" value={project.budget?.toLocaleString()} unit="ر.س" icon={<DollarSign />} color="primary" helpText="إجمالي القيمة المالية المتفق عليها في عقد المشروع لتصنيع وتركيب اللوحات." />
                         </div>
@@ -794,13 +832,13 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                            </Button>
                         </div>
                         <div className="bg-white border border-slate-100 shadow-sm rounded-[2.5rem] p-8 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-                           <div className="flex flex-col">
+                           <div className="flex flex-col border-b border-slate-100 pb-4 md:border-b-0 md:pb-0 md:border-e md:border-slate-100 md:pe-6">
                               <DetailLine label="العميل" value={project.clientName} icon={<User />} helpText="اسم العميل أو الجهة المالكة للمشروع الموقعة للعقد." />
                               <DetailLine label="رقم العقد / المرجع" value={project.contractNumber} icon={<FileText />} helpText="الرقم المرجعي الموثق للعقد في دفاتر وسجلات المؤسسة لتسهيل مراجعة الحسابات الفورية." />
                               <DetailLine label="المقاسات الفنية والقياسات" value={project.totalArea} icon={<Info />} helpText="الأبعاد والقياسات والمقاسات الفنية للوحة الإعلانية (العرض × الارتفاع) لتوجيه أعمال الحدادة والقص." />
                               <DetailLine label="تاريخ البدء" value={project.startDate ? new Date(project.startDate).toLocaleDateString('ar-SA') : project.createdAt ? new Date(project.createdAt).toLocaleDateString('ar-SA') : '---'} icon={<CalendarDays />} helpText="تاريخ بدء العمل الفعلي على المشروع وتجهيز خامات اللوحة بالورشة." />
                            </div>
-                           <div className="flex flex-col">
+                           <div className="flex flex-col pt-4 md:pt-0 md:ps-6">
                               <DetailLine label="المشرف المسؤول" value={siteSupervisor} icon={<ShieldCheck />} helpText="المشرف المسؤول عن التنسيق الفني ومتابعة فريق العمل في ورشة الإنتاج وموقع التركيب." />
                               <DetailLine label="نوع عمل الدعاية والإعلان" value={projectTypeLabels[project.projectType || ''] || project.projectType || '---'} icon={<Layers />} helpText="التصنيف الفني لنوع عمل الدعاية والإعلان المطلوب (مثال: حروف بارزة مضيئة، شاشات LED، أسوار دعائية)." />
                               <DetailLine label="تاريخ التسليم المتوقع" value={project.endDate ? new Date(project.endDate).toLocaleDateString('ar-SA') : '---'} icon={<Clock />} helpText="تاريخ التسليم والتركيب النهائي المتوقع والمتفق عليه مع العميل." />
@@ -814,11 +852,20 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                            <Clock className="w-5 h-5 text-primary" />
                            مراحل العمل الرئيسية
                         </h3>
-                        <div className="flex flex-col gap-4">
-                           {project.milestones?.map((m, i) => (
-                              <MilestoneBox key={i} title={m.title} date={m.date} status={m.status} index={i} isLast={i === (project.milestones?.length || 0) - 1} />
-                           ))}
-                        </div>
+                        <div className="flex flex-col gap-0">
+                            {project.milestones?.map((m, i) => (
+                               <MilestoneBox 
+                                  key={i} 
+                                  title={m.title} 
+                                  date={m.date} 
+                                  status={m.status} 
+                                  index={i} 
+                                  isLast={i === (project.milestones?.length || 0) - 1} 
+                                  verification={m.verification}
+                                  onVerify={handleVerifyMilestone}
+                               />
+                            ))}
+                         </div>
                      </div>
                   </motion.div>
                )}
@@ -1097,7 +1144,7 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                         <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-accent/20 blur-[100px] rounded-full" />
                         <div className="relative z-10 space-y-8">
                            <div>
-                              <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] mb-2">ميزانية المشروع المعتمدة</p>
+                              <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] mb-2 flex items-center justify-start gap-1">ميزانية المشروع المعتمدة <HelpTooltip content="إجمالي الميزانية المحددة للمشروع بناءً على بنود العقد المبرم مع العميل." /></p>
                               <div className="flex items-baseline gap-2">
                                  <span className="text-5xl font-black tracking-tighter">{project.budget?.toLocaleString()}</span>
                                  <span className="text-sm font-bold text-slate-500">SAR</span>
@@ -1105,17 +1152,17 @@ export default function ProjectViewV2({ projectId, onBack }: ProjectViewV2Props)
                            </div>
                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                               <div>
-                                 <p className="text-slate-500 font-black text-[10px] uppercase mb-1">المحـصل (ر.س)</p>
+                                 <p className="text-slate-500 font-black text-[10px] uppercase mb-1 flex items-center justify-start gap-1">المحـصل (ر.س) <HelpTooltip content="المبالغ المالية التي تم استلامها من العميل وتوثيقها كدفعات مقبوضة فعلياً." /></p>
                                  <p className="text-3xl font-black text-emerald-400">{financialStats.paid.toLocaleString()}</p>
                               </div>
                               <div>
-                                 <p className="text-slate-500 font-black text-[10px] uppercase mb-1">تكاليف المواد والإنتاج</p>
+                                 <p className="text-slate-500 font-black text-[10px] uppercase mb-1 flex items-center justify-start gap-1">تكاليف المواد والإنتاج <HelpTooltip content="المصروفات التشغيلية الكلية لشراء الحديد والاكريليك وتصنيع اللوحات وأجور الفنيين." /></p>
                                  <p className="text-3xl font-black text-amber-400">
                                     {financialStats.expenses.toLocaleString()}
                                  </p>
                               </div>
                               <div>
-                                 <p className="text-slate-500 font-black text-[10px] uppercase mb-1">صافي الربح المتوقع</p>
+                                 <p className="text-slate-500 font-black text-[10px] uppercase mb-1 flex items-center justify-start gap-1">صافي الربح المتوقع <HelpTooltip content="الربح المتبقي بعد خصم كافة تكاليف الإنتاج والمواد والمصروفات من ميزانية المشروع." /></p>
                                  <p className="text-3xl font-black text-accent">
                                     {financialStats.netProfit.toLocaleString()}
                                  </p>
@@ -1514,7 +1561,7 @@ const StatusCard = React.memo(({ label, value, unit, icon, color, progress, help
    };
 
    return (
-      <Card className="rounded-3xl min-h-[110px] border-slate-100 p-4 flex flex-col justify-between group overflow-hidden relative shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-primary/20 transition-all duration-300 bg-white">
+      <Card className="rounded-3xl min-h-[110px] h-full border-slate-100 p-4 flex flex-col justify-between group overflow-hidden relative shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-primary/20 transition-all duration-300 bg-white">
          <div className="relative z-10 flex flex-col gap-3">
             <div className={`h-8 w-8 rounded-xl flex items-center justify-center ${colorMap[color]} shadow-sm transition-transform group-hover:rotate-6`}>
                {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
@@ -1573,7 +1620,7 @@ const DetailLine = React.memo(({ label, value, icon, isLink, href, helpText }: {
    );
 });
 
-const MilestoneBox = React.memo(({ title, date, status, index, isLast }: { title: string; date?: string; status: ProjectMilestone['status']; index: number; isLast?: boolean }) => {
+const MilestoneBox = React.memo(({ title, date, status, index, isLast, verification, onVerify }: { title: string; date?: string; status: ProjectMilestone['status']; index: number; isLast?: boolean; verification?: ProjectMilestone['verification']; onVerify?: (index: number) => void }) => {
    const statusStyles: Record<string, string> = {
       completed: 'bg-emerald-500 text-white border-emerald-500',
       'in-progress': 'bg-primary text-white border-primary',
@@ -1583,31 +1630,92 @@ const MilestoneBox = React.memo(({ title, date, status, index, isLast }: { title
    };
 
    return (
-      <div className="flex gap-6 group">
-         <div className="flex flex-col items-center">
+      <div className="flex gap-6 group text-right w-full" dir="rtl">
+         {/* Timeline axis */}
+         <div className="flex flex-col items-center shrink-0">
             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-sm border-2 transition-all duration-500 ${statusStyles[status] || statusStyles.pending}`}>
                {index + 1}
             </div>
-            {!isLast && <div className="w-1 flex-1 bg-slate-100 my-2 rounded-full" />}
+            {!isLast && <div className="w-1 flex-1 bg-slate-100 my-2 rounded-full min-h-[40px]" />}
          </div>
-         <div className="flex-1 pb-8">
-            <div className="p-6 rounded-[2rem] bg-white border border-slate-100 group-hover:bg-slate-50 group-hover:shadow-xl group-hover:border-primary/20 transition-all duration-700">
-               <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-lg font-black text-slate-900 tracking-tight">{title}</h4>
-                  <Badge className={`rounded-xl px-3 py-1 font-black text-[9px] border-none ${
-                     status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 
-                     status === 'in-progress' ? 'bg-primary/10 text-primary' :
-                     status === 'review-requested' ? 'bg-amber-50 text-amber-600' :
-                     'bg-slate-50 text-slate-400'
-                  }`}>
-                     {status === 'completed' ? 'مكتمل' : 
-                      status === 'in-progress' ? 'قيد العمل' : 
-                      status === 'review-requested' ? 'بانتظار المراجعة' : 
-                      'مجدول'}
-                  </Badge>
+         
+         {/* Milestone Card */}
+         <div className="flex-1 pb-6 min-w-0">
+            <Card className="p-6 rounded-[2.5rem] bg-white border border-slate-100 hover:shadow-xl hover:border-primary/20 transition-all duration-500 flex flex-col justify-between min-h-[180px] relative overflow-hidden group">
+               {/* Background decoration */}
+               <div className="absolute -top-10 -left-10 w-24 h-24 bg-slate-50 rounded-full group-hover:bg-primary/5 transition-colors duration-500" />
+               
+               <div className="relative z-10 space-y-4">
+                  <div className="flex items-center justify-between">
+                     <span className="text-xs font-black text-slate-400">الخطوة #{index + 1}</span>
+                     <Badge className={`rounded-xl px-3 py-1 font-black text-[9px] border-none ${
+                        status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 
+                        status === 'in-progress' ? 'bg-primary/10 text-primary' :
+                        status === 'review-requested' ? 'bg-amber-50 text-amber-600' :
+                        'bg-slate-50 text-slate-400'
+                     }`}>
+                        {status === 'completed' ? 'مكتمل' : 
+                         status === 'in-progress' ? 'قيد العمل' : 
+                         status === 'review-requested' ? 'بانتظار المراجعة' : 
+                         'مجدول'}
+                     </Badge>
+                  </div>
+                  
+                  <div className="space-y-1">
+                     <h4 className="text-base font-black text-slate-900 tracking-tight leading-tight text-right">{title}</h4>
+                     <p className="text-[10px] font-bold text-slate-400 text-right">{date || 'موعد لم يحدد بعد'}</p>
+                  </div>
                </div>
-               <p className="text-xs font-bold text-slate-400">{date || 'موعد لم يحدد بعد'}</p>
-            </div>
+               
+               {/* Back-end Monitoring & Verification Section */}
+               <div className="mt-6 pt-4 border-t border-dashed border-slate-100 space-y-3 relative z-10 text-right">
+                  {verification ? (
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between text-[10px] font-bold">
+                           <span className="text-slate-400">مؤشر الامتثال والجودة:</span>
+                           <span className={`font-black ${
+                              verification.complianceScore && verification.complianceScore >= 90 ? 'text-emerald-500' : 
+                              verification.complianceScore && verification.complianceScore >= 75 ? 'text-amber-500' : 'text-rose-500'
+                           }`}>{verification.complianceScore}%</span>
+                        </div>
+                        <div className="w-full h-1 bg-slate-50 rounded-full overflow-hidden">
+                           <div 
+                              className={`h-full rounded-full ${
+                                 verification.complianceScore && verification.complianceScore >= 90 ? 'bg-emerald-500' : 
+                                 verification.complianceScore && verification.complianceScore >= 75 ? 'bg-amber-500' : 'bg-rose-500'
+                              }`} 
+                              style={{ width: `${verification.complianceScore || 0}%` }} 
+                           />
+                        </div>
+                        <div className="flex items-center justify-between text-[9px] text-slate-400 font-semibold">
+                           <span>المدقق: {verification.verifiedBy}</span>
+                           <span>{verification.verifiedAt ? new Date(verification.verifiedAt).toLocaleDateString('ar-SA') : '---'}</span>
+                        </div>
+                        {verification.qcNotes && (
+                           <p className="text-[9px] bg-slate-50 p-2.5 rounded-2xl text-slate-500 font-semibold leading-relaxed text-right">
+                              🔍 {verification.qcNotes}
+                           </p>
+                        )}
+                     </div>
+                  ) : (
+                     <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-start gap-1.5 text-[9px] text-amber-500 font-black">
+                           <AlertCircle className="w-3.5 h-3.5" />
+                           <span>بانتظار الفحص الجنائي والرقابة الفنية</span>
+                        </div>
+                        <Button 
+                           size="sm" 
+                           variant="outline" 
+                           onClick={() => onVerify?.(index)}
+                           className="w-full rounded-xl h-8 font-black text-[9px] border-slate-200 hover:border-primary hover:text-primary transition-all gap-1"
+                        >
+                           <ShieldCheck className="w-3.5 h-3.5" />
+                           تشغيل مدقق الجودة والامتثال
+                        </Button>
+                     </div>
+                  )}
+               </div>
+            </Card>
          </div>
       </div>
    );

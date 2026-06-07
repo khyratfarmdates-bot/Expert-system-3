@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { ModuleHelp } from '@/components/ui/HelpTooltip';
+import { Briefcase, Sparkles, UploadCloud, Search, TrendingUp, ClipboardList } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -418,6 +420,24 @@ export default function ProjectsV2() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 animate-in fade-in duration-700" dir="rtl">
+      <ModuleHelp
+        title="إدارة المشاريع الميدانية"
+        description="لوحة تحكم شاملة لمتابعة جميع مشاريع الدعاية والإعلان — الميزانية، التقدم، الفريق، والمرفقات."
+        steps={[
+          { icon: Briefcase, title: 'إنشاء مشروع جديد', desc: 'اضغط "مشروع جديد" واملأ البيانات عبر 4 خطوات: المعلومات الأساسية، المالية، بيانات العميل، والمرفقات.', color: 'bg-blue-100 text-blue-600' },
+          { icon: Sparkles, title: 'التعبئة الذكية (AI)', desc: 'الصق نص العقد أو رسالة الواتساب واضغط "تعبئة ذكية" — سيستخرج النظام جميع بيانات المشروع تلقائياً.', color: 'bg-amber-100 text-amber-600' },
+          { icon: UploadCloud, title: 'رفع المستندات', desc: 'في الخطوة الأخيرة يمكن رفع ملفات العقد، الخرائط، وصور الموقع مع تحليل ذكي لاستخلاص بياناتها.', color: 'bg-purple-100 text-purple-600' },
+          { icon: Search, title: 'فلترة وبحث', desc: 'ابحث باسم المشروع أو فلتر بالحالة (نشط/مكتمل). اختر عرض شبكي أو قائمة حسب تفضيلك.', color: 'bg-emerald-100 text-emerald-600' },
+          { icon: TrendingUp, title: 'تفاصيل المشروع', desc: 'اضغط على أي مشروع لفتح لوحة تحكمه الكاملة: المالية، التقدم، الفريق، المرفقات، والتحديثات.', color: 'bg-teal-100 text-teal-600' },
+          { icon: ClipboardList, title: 'مراحل العمل', desc: 'كل مشروع يبدأ بـ5 مراحل افتراضية يمكن تخصيصها وتحديث حالتها ونسبة الاكتمال من داخل لوحة المشروع.', color: 'bg-slate-100 text-slate-600' },
+        ]}
+        tips={[
+          'استخدم التعبئة الذكية (لصق محادثة الواتساب) لتوفير 90% من وقت إدخال البيانات.',
+          'رفع مستند العقد يتيح للذكاء الاصطناعي استخراج بيانات المشروع تلقائياً.',
+          'زر "تحميل التقرير العام" يطبع لائحة كل المشاريع مباشرة.',
+          'مشاريع دون تواريخ انتهاء تظهر بلا شريط تقدم — دائماً أدخل تواريخ واضحة.',
+        ]}
+      />
       {/* 🌌 High-End Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1 md:space-y-2">
