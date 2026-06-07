@@ -49,6 +49,13 @@ import {
   Factory,
   Sparkles,
   FileSpreadsheet,
+  RefreshCw,
+  Copy,
+  Moon,
+  Sun,
+  ArrowLeft,
+  Home,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -173,6 +180,20 @@ function AppContent() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({ x: 0, y: 0, visible: false });
+  const [tabHistory, setTabHistory] = useState<string[]>(["dashboard"]);
+
+  useEffect(() => {
+    setTabHistory((prev) => {
+      if (prev[prev.length - 1] === activeTab) return prev;
+      return [...prev, activeTab];
+    });
+  }, [activeTab]);
+
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -187,6 +208,84 @@ function AppContent() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      
+      const menuWidth = 200;
+      const menuHeight = 285;
+      let posX = e.clientX;
+      let posY = e.clientY;
+      
+      if (posX + menuWidth > window.innerWidth) {
+        posX = window.innerWidth - menuWidth - 10;
+      }
+      if (posY + menuHeight > window.innerHeight) {
+        posY = window.innerHeight - menuHeight - 10;
+      }
+      
+      setContextMenu({ x: posX, y: posY, visible: true });
+    };
+
+    const handleClick = () => {
+      setContextMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && (e.key === "h" || e.key === "H" || e.key === "ا")) {
+        e.preventDefault();
+        setActiveTab(profile?.role === "sales_rep" ? "rep_dashboard" : "dashboard");
+        toast.info("تم الانتقال إلى لوحة التحكم الرئيسية");
+      }
+      if (e.altKey && (e.key === "s" || e.key === "S" || e.key === "س")) {
+        e.preventDefault();
+        if (profile?.role === "manager") {
+          setActiveTab("settings");
+          toast.info("تم الانتقال إلى الإعدادات");
+        }
+      }
+      if (e.altKey && (e.key === "p" || e.key === "P" || e.key === "ح")) {
+        e.preventDefault();
+        setActiveTab(profile?.role === "sales_rep" ? "sales_rep_profile" : "profile");
+        toast.info("تم الانتقال إلى الملف الشخصي");
+      }
+      if (e.altKey && (e.key === "t" || e.key === "T" || e.key === "ف")) {
+        e.preventDefault();
+        const root = document.documentElement;
+        if (root.classList.contains("dark")) {
+          root.classList.remove("dark");
+          toast.success("تم تفعيل المظهر المضيء");
+        } else {
+          root.classList.add("dark");
+          toast.success("تم تفعيل المظهر الداكن");
+        }
+      }
+      if (e.altKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (tabHistory.length > 1) {
+          const newHistory = [...tabHistory];
+          newHistory.pop();
+          const prevTab = newHistory.pop();
+          if (prevTab) {
+            setTabHistory(newHistory);
+            setActiveTab(prevTab);
+            toast.info("تم الرجوع للصفحة السابقة");
+          }
+        }
+      }
+    };
+
+    window.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("click", handleClick);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("click", handleClick);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [profile, tabHistory]);
   const [sysSettings, setSysSettings] = useState<any>({
     companyName: "خبراء الرسم",
     companySub: "للدعاية والإعلان",
@@ -1473,6 +1572,174 @@ function AppContent() {
           onComplete={() => setShowWelcomeScreen(false)} 
         />
       )}
+
+      {/* Windows 11 Style Context Menu */}
+      <AnimatePresence>
+        {contextMenu.visible && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.1, ease: "easeOut" }}
+            style={{ 
+              top: contextMenu.y, 
+              left: contextMenu.x 
+            }}
+            className="fixed z-[9999] w-[210px] rounded-xl border border-slate-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-900/85 backdrop-blur-xl shadow-[0_10px_35px_-5px_rgba(0,0,0,0.2)] p-1 text-slate-800 dark:text-zinc-200 select-none transition-shadow"
+            dir="rtl"
+          >
+            {/* 1. Back */}
+            <button
+              disabled={tabHistory.length <= 1}
+              onClick={() => {
+                setContextMenu(prev => ({ ...prev, visible: false }));
+                if (tabHistory.length > 1) {
+                  const newHistory = [...tabHistory];
+                  newHistory.pop(); // Remove current
+                  const prevTab = newHistory.pop(); // Get previous
+                  if (prevTab) {
+                    setTabHistory(newHistory);
+                    setActiveTab(prevTab);
+                    toast.info("تم الرجوع للخلف");
+                  }
+                }
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-100/80 dark:hover:bg-zinc-800/70 rounded-lg cursor-pointer transition-colors text-right disabled:opacity-40 disabled:cursor-not-allowed group text-[11px] font-bold"
+            >
+              <div className="flex items-center gap-2">
+                <ArrowLeft className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span>رجوع للخلف</span>
+              </div>
+              <span className="text-[9px] text-muted-foreground/50 font-mono tracking-tighter">Alt + ←</span>
+            </button>
+
+            {/* 2. Refresh */}
+            <button
+              onClick={() => {
+                setContextMenu(prev => ({ ...prev, visible: false }));
+                toast.loading("جاري تحديث النظام...");
+                setTimeout(() => {
+                  window.location.reload();
+                }, 400);
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-100/80 dark:hover:bg-zinc-800/70 rounded-lg cursor-pointer transition-colors text-right group text-[11px] font-bold"
+            >
+              <div className="flex items-center gap-2">
+                <RefreshCw className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span>تحديث الصفحة</span>
+              </div>
+              <span className="text-[9px] text-muted-foreground/50 font-mono tracking-tighter">F5</span>
+            </button>
+
+            <div className="h-[1px] bg-slate-100 dark:bg-zinc-800/50 my-1 mx-1" />
+
+            {/* 3. Dashboard */}
+            <button
+              onClick={() => {
+                setContextMenu(prev => ({ ...prev, visible: false }));
+                setActiveTab(profile?.role === "sales_rep" ? "rep_dashboard" : "dashboard");
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-100/80 dark:hover:bg-zinc-800/70 rounded-lg cursor-pointer transition-colors text-right group text-[11px] font-bold"
+            >
+              <div className="flex items-center gap-2">
+                <Home className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span>الرئيسية</span>
+              </div>
+              <span className="text-[9px] text-muted-foreground/50 font-mono tracking-tighter">Alt + H</span>
+            </button>
+
+            {/* 4. Profile */}
+            <button
+              onClick={() => {
+                setContextMenu(prev => ({ ...prev, visible: false }));
+                setActiveTab(profile?.role === "sales_rep" ? "sales_rep_profile" : "profile");
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-100/80 dark:hover:bg-zinc-800/70 rounded-lg cursor-pointer transition-colors text-right group text-[11px] font-bold"
+            >
+              <div className="flex items-center gap-2">
+                <User className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span>الملف الشخصي</span>
+              </div>
+              <span className="text-[9px] text-muted-foreground/50 font-mono tracking-tighter">Alt + P</span>
+            </button>
+
+            {/* 5. Settings */}
+            {profile?.role === "manager" && (
+              <button
+                onClick={() => {
+                  setContextMenu(prev => ({ ...prev, visible: false }));
+                  setActiveTab("settings");
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-100/80 dark:hover:bg-zinc-800/70 rounded-lg cursor-pointer transition-colors text-right group text-[11px] font-bold"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <span>الإعدادات</span>
+                </div>
+                <span className="text-[9px] text-muted-foreground/50 font-mono tracking-tighter">Alt + S</span>
+              </button>
+            )}
+
+            <div className="h-[1px] bg-slate-100 dark:bg-zinc-800/50 my-1 mx-1" />
+
+            {/* 6. Toggle Theme */}
+            <button
+              onClick={() => {
+                setContextMenu(prev => ({ ...prev, visible: false }));
+                const root = document.documentElement;
+                if (root.classList.contains("dark")) {
+                  root.classList.remove("dark");
+                  toast.success("تم تفعيل المظهر المضيء");
+                } else {
+                  root.classList.add("dark");
+                  toast.success("تم تفعيل المظهر الداكن");
+                }
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-100/80 dark:hover:bg-zinc-800/70 rounded-lg cursor-pointer transition-colors text-right group text-[11px] font-bold"
+            >
+              <div className="flex items-center gap-2">
+                <Moon className="w-3.5 h-3.5 dark:hidden text-muted-foreground group-hover:text-primary transition-colors" />
+                <Sun className="w-3.5 h-3.5 hidden dark:block text-muted-foreground group-hover:text-primary transition-colors" />
+                <span>تغيير المظهر</span>
+              </div>
+              <span className="text-[9px] text-muted-foreground/50 font-mono tracking-tighter">Alt + T</span>
+            </button>
+
+            {/* 7. Copy URL */}
+            <button
+              onClick={() => {
+                setContextMenu(prev => ({ ...prev, visible: false }));
+                navigator.clipboard.writeText(window.location.href);
+                toast.success("تم نسخ رابط الصفحة بنجاح!");
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-100/80 dark:hover:bg-zinc-800/70 rounded-lg cursor-pointer transition-colors text-right group text-[11px] font-bold"
+            >
+              <div className="flex items-center gap-2">
+                <Copy className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span>نسخ الرابط</span>
+              </div>
+              <span className="text-[9px] text-muted-foreground/50 font-mono tracking-tighter">Ctrl + C</span>
+            </button>
+
+            <div className="h-[1px] bg-slate-100 dark:bg-zinc-800/50 my-1 mx-1" />
+
+            {/* 8. Logout */}
+            <button
+              onClick={() => {
+                setContextMenu(prev => ({ ...prev, visible: false }));
+                handleLogout();
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg cursor-pointer transition-colors text-right text-red-500 hover:text-red-650 group text-[11px] font-bold"
+            >
+              <div className="flex items-center gap-2">
+                <LogOut className="w-3.5 h-3.5 text-red-400 group-hover:text-red-500 transition-colors" />
+                <span>تسجيل الخروج</span>
+              </div>
+              <span className="text-[9px] text-red-450/70 font-mono tracking-tighter">Alt + L</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
