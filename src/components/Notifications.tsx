@@ -165,7 +165,7 @@ export default function Notifications() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto px-4">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full max-w-4xl mx-auto px-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
         <div>
           <h1 className="text-2xl font-black text-primary tracking-tight">مركز التنبيهات الذكي</h1>

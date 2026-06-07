@@ -130,7 +130,7 @@ export default function Analytics({ onBack }: { onBack?: () => void }) {
   const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444'];
 
   return (
-    <div className="space-y-6 pb-20 max-w-[1440px] mx-auto w-full px-4" dir="rtl">
+    <div className="space-y-6 pb-20 w-full px-4" dir="rtl">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">

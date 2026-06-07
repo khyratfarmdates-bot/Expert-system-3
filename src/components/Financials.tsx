@@ -370,7 +370,7 @@ export default function Financials() {
 
   return (
     currentView !== 'dashboard' ? (
-      <div className="space-y-6 max-w-[1440px] mx-auto w-full px-4">
+      <div className="space-y-6">
         {currentView === 'revenue' && (
           <div className="w-full space-y-8 pb-32">
             <DetailHeader title="تفاصيل الإيرادات" icon={ArrowUpRight} onBack={() => setCurrentView('dashboard')} />
@@ -632,7 +632,7 @@ export default function Financials() {
         )}
       </div>
     ) : (
-      <div className="space-y-6 animate-in fade-in duration-500 max-w-[1440px] mx-auto w-full px-4">
+      <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-lg md:text-2xl font-bold text-primary tracking-tight">المالية والمصروفات</h1>

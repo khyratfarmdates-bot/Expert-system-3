@@ -430,7 +430,7 @@ export default function SmartOfferBot() {
   if (result) {
     const isPendingApproval = (result as any).pendingApproval;
     return (
-      <div className="max-w-md mx-auto text-right" dir="rtl">
+      <div className="w-full text-right" dir="rtl">
         <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white">
           {isPendingApproval ? (
             <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-8 text-center text-white relative">
@@ -513,7 +513,7 @@ export default function SmartOfferBot() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 text-right" dir="rtl">
+    <div className="w-full max-w-4xl mx-auto space-y-6 text-right" dir="rtl">
       
       {/* Bot Chat Header */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-gradient-to-l from-primary/10 to-transparent p-6 rounded-3xl border border-primary/10">

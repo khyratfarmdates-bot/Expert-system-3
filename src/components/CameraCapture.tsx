@@ -560,7 +560,7 @@ export default function CameraCapture() {
 
   if (mode === 'selection') {
     return (
-      <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20" dir="rtl">
+      <div className="w-full max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20" dir="rtl">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-black text-slate-900 mb-2">الرفع الميداني السريع</h2>
           <p className="text-slate-500 font-bold">بوابة واحدة لرفع جميع أنواع الملفات والمستندات</p>
@@ -643,7 +643,7 @@ export default function CameraCapture() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-20" dir="rtl">
+    <div className="w-full max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-20" dir="rtl">
       <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setMode('selection')} className="rounded-full">

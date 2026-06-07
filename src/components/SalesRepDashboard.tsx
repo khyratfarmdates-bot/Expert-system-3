@@ -160,7 +160,7 @@ export default function SalesRepDashboard({ subPage = 'dashboard', onNavigate }:
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto w-full space-y-6" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+    <div className="p-4 md:p-6 w-full space-y-6" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
 
       {/* Top Navigation / Breadcrumb for Sub-pages */}
       {subPage !== 'dashboard' && (

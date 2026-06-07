@@ -711,7 +711,7 @@ function AppContent() {
         dir="rtl"
         style={{ fontFamily: "'Cairo', sans-serif" }}
       >
-        <div className="max-w-5xl mx-auto w-full">
+        <div className="w-full">
           <WorkerView
             workerId={publicWorkerId}
             onBack={() => setPublicWorkerId(null)}
@@ -943,10 +943,10 @@ function AppContent() {
               x: 0,
             }}
             exit={{ width: 0, opacity: 0 }}
-            className={`fixed inset-y-0 right-0 lg:h-screen bg-sidebar text-sidebar-foreground border-l border-white/5 z-40 lg:relative lg:translate-x-0 transition-all duration-300 shadow-[0_0_50px_rgba(0,0,0,0.5)] lg:shadow-none flex flex-col overflow-hidden rounded-l-[1.5rem] lg:rounded-none lg:top-0 top-16 bottom-[88px] h-auto`}
+            className={`fixed inset-y-0 right-0 lg:h-screen bg-sidebar/90 backdrop-blur-md text-sidebar-foreground border-l border-slate-200/50 dark:border-zinc-800/50 z-40 lg:relative lg:translate-x-0 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.08)] lg:shadow-none flex flex-col overflow-hidden rounded-l-[1.5rem] lg:rounded-none lg:top-0 top-16 bottom-[88px] h-auto`}
           >
             <div
-              className={`px-6 py-8 border-b border-white/10 mb-2 transition-all duration-300 ${isSidebarCollapsed ? "items-center px-4" : ""}`}
+              className={`px-6 py-8 border-b border-slate-100 dark:border-zinc-850/30 mb-2 transition-all duration-300 ${isSidebarCollapsed ? "items-center px-4" : ""}`}
             >
               <div className="flex items-center justify-between">
                 <div 
@@ -966,7 +966,7 @@ function AppContent() {
                       className="flex flex-col overflow-hidden"
                     >
                       <span 
-                        className={`font-black text-white tracking-tight leading-[1.1] mb-0.5 transition-all ${
+                        className={`font-black text-foreground tracking-tight leading-[1.1] mb-0.5 transition-all ${
                           (sysSettings.companyName?.length || 0) > 20 ? 'text-[11px]' : 
                           (sysSettings.companyName?.length || 0) > 15 ? 'text-xs' : 
                           'text-sm md:text-base'
@@ -997,9 +997,9 @@ function AppContent() {
                 return (
                   <div key={group.id} className="mb-4">
                     {showFull && group.title && (
-                      <div className="px-6 mb-2 mt-5 text-[10px] font-extrabold text-white/35 tracking-widest select-none flex items-center gap-2">
+                      <div className="px-6 mb-2 mt-5 text-[10px] font-extrabold text-muted-foreground/60 tracking-widest select-none flex items-center gap-2">
                         <span>{group.title}</span>
-                        <div className="flex-1 h-[1px] bg-white/5" />
+                        <div className="flex-1 h-[1px] bg-slate-100 dark:bg-zinc-800/50" />
                       </div>
                     )}
 
@@ -1038,8 +1038,8 @@ function AppContent() {
                                   !showFull ? "justify-center px-0 py-4" : "px-6 py-2"
                                 } ${
                                   isSubActive
-                                    ? "bg-white/5 text-white"
-                                    : "text-white/50 hover:bg-white/10 hover:text-white/90"
+                                    ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground font-black"
+                                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                                 }`}
                               >
                                 <div className="flex items-center gap-3">
@@ -1063,7 +1063,7 @@ function AppContent() {
                               </button>
                               
                               {showFull && isExpanded && (
-                                <div className="space-y-0.5 pr-4 border-r border-white/5 mr-6 mt-0.5">
+                                <div className="space-y-0.5 pr-4 border-r border-slate-100 dark:border-zinc-800/60 mr-6 mt-0.5">
                                   {allowedSubItems.map((sub: any) => (
                                     <button
                                       key={sub.id}
@@ -1074,8 +1074,8 @@ function AppContent() {
                                       }}
                                       className={`w-full flex items-center gap-3 transition-all px-4 py-1.5 rounded-lg text-right relative text-[11px] font-bold ${
                                         activeTab === sub.id
-                                          ? "bg-white/10 text-white"
-                                          : "text-white/40 hover:bg-white/5 hover:text-white/70"
+                                          ? "bg-primary/10 text-primary dark:bg-primary/20 font-black"
+                                          : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
                                       }`}
                                     >
                                       {activeTab === sub.id && (
@@ -1104,8 +1104,8 @@ function AppContent() {
                                 : "px-6 py-2"
                             } ${
                               activeTab === item.id
-                                ? "bg-white/10 text-white"
-                                : "text-white/50 hover:bg-white/10 hover:text-white/90"
+                                ? "bg-primary/10 text-primary dark:bg-primary/20 font-black"
+                                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                             }`}
                           >
                             {activeTab === item.id && showFull && (
@@ -1139,7 +1139,7 @@ function AppContent() {
                     </motion.div>
 
                     {!showFull && (
-                      <div className="mx-4 my-2 border-b border-white/5" />
+                      <div className="mx-4 my-2 border-b border-slate-100 dark:border-zinc-800/50" />
                     )}
                   </div>
                 );
@@ -1147,12 +1147,12 @@ function AppContent() {
             </nav>
 
             <div
-              className={`p-4 border-t border-white/10 mt-auto transition-all ${isSidebarCollapsed ? "items-center px-2" : ""}`}
+              className={`p-4 border-t border-slate-100 dark:border-zinc-800/50 mt-auto transition-all ${isSidebarCollapsed ? "items-center px-2" : ""}`}
             >
               {profile?.role === "manager" && (
                 <Button
                   variant="ghost"
-                  className={`w-full justify-start gap-3 hover:text-white hover:bg-white/5 rounded-xl py-5 ${isSidebarCollapsed ? "px-0 justify-center" : ""}`}
+                  className={`w-full justify-start gap-3 hover:text-foreground hover:bg-secondary/50 rounded-xl py-5 ${isSidebarCollapsed ? "px-0 justify-center" : ""}`}
                   onClick={() => setActiveTab("settings")}
                 >
                   <Settings className="w-5 h-5 shrink-0" />
@@ -1163,7 +1163,7 @@ function AppContent() {
               )}
               <Button
                 variant="ghost"
-                className={`w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-white/5 rounded-xl py-5 ${isSidebarCollapsed ? "px-0 justify-center" : ""}`}
+                className={`w-full justify-start gap-3 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl py-5 ${isSidebarCollapsed ? "px-0 justify-center" : ""}`}
                 onClick={handleLogout}
               >
                 <LogOut className="w-5 h-5 shrink-0" />
