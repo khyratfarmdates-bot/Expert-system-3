@@ -1525,7 +1525,8 @@ export default function SystemSettings() {
                                     sidebarColor: settings.sidebarColor,
                                     primaryColor: settings.primaryColor,
                                     borderRadius: (settings as any).borderRadius || '12px',
-                                    enableGlassEffect: (settings as any).enableGlassEffect || false
+                                    enableGlassEffect: (settings as any).enableGlassEffect || false,
+                                    isDarkMode: document.documentElement.classList.contains('dark')
                                   }
                                 });
                                 toast.success('تم حفظ وتثبيت ثيمك الخاص بنجاح');

@@ -15,6 +15,7 @@ import {
   doc,
   orderBy,
   limit,
+  updateDoc,
 } from "firebase/firestore";
 import {
   Bell,
@@ -223,6 +224,31 @@ function AppContent() {
     return [];
   };
 
+  const toggleThemeMode = async (nextDark: boolean) => {
+    const root = document.documentElement;
+    if (nextDark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+
+    setSysSettings((prev: any) => ({
+      ...prev,
+      isDarkMode: nextDark
+    }));
+
+    if (profile?.uid) {
+      try {
+        const userRef = doc(db, "users", profile.uid);
+        await updateDoc(userRef, {
+          "userTheme.isDarkMode": nextDark
+        });
+      } catch (err) {
+        console.warn("Could not save theme preference to database", err);
+      }
+    }
+  };
+
   useEffect(() => {
     setTabHistory((prev) => {
       if (prev[prev.length - 1] === activeTab) return prev;
@@ -354,13 +380,9 @@ function AppContent() {
       if (e.altKey && (e.key === "t" || e.key === "T" || e.key === "ف")) {
         e.preventDefault();
         const root = document.documentElement;
-        if (root.classList.contains("dark")) {
-          root.classList.remove("dark");
-          toast.success("تم تفعيل المظهر المضيء");
-        } else {
-          root.classList.add("dark");
-          toast.success("تم تفعيل المظهر الداكن");
-        }
+        const nextDark = !root.classList.contains("dark");
+        toggleThemeMode(nextDark);
+        toast.success(nextDark ? "تم تفعيل المظهر الداكن" : "تم تفعيل المظهر المضيء");
       }
       if (e.altKey && e.key === "ArrowLeft") {
         e.preventDefault();
@@ -718,16 +740,20 @@ function AppContent() {
     if (theme.primaryColor) root.style.setProperty('--primary', theme.primaryColor);
     if (theme.borderRadius) root.style.setProperty('--radius', theme.borderRadius);
     
-    if (theme.enableGlassEffect) {
-      root.classList.add('glass-theme');
-    } else {
-      root.classList.remove('glass-theme');
+    if (theme.enableGlassEffect !== undefined) {
+      if (theme.enableGlassEffect) {
+        root.classList.add('glass-theme');
+      } else {
+        root.classList.remove('glass-theme');
+      }
     }
 
-    if (theme.isDarkMode) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+    if (theme.isDarkMode !== undefined) {
+      if (theme.isDarkMode) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
     }
   };
 
@@ -1919,13 +1945,9 @@ function AppContent() {
                   onClick={() => {
                     setContextMenu(prev => ({ ...prev, visible: false }));
                     const root = document.documentElement;
-                    if (root.classList.contains("dark")) {
-                      root.classList.remove("dark");
-                      toast.success("تم تفعيل المظهر المضيء");
-                    } else {
-                      root.classList.add("dark");
-                      toast.success("تم تفعيل المظهر الداكن");
-                    }
+                    const nextDark = !root.classList.contains("dark");
+                    toggleThemeMode(nextDark);
+                    toast.success(nextDark ? "تم تفعيل المظهر الداكن" : "تم تفعيل المظهر المضيء");
                   }}
                   className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-100/80 dark:hover:bg-zinc-800/70 rounded-lg cursor-pointer transition-colors text-right group text-[11px] font-bold"
                 >

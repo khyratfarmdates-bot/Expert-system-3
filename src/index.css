@@ -210,3 +210,157 @@ input[type=number] {
   -ms-overflow-style: none !important; /* IE/Edge */
 }
 
+/* Dark Mode Global Overrides for Hardcoded Light Components */
+.dark .bg-white,
+.dark [class*="bg-white"] {
+  background-color: var(--card) !important;
+}
+
+.dark .bg-white\/5,
+.dark .bg-white\/10,
+.dark .bg-white\/15,
+.dark .bg-white\/20,
+.dark .bg-white\/30,
+.dark .bg-white\/40 {
+  background-color: rgba(28, 28, 30, 0.3) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.dark .bg-white\/50,
+.dark .bg-white\/60,
+.dark .bg-white\/70,
+.dark .bg-white\/80,
+.dark .bg-white\/90,
+.dark .bg-white\/95,
+.dark .bg-white\/98 {
+  background-color: rgba(28, 28, 30, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-slate-200,
+.dark .bg-slate-300,
+.dark .bg-slate-400,
+.dark [class*="bg-slate-50"],
+.dark [class*="bg-slate-100"],
+.dark [class*="bg-slate-200"],
+.dark [class*="bg-slate-300"],
+.dark .bg-zinc-50,
+.dark .bg-zinc-100,
+.dark .bg-zinc-200,
+.dark .bg-zinc-300,
+.dark [class*="bg-zinc-50"],
+.dark [class*="bg-zinc-100"],
+.dark [class*="bg-zinc-200"],
+.dark [class*="bg-zinc-300"],
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-gray-200,
+.dark .bg-gray-300,
+.dark [class*="bg-gray-50"],
+.dark [class*="bg-gray-100"],
+.dark [class*="bg-gray-200"],
+.dark [class*="bg-gray-300"] {
+  background-color: #2c2c2e !important;
+}
+
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-slate-650,
+.dark .text-slate-600,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-zinc-900,
+.dark .text-zinc-800,
+.dark .text-zinc-700,
+.dark .text-zinc-600,
+.dark .text-black,
+.dark [class*="text-slate-900"],
+.dark [class*="text-slate-800"],
+.dark [class*="text-slate-700"],
+.dark [class*="text-slate-650"],
+.dark [class*="text-slate-600"],
+.dark [class*="text-gray-900"],
+.dark [class*="text-gray-800"],
+.dark [class*="text-gray-700"],
+.dark [class*="text-gray-600"],
+.dark [class*="text-zinc-900"],
+.dark [class*="text-zinc-800"],
+.dark [class*="text-zinc-700"],
+.dark [class*="text-zinc-600"] {
+  color: var(--foreground) !important;
+}
+
+.dark .text-slate-500,
+.dark .text-slate-450,
+.dark .text-slate-400,
+.dark .text-gray-500,
+.dark .text-gray-400,
+.dark .text-zinc-500,
+.dark .text-zinc-400,
+.dark [class*="text-slate-500"],
+.dark [class*="text-slate-450"],
+.dark [class*="text-slate-400"],
+.dark [class*="text-gray-500"],
+.dark [class*="text-gray-400"],
+.dark [class*="text-zinc-500"],
+.dark [class*="text-zinc-400"] {
+  color: var(--muted-foreground) !important;
+}
+
+.dark .text-slate-300,
+.dark [class*="text-slate-300"] {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-zinc-100,
+.dark .border-zinc-200,
+.dark [class*="border-slate-"],
+.dark [class*="border-gray-"],
+.dark [class*="border-zinc-"] {
+  border-color: var(--border) !important;
+}
+
+.dark .shadow-xs,
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark div[role="dialog"],
+.dark .dialog-content,
+.dark [class*="DialogContent"] {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #2c2c2e !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.dark [class*="hover:bg-slate-50"]:hover,
+.dark [class*="hover:bg-slate-100"]:hover,
+.dark [class*="hover:bg-zinc-100"]:hover,
+.dark [class*="hover:bg-gray-100"]:hover {
+  background-color: #2c2c2e !important;
+}
+
