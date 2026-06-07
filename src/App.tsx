@@ -57,6 +57,11 @@ import {
   ArrowLeft,
   Home,
   User,
+  Mail,
+  MapPin,
+  Database,
+  Paintbrush,
+  LayoutGrid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -168,6 +173,19 @@ class ErrorBoundary extends React.Component<any, any> {
   }
 }
 
+const settingsCategories = [
+  { id: "", label: "لوحة الإعدادات الرئيسية", icon: LayoutGrid, isHub: true },
+  { id: "company_profile", label: "هوية الشركة والأرشيف", icon: Building2 },
+  { id: "general", label: "الإعدادات العامة والمالية", icon: Settings },
+  { id: "notifications", label: "البريد والإشعارات", icon: Mail },
+  { id: "attendance", label: "نظام الدوام والـ GPS", icon: Clock },
+  { id: "ai", label: "الذكاء الاصطناعي", icon: Sparkles },
+  { id: "locations", label: "المقرات والسكن الإداري", icon: MapPin },
+  { id: "banks", label: "الحسابات البنكية والخزائن", icon: CreditCard },
+  { id: "theme", label: "المظهر والثيم البصري", icon: Paintbrush },
+  { id: "data", label: "إدارة البيانات والأمان", icon: Database }
+];
+
 function AppContent() {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -180,7 +198,10 @@ function AppContent() {
   const [expandedSubMenus, setExpandedSubMenus] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isOffline, setIsOffline] = useState(false);  const [contextMenu, setContextMenu] = useState<{
+  const [isOffline, setIsOffline] = useState(false);
+  const [settingsSubTab, setSettingsSubTab] = useState<string>("");
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     visible: boolean;
@@ -357,6 +378,7 @@ function AppContent() {
 
     const handleClick = () => {
       setContextMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+      setShowSettingsDropdown(false);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1169,7 +1191,7 @@ function AppContent() {
               x: 0,
             }}
             exit={{ width: 0, opacity: 0 }}
-            className={`fixed inset-y-0 right-0 lg:h-screen bg-sidebar/90 backdrop-blur-md text-sidebar-foreground border-l border-slate-200/50 dark:border-zinc-800/50 z-40 lg:relative lg:translate-x-0 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.08)] lg:shadow-none flex flex-col overflow-hidden rounded-l-[1.5rem] lg:rounded-none lg:top-0 top-16 bottom-[88px] h-auto`}
+            className={`fixed inset-y-0 right-0 lg:h-screen bg-sidebar/90 backdrop-blur-md text-sidebar-foreground border-l border-slate-200/50 dark:border-zinc-800/50 z-40 lg:relative lg:translate-x-0 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.08)] lg:shadow-none flex flex-col overflow-visible rounded-l-[1.5rem] lg:rounded-none lg:top-0 top-16 bottom-[88px] h-auto`}
           >
             <div className={`p-4 mb-2 transition-all duration-300 ${isSidebarCollapsed ? "px-2" : "px-4"}`}>
               <div 
@@ -1371,24 +1393,67 @@ function AppContent() {
               className={`p-3 mt-auto transition-all flex flex-col gap-2 ${isSidebarCollapsed ? "items-center px-2" : ""}`}
             >
               {profile?.role === "manager" && (
-                <div
-                  onClick={() => setActiveTab("settings")}
-                  className={`flex items-center gap-3 cursor-pointer active:scale-95 text-white transition-all duration-300 ${
-                    activeTab === "settings" ? "opacity-100 scale-102" : "opacity-80 hover:opacity-100"
-                  } ${
-                    isSidebarCollapsed ? "w-9 h-9 justify-center mx-auto" : "px-3 py-2 w-full"
-                  }`}
-                  title="الإعدادات"
-                >
-                  <Settings className={`w-4 h-4 shrink-0 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.95)] ${
-                    activeTab === "settings" ? "stroke-[2.5px]" : "stroke-[1.8px]"
-                  }`} />
-                  {!isSidebarCollapsed && (
-                    <span className={`font-black text-xs text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.95)] tracking-tight ${
-                      activeTab === "settings" ? "underline underline-offset-4 decoration-white/30" : ""
-                    }`}>
-                      الإعدادات
-                    </span>
+                <div className="relative w-full">
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowSettingsDropdown(!showSettingsDropdown);
+                    }}
+                    className={`flex items-center gap-3 cursor-pointer active:scale-95 text-white transition-all duration-300 ${
+                      activeTab === "settings" ? "opacity-100 scale-102" : "opacity-80 hover:opacity-100"
+                    } ${
+                      isSidebarCollapsed ? "w-9 h-9 justify-center mx-auto" : "px-3 py-2 w-full"
+                    }`}
+                    title="الإعدادات"
+                  >
+                    <Settings className={`w-4 h-4 shrink-0 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.95)] ${
+                      activeTab === "settings" ? "stroke-[2.5px]" : "stroke-[1.8px]"
+                    }`} />
+                    {!isSidebarCollapsed && (
+                      <span className={`font-black text-xs text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.95)] tracking-tight ${
+                        activeTab === "settings" ? "underline underline-offset-4 decoration-white/30" : ""
+                      }`}>
+                        الإعدادات
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Settings Dropdown Popover */}
+                  {showSettingsDropdown && (
+                    <div 
+                      className="absolute bottom-0 right-full mr-3 z-50 w-[230px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-zinc-800/80 rounded-2xl shadow-[0_10px_40px_-5px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_-5px_rgba(0,0,0,0.5)] p-2 text-right flex flex-col gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-zinc-800/50 mb-1 flex items-center justify-between">
+                        <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500">خيارات الإعدادات</span>
+                        <Settings className="w-3 h-3 text-slate-400 dark:text-zinc-500" />
+                      </div>
+                      
+                      {settingsCategories.map((cat) => {
+                        const Icon = cat.icon;
+                        const isActive = activeTab === "settings" && settingsSubTab === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            onClick={() => {
+                              setSettingsSubTab(cat.id);
+                              setActiveTab("settings");
+                              setShowSettingsDropdown(false);
+                            }}
+                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer text-right text-[11px] font-bold transition-all ${
+                              isActive 
+                                ? "bg-primary text-white" 
+                                : cat.isHub 
+                                  ? "text-primary dark:text-primary-foreground font-black bg-primary/10 hover:bg-primary/20"
+                                  : "text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800/70"
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5 shrink-0" />
+                            <span>{cat.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}
@@ -1609,7 +1674,7 @@ function AppContent() {
                 {activeTab === "briefing" && <ExecutiveBriefingSystem goToTab={setActiveTab} />}
                 {activeTab === "general_ledger" && <GeneralLedger />}
                 {activeTab === "attendance_manager" && <AttendanceManager />}
-                {activeTab === "settings" && <SystemSettings />}
+                {activeTab === "settings" && <SystemSettings initialTab={settingsSubTab} />}
               </motion.div>
             </AnimatePresence>
           </div>

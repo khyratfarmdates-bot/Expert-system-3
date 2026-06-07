@@ -71,7 +71,7 @@ import {
 import CompanyProfile from './CompanyProfile';
 import GeminiKeyCard from './GeminiKeyCard';
 
-export default function SystemSettings() {
+export default function SystemSettings({ initialTab }: { initialTab?: string }) {
   const { user, profile } = useAuth();
   const isManager = profile?.role === 'manager';
 
@@ -82,6 +82,18 @@ export default function SystemSettings() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [showHub, setShowHub] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (initialTab !== undefined) {
+      if (initialTab === '') {
+        setShowHub(true);
+      } else {
+        setActiveTab(initialTab);
+        setShowHub(false);
+      }
+    }
+  }, [initialTab]);
 
   // Locations State
   const [newOffice, setNewOffice] = useState({
